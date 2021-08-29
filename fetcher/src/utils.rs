@@ -119,7 +119,7 @@ impl Fetcher {
 
         let lower_limit = ITEM_PER_PAGE * page;
         let upper_limit = std::cmp::min(trending_now.len(), lower_limit + ITEM_PER_PAGE);
-        if lower_limit > upper_limit {
+        if lower_limit >= upper_limit {
             return Err(ReturnAction::EOR);
         }
         Ok(&trending_now[lower_limit..upper_limit])

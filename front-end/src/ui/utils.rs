@@ -21,7 +21,7 @@ impl<'parent> ui::TopLayout {
     pub fn new(parent: Rect) -> Self {
         let layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(90), Constraint::Percentage(10)])
+            .constraints([Constraint::Percentage(85), Constraint::Percentage(15)])
             .split(parent);
 
         ui::TopLayout {
@@ -362,7 +362,6 @@ impl Default for ui::State<'_> {
         let mpv = libmpv::Mpv::new().unwrap();
         mpv.set_property("video", "no").unwrap();
         mpv.set_property("cache", "yes").unwrap();
-        /*
         mpv.set_property("cache-secs", 10).unwrap();
         mpv.set_property("cache-pause-wait", 5).unwrap();
         mpv.set_property("demuxer-readahead-secs", 10).unwrap();
@@ -371,16 +370,15 @@ impl Default for ui::State<'_> {
         mpv.set_property("hwdec", "yes").unwrap();
         mpv.set_property("demuxer-cache-wait", "no").unwrap();
         mpv.set_property("cache-on-disk", "yes").unwrap();
-        mpv.set_property("ytdl-format", "opus").unwrap();
+        mpv.set_property("ytdl-format", "worst").unwrap();
         mpv.set_property("script-opts", "ytdl_hook-try_ytdl_first=yes")
             .unwrap();
-        */
 
         let mut sidebar_list_state = ListState::default();
         sidebar_list_state.select(Some(0));
         ui::State {
             help: "Press ?",
-            sidebar: sidebar_list_state,
+            sidebar: (sidebar_list_state, ui::SidebarOption::None),
             musicbar: VecDeque::new(),
             playlistbar: VecDeque::new(),
             artistbar: VecDeque::new(),
@@ -393,7 +391,7 @@ impl Default for ui::State<'_> {
                 music_elapse: Duration::new(0, 0),
             },
             player: mpv,
-            to_fetch: ui::FillFetch::Trending(1_usize),
+            to_fetch: ui::FillFetch::None,
         }
     }
 }

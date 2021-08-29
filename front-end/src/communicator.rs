@@ -22,22 +22,27 @@ pub async fn communicator<'st, 'nt>(
         std::mem::drop(state);
 
         match to_fetch {
-            ui::FillFetch::None | ui::FillFetch::Filled => {}
+            ui::FillFetch::None => {}
             ui::FillFetch::Trending(page) => {
                 state_original.lock().unwrap().help = "Fetching...";
+                notifier.notify_all();
                 let trending_music = fetcher.get_trending_music(page).await;
                 let mut state = state_original.lock().unwrap();
 
                 match trending_music {
                     Ok(data) => {
                         state.musicbar = VecDeque::from(Vec::from(data));
-                        state.to_fetch = ui::FillFetch::Filled;
-                        notifier.notify_all();
+                        state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = Some(page);
                     }
-                    Err(e) => {}
+                    Err(_e) => {
+                        state.musicbar = VecDeque::new();
+                        state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
+                    }
                 }
-
+                state.to_fetch = ui::FillFetch::None;
+                state.active = ui::Window::Musicbar;
                 state.help = "Press ?";
+                notifier.notify_all();
             }
             ui::FillFetch::Search(m_page, p_page, a_page) => {}
         }

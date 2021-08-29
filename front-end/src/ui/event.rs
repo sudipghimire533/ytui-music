@@ -8,9 +8,9 @@ use std::{
     time::Duration,
 };
 
-const MIDDLE_MUSIC_INDEX: usize = 0;
-const MIDDLE_PLAYLIST_INDEX: usize = 0;
-const MIDDLE_ARTIST_INDEX: usize = 0;
+pub const MIDDLE_MUSIC_INDEX: usize = 0;
+pub const MIDDLE_PLAYLIST_INDEX: usize = 0;
+pub const MIDDLE_ARTIST_INDEX: usize = 0;
 const SEARCH_SH_KEY: char = '/';
 const HELP_SH_KEY: char = '?';
 const NEXT_SH_KEY: char = 'n';
@@ -26,6 +26,7 @@ enum HeadTo {
     Next,
     Prev,
 }
+
 fn advance_index(current: usize, limit: usize, direction: HeadTo) -> usize {
     match direction {
         HeadTo::Next => (current + 1) % limit,
@@ -56,106 +57,24 @@ macro_rules! drop_and_call {
     }};
 }
 
-macro_rules! fill_core {
-    ("@internal-update-music", $res: expr, $state: expr, $notifier: expr) => {
-        let mut state = $state.lock().unwrap();
-        state.musicbar = $res;
-        state.active = ui::Window::Musicbar;
-        state.help = "Press ?";
-        $notifier.notify_all();
+#[inline]
+fn get_page(current: &Option<usize>, direction: HeadTo) -> usize {
+    let page = match current {
+        None => 0,
+        Some(prev) => match direction {
+            HeadTo::Initial => 0,
+            HeadTo::Next => prev + 1,
+            HeadTo::Prev => prev.checked_sub(1).unwrap_or_default(),
+        },
     };
-    ("@internal-update-artist", $res: expr, $state: expr, $notifier: expr) => {
-        let mut state = $state.lock().unwrap();
-        state.artistbar = $res;
-        state.active = ui::Window::Artistbar;
-        state.help = "Press ?";
-        $notifier.notify_all();
-    };
-    ($direction: expr, $st_index: expr, $callback: path, $state: expr, $notifier: expr) => {{
-        let mut state = $state.lock().unwrap();
-        state.help = "Loading...";
-        $notifier.notify_all();
-
-        let fetch_page = match state.fetched_page[$st_index] {
-            None => 0,
-            Some(prev) => match $direction {
-                HeadTo::Next => prev + 1,
-                HeadTo::Prev if prev > 0 => prev - 1,
-                _ => 0,
-            },
-        };
-        let res = match $callback(fetch_page) {
-            Some(data) => {
-                state.fetched_page[$st_index] = Some(fetch_page);
-                ::std::collections::VecDeque::from(data)
-            }
-            None => {
-                state.fetched_page[$st_index] = None;
-                ::std::collections::VecDeque::new()
-            }
-        };
-        res
-    }};
-}
-
-macro_rules! fill {
-    ("trending music", $direction: expr, $state: expr, $notifier: expr) => {{
-        let res = fill_core!(
-            $direction,
-            MIDDLE_MUSIC_INDEX,
-            test_backend::get_trending_music,
-            $state,
-            $notifier
-        );
-        fill_core!("@internal-update-music", res, $state, $notifier);
-    }};
-    ("community music", $direction: expr, $state: expr, $notifier: expr) => {{
-        let res = fill_core!(
-            $direction,
-            MIDDLE_MUSIC_INDEX,
-            test_backend::get_community_music,
-            $state,
-            $notifier
-        );
-        fill_core!("@internal-update-music", res, $state, $notifier);
-    }};
-    ("recents music", $direction: expr, $state: expr, $notifier: expr) => {{
-        let res = fill_core!(
-            $direction,
-            MIDDLE_MUSIC_INDEX,
-            test_backend::get_recents_music,
-            $state,
-            $notifier
-        );
-        fill_core!("@internal-update-music", res, $state, $notifier);
-    }};
-    ("favourates music", $direction: expr, $state: expr, $notifier: expr) => {
-        let res = fill_core!(
-            $direction,
-            MIDDLE_MUSIC_INDEX,
-            test_backend::get_favourates_music,
-            $state,
-            $notifier
-        );
-        fill_core!("@internal-update-music", res, $state, $notifier);
-    };
-    ("following artist", $direction: expr, $state: expr, $notifier: expr) => {
-        let res = fill_core!(
-            $direction,
-            MIDDLE_ARTIST_INDEX,
-            test_backend::get_following_artist,
-            $state,
-            $notifier
-        );
-        fill_core!("@internal-update-artist", res, $state, $notifier);
-    };
+    page as usize
 }
 
 pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut Arc<Condvar>) {
     let advance_sidebar = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        let current = state.sidebar.selected().unwrap_or_default();
-        state.sidebar.select(Some(advance_index(
+        let current = state.sidebar.0.selected().unwrap_or_default();
+        state.sidebar.0.select(Some(advance_index(
             current,
             ui::utils::SIDEBAR_LIST_COUNT,
             direction,
@@ -242,8 +161,9 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     };
 
     let fill_trending_music = |direction: HeadTo| {
-        // fill!("trending music", direction, state_original, notifier);
-        state_original.lock().unwrap().to_fetch = ui::FillFetch::Trending(1_usize);
+        let mut state = state_original.lock().unwrap();
+        let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
+        state.to_fetch = ui::FillFetch::Trending(page);
         notifier.notify_all();
     };
     let fill_community_music = |direction: HeadTo| {
@@ -269,7 +189,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         let state = state_original.lock().unwrap();
         match state.active {
             ui::Window::Musicbar => {
-                match ui::SidebarOption::try_from(state.sidebar.selected().unwrap()).unwrap() {
+                match ui::SidebarOption::try_from(state.sidebar.1.clone()).unwrap() {
                     ui::SidebarOption::Trending => {
                         drop_and_call!(state, fill_trending_music, direction);
                     }
@@ -286,7 +206,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                 }
             }
             ui::Window::Artistbar => {
-                match ui::SidebarOption::try_from(state.sidebar.selected().unwrap()).unwrap() {
+                match ui::SidebarOption::try_from(state.sidebar.1.clone()).unwrap() {
                     ui::SidebarOption::Followings => {
                         drop_and_call!(state, fill_following_artist, direction);
                     }
@@ -302,8 +222,9 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         match active_window {
             ui::Window::Sidebar => {
                 let side_select =
-                    ui::SidebarOption::try_from(state.sidebar.selected().unwrap()).unwrap();
+                    ui::SidebarOption::try_from(state.sidebar.0.selected().unwrap()).unwrap();
                 std::mem::drop(state);
+
                 match side_select {
                     ui::SidebarOption::Trending => fill_trending_music(HeadTo::Initial),
                     ui::SidebarOption::YoutubeCommunity => fill_community_music(HeadTo::Initial),
@@ -312,6 +233,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                     ui::SidebarOption::RecentlyPlayed => fill_recents_music(HeadTo::Initial),
                     _ => {}
                 }
+                state_original.lock().unwrap().sidebar.1 = side_select;
             }
             ui::Window::Musicbar => {
                 let music_under_selection = !state.musicbar.is_empty();

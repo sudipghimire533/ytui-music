@@ -93,7 +93,7 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                 screen.render_stateful_widget(
                     SideBar::get_shortcuts(&state_unlocked),
                     position.shortcut,
-                    &mut state_unlocked.sidebar,
+                    &mut state_unlocked.sidebar.0,
                 );
 
                 let (music_table, mut music_table_state) =
@@ -162,7 +162,7 @@ pub struct PlaylistUnit {
     pub name: String,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 pub enum SidebarOption {
     Trending,
     YoutubeCommunity,
@@ -171,6 +171,7 @@ pub enum SidebarOption {
     Favourates,
     MyPlalist,
     Search,
+    None,
 }
 
 #[derive(PartialEq, Clone)]
@@ -194,20 +195,23 @@ pub struct BottomState {
 pub enum FillFetch {
     None,
     Search(usize, usize, usize), // Page number of Music, Playlist and Artist
-    Filled,
     Trending(usize), // Page number of trending page
 }
 
 pub struct State<'p> {
     pub help: &'p str,
-    sidebar: ListState,
+    // First is state of the sidebar list itself
+    // And second is the state that is actually active.
+    // which remains same even selected() of ListState is changed.
+    // second memeber of tuple is only changed when user press ENTER on given SidebarOption
+    sidebar: (ListState, SidebarOption),
     pub musicbar: VecDeque<fetcher::MusicUnit>,
     pub playlistbar: VecDeque<PlaylistUnit>,
     pub artistbar: VecDeque<ArtistUnit>,
     bottom: BottomState,
     search: String,
     pub active: Window,
-    fetched_page: [Option<u32>; 3],
+    pub fetched_page: [Option<usize>; 3],
     player: libmpv::Mpv,
     pub to_fetch: FillFetch,
 }
