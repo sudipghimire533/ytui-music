@@ -362,6 +362,7 @@ impl Default for ui::State<'_> {
         let mpv = libmpv::Mpv::new().unwrap();
         mpv.set_property("video", "no").unwrap();
         mpv.set_property("cache", "yes").unwrap();
+        /*
         mpv.set_property("cache-secs", 10).unwrap();
         mpv.set_property("cache-pause-wait", 5).unwrap();
         mpv.set_property("demuxer-readahead-secs", 10).unwrap();
@@ -373,6 +374,7 @@ impl Default for ui::State<'_> {
         mpv.set_property("ytdl-format", "opus").unwrap();
         mpv.set_property("script-opts", "ytdl_hook-try_ytdl_first=yes")
             .unwrap();
+        */
 
         let mut sidebar_list_state = ListState::default();
         sidebar_list_state.select(Some(0));
@@ -391,7 +393,7 @@ impl Default for ui::State<'_> {
                 music_elapse: Duration::new(0, 0),
             },
             player: mpv,
-            fetcher: fetcher::Fetcher::new(),
+            to_fetch: ui::FillFetch::Trending(1_usize),
         }
     }
 }
@@ -403,7 +405,7 @@ impl ui::State<'_> {
             self.bottom.music_duration = Duration::from_secs(0);
             self.bottom.music_elapse = Duration::from_secs(0);
             self.bottom.playing = None;
-            notifier.notify_one();
+            notifier.notify_all();
 
             match self
                 .player
@@ -421,7 +423,7 @@ impl ui::State<'_> {
                     self.bottom.music_duration = Duration::from_secs(0);
                 }
             }
-            notifier.notify_one();
+            notifier.notify_all();
         }
     }
     pub fn refresh_time_elapsed(&mut self) -> bool {
@@ -458,7 +460,7 @@ impl ui::State<'_> {
             // TODO: music_title.clone() feels like heavy and unneeded
             // Fight back the compiler
             self.bottom.playing = Some((music_title.to_string(), !is_playing));
-            notifier.notify_one();
+            notifier.notify_all();
         }
     }
 }

@@ -3,6 +3,7 @@ mod utils;
 use std::sync::Condvar;
 use tui::{backend::CrosstermBackend, Terminal};
 mod shared_import {
+    pub use fetcher;
     pub use libmpv;
     pub use serde::{Deserialize, Serialize};
     pub use std::convert::{From, Into, TryFrom, TryInto};
@@ -11,7 +12,6 @@ mod shared_import {
         sync::{Arc, Mutex},
         time::Duration,
     };
-    pub use fetcher;
     pub use tui::{
         backend::Backend,
         layout::{self, Alignment, Constraint, Direction, Layout, Rect},
@@ -190,16 +190,24 @@ pub struct BottomState {
     playing: Option<(String, bool)>, // Music title and playing status
 }
 
+#[derive(Clone)]
+pub enum FillFetch {
+    None,
+    Search(usize, usize, usize), // Page number of Music, Playlist and Artist
+    Filled,
+    Trending(usize), // Page number of trending page
+}
+
 pub struct State<'p> {
-    help: &'p str,
+    pub help: &'p str,
     sidebar: ListState,
-    musicbar: VecDeque<MusicUnit>,
-    playlistbar: VecDeque<PlaylistUnit>,
-    artistbar: VecDeque<ArtistUnit>,
+    pub musicbar: VecDeque<fetcher::MusicUnit>,
+    pub playlistbar: VecDeque<PlaylistUnit>,
+    pub artistbar: VecDeque<ArtistUnit>,
     bottom: BottomState,
     search: String,
-    active: Window,
+    pub active: Window,
     fetched_page: [Option<u32>; 3],
     player: libmpv::Mpv,
-    fetcher: fetcher::Fetcher,
+    pub to_fetch: FillFetch,
 }

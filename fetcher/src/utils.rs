@@ -99,16 +99,13 @@ impl Fetcher {
         page: usize,
     ) -> Result<&[super::MusicUnit], ReturnAction> {
         if self.trending_now.is_none() {
-            let obj = self
-                .send_request::<Vec<super::MusicUnit>>(
-                    &format!(
-                        "/trending?type=Music&{region}&{music_field}",
-                        region = REGION,
-                        music_field = MUSIC_FIELDS,
-                    ),
-                    2,
-                )
-                .await;
+            let suffix = format!(
+                "/trending?type=Music&{region}&{music_field}",
+                region = REGION,
+                music_field = MUSIC_FIELDS
+            );
+
+            let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 2).await;
 
             self.trending_now = match obj {
                 Ok(mut res) => {

@@ -7,7 +7,6 @@ use std::{
     sync::{Arc, Condvar, Mutex},
     time::Duration,
 };
-use tokio;
 
 const MIDDLE_MUSIC_INDEX: usize = 0;
 const MIDDLE_PLAYLIST_INDEX: usize = 0;
@@ -63,19 +62,19 @@ macro_rules! fill_core {
         state.musicbar = $res;
         state.active = ui::Window::Musicbar;
         state.help = "Press ?";
-        $notifier.notify_one();
+        $notifier.notify_all();
     };
     ("@internal-update-artist", $res: expr, $state: expr, $notifier: expr) => {
         let mut state = $state.lock().unwrap();
         state.artistbar = $res;
         state.active = ui::Window::Artistbar;
         state.help = "Press ?";
-        $notifier.notify_one();
+        $notifier.notify_all();
     };
     ($direction: expr, $st_index: expr, $callback: path, $state: expr, $notifier: expr) => {{
         let mut state = $state.lock().unwrap();
         state.help = "Loading...";
-        $notifier.notify_one();
+        $notifier.notify_all();
 
         let fetch_page = match state.fetched_page[$st_index] {
             None => 0,
@@ -161,37 +160,37 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             ui::utils::SIDEBAR_LIST_COUNT,
             direction,
         )));
-        notifier.notify_one();
+        notifier.notify_all();
     };
     let advance_music_list = |move_down: HeadTo| {
         if advance_list(&mut state_original.lock().unwrap().musicbar, move_down) {
-            notifier.notify_one();
+            notifier.notify_all();
         }
     };
     let advance_artist_list = |move_down: HeadTo| {
         if advance_list(&mut state_original.lock().unwrap().artistbar, move_down) {
-            notifier.notify_one();
+            notifier.notify_all();
         }
     };
     let advance_playlist_list = |move_down: HeadTo| {
         if advance_list(&mut state_original.lock().unwrap().playlistbar, move_down) {
-            notifier.notify_one();
+            notifier.notify_all();
         }
     };
     let quit = || {
         // setting active window to None is to quit
         state_original.lock().unwrap().active = ui::Window::None;
-        notifier.notify_one();
+        notifier.notify_all();
     };
     let moveto_next_window = || {
         let mut state = state_original.lock().unwrap();
         state.active = state.active.next();
-        notifier.notify_one();
+        notifier.notify_all();
     };
     let moveto_prev_window = || {
         let mut state = state_original.lock().unwrap();
         state.active = state.active.prev();
-        notifier.notify_one();
+        notifier.notify_all();
     };
     let handle_esc = || {
         let mut state = state_original.lock().unwrap();
@@ -205,18 +204,18 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         match state.active {
             ui::Window::Searchbar => {
                 state.search.pop();
-                notifier.notify_one();
+                notifier.notify_all();
             }
             _ => drop_and_call!(state, moveto_prev_window),
         }
     };
     let handle_search_input = |ch| {
         state_original.lock().unwrap().search.push(ch);
-        notifier.notify_one();
+        notifier.notify_all();
     };
     let activate_search = || {
         state_original.lock().unwrap().active = ui::Window::Searchbar;
-        notifier.notify_one();
+        notifier.notify_all();
     };
     let show_help = || {
         todo!();
@@ -243,19 +242,21 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     };
 
     let fill_trending_music = |direction: HeadTo| {
-        fill!("trending music", direction, state_original, notifier);
+        // fill!("trending music", direction, state_original, notifier);
+        state_original.lock().unwrap().to_fetch = ui::FillFetch::Trending(1_usize);
+        notifier.notify_all();
     };
     let fill_community_music = |direction: HeadTo| {
-        fill!("community music", direction, state_original, notifier);
+        //   fill!("community music", direction, state_original, notifier);
     };
     let fill_recents_music = |direction: HeadTo| {
-        fill!("recents music", direction, state_original, notifier);
+        // fill!("recents music", direction, state_original, notifier);
     };
     let fill_favourates_music = |direction: HeadTo| {
-        fill!("favourates music", direction, state_original, notifier);
+        // fill!("favourates music", direction, state_original, notifier);
     };
     let fill_following_artist = |direction: HeadTo| {
-        fill!("following artist", direction, state_original, notifier);
+        // fill!("following artist", direction, state_original, notifier);
     };
     let handle_play_advance = |direction: HeadTo| {
         advance_music_list(direction);
@@ -322,84 +323,74 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         }
     };
 
-    let listener_looop = || loop {
-        async {
-            if event::poll(Duration::from_millis(REFRESH_RATE)).unwrap() {
-                match event::read().unwrap() {
-                    Event::Key(key) => match key.code {
-                        KeyCode::Down | KeyCode::PageDown => {
-                            handle_down();
-                        }
-                        KeyCode::Up | KeyCode::PageUp => {
-                            handle_up();
-                        }
-                        KeyCode::Right | KeyCode::Tab => {
-                            moveto_next_window();
-                        }
-                        KeyCode::Left | KeyCode::BackTab => {
-                            moveto_prev_window();
-                        }
-                        KeyCode::Esc => {
-                            handle_esc();
-                        }
-                        KeyCode::Enter => {
-                            handle_enter();
-                        }
-                        KeyCode::Backspace | KeyCode::Delete => {
-                            handle_backspace();
-                        }
-                        KeyCode::Char(ch) => {
-                            /* If searchbar is active register every char key as input term */
-                            if state_original.lock().unwrap().active == ui::Window::Searchbar {
-                                handle_search_input(ch);
-                            }
-                            /* Handle single character key shortcut as it is not in input */
-                            else if ch == SEARCH_SH_KEY {
-                                activate_search();
-                            } else if ch == HELP_SH_KEY {
-                                show_help();
-                            } else if ch == QUIT_SH_KEY {
-                                quit();
-                                return;
-                            } else if ch == NEXT_SH_KEY {
-                                if key.modifiers.contains(KeyModifiers::CONTROL) {
-                                    handle_play_advance(HeadTo::Next);
-                                } else {
-                                    handle_page_nav(HeadTo::Next);
-                                }
-                            } else if ch == PREV_SH_KEY {
-                                if key.modifiers.contains(KeyModifiers::CONTROL) {
-                                    handle_play_advance(HeadTo::Prev);
-                                } else {
-                                    handle_page_nav(HeadTo::Prev);
-                                }
-                            } else if ch == SEEK_F_KEY {
-                            } else if ch == SEEK_B_KEY {
-                            } else if ch == TOGGLE_PAUSE_KEY {
-                                state_original.lock().unwrap().toggle_pause(notifier);
-                            }
-                        }
-                        _ => {}
-                    },
-                    Event::Resize(..) => {
-                        // just update the layout
-                        notifier.notify_one();
+    'listener_loop: loop {
+        if event::poll(Duration::from_millis(REFRESH_RATE)).unwrap() {
+            match event::read().unwrap() {
+                Event::Key(key) => match key.code {
+                    KeyCode::Down | KeyCode::PageDown => {
+                        handle_down();
                     }
-                    Event::Mouse(..) => {}
+                    KeyCode::Up | KeyCode::PageUp => {
+                        handle_up();
+                    }
+                    KeyCode::Right | KeyCode::Tab => {
+                        moveto_next_window();
+                    }
+                    KeyCode::Left | KeyCode::BackTab => {
+                        moveto_prev_window();
+                    }
+                    KeyCode::Esc => {
+                        handle_esc();
+                    }
+                    KeyCode::Enter => {
+                        handle_enter();
+                    }
+                    KeyCode::Backspace | KeyCode::Delete => {
+                        handle_backspace();
+                    }
+                    KeyCode::Char(ch) => {
+                        /* If searchbar is active register every char key as input term */
+                        if state_original.lock().unwrap().active == ui::Window::Searchbar {
+                            handle_search_input(ch);
+                        }
+                        /* Handle single character key shortcut as it is not in input */
+                        else if ch == SEARCH_SH_KEY {
+                            activate_search();
+                        } else if ch == HELP_SH_KEY {
+                            show_help();
+                        } else if ch == QUIT_SH_KEY {
+                            quit();
+                            break 'listener_loop;
+                        } else if ch == NEXT_SH_KEY {
+                            if key.modifiers.contains(KeyModifiers::CONTROL) {
+                                handle_play_advance(HeadTo::Next);
+                            } else {
+                                handle_page_nav(HeadTo::Next);
+                            }
+                        } else if ch == PREV_SH_KEY {
+                            if key.modifiers.contains(KeyModifiers::CONTROL) {
+                                handle_play_advance(HeadTo::Prev);
+                            } else {
+                                handle_page_nav(HeadTo::Prev);
+                            }
+                        } else if ch == SEEK_F_KEY {
+                        } else if ch == SEEK_B_KEY {
+                        } else if ch == TOGGLE_PAUSE_KEY {
+                            state_original.lock().unwrap().toggle_pause(notifier);
+                        }
+                    }
+                    _ => {}
+                },
+                Event::Resize(..) => {
+                    // just update the layout
+                    notifier.notify_all();
                 }
-            } else {
-                if state_original.lock().unwrap().refresh_time_elapsed() {
-                    notifier.notify_one();
-                }
+                Event::Mouse(..) => {}
+            }
+        } else {
+            if state_original.lock().unwrap().refresh_time_elapsed() {
+                notifier.notify_all();
             }
         }
-    };
-
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(async {
-            listener_looop().await;
-        });
+    }
 }
