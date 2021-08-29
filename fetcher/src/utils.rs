@@ -8,6 +8,7 @@ const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KH
 const MUSIC_FIELDS: &str = "fields=videoId,title,author,lengthSeconds";
 const ITEM_PER_PAGE: usize = 10;
 const REGION: &str = "region=np";
+const SEARCH_TYPE: [&str; 3] = ["video", "playlist", "channel"];
 
 impl super::ExtendDuration for Duration {
     fn to_string(self) -> String {
@@ -106,17 +107,16 @@ impl Fetcher {
             );
 
             let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 2).await;
-
-            self.trending_now = match obj {
+            match obj {
                 Ok(mut res) => {
                     res.shrink_to_fit();
-                    Some(res)
+                    self.trending_now = Some(res);
                 }
                 Err(e) => return Err(e),
-            };
+            }
         }
-        let trending_now = self.trending_now.as_ref().unwrap();
 
+        let trending_now = self.trending_now.as_ref().unwrap();
         let lower_limit = ITEM_PER_PAGE * page;
         let upper_limit = std::cmp::min(trending_now.len(), lower_limit + ITEM_PER_PAGE);
         if lower_limit >= upper_limit {
