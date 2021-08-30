@@ -164,14 +164,14 @@ pub struct PlaylistUnit {
 
 #[derive(Clone)]
 pub enum SidebarOption {
-    Trending,
-    YoutubeCommunity,
-    RecentlyPlayed,
-    Followings,
-    Favourates,
-    MyPlalist,
-    Search,
-    None,
+    Trending = 0,
+    YoutubeCommunity = 1,
+    RecentlyPlayed = 2,
+    Followings = 3,
+    Favourates = 4,
+    MyPlalist = 5,
+    Search = 6,
+    None = 7,
 }
 
 #[derive(PartialEq, Clone)]
@@ -194,8 +194,8 @@ pub struct BottomState {
 #[derive(Clone)]
 pub enum FillFetch {
     None,
-    Search(usize, usize, usize), // Page number of Music, Playlist and Artist
-    Trending(usize), // Page number of trending page
+    Search(String, [Option<usize>; 3]), // query & page number of Music, Playlist, Artist
+    Trending(usize),                    // Page number of trending page
 }
 
 pub struct State<'p> {
@@ -209,7 +209,11 @@ pub struct State<'p> {
     pub playlistbar: VecDeque<PlaylistUnit>,
     pub artistbar: VecDeque<ArtistUnit>,
     bottom: BottomState,
-    search: String,
+    // First string is the actual string being typed on searchbar (to actually render)
+    // If (musicbar or playlistbar or artistbar) is filled with search result
+    // second memebr is Some(result_of_this_query) (to send to fetcher)
+    // second member is the string of searchbar when use pressed ENTER last time in searchbar
+    pub search: (String, String),
     pub active: Window,
     pub fetched_page: [Option<usize>; 3],
     player: libmpv::Mpv,

@@ -53,7 +53,7 @@ impl<'parent> ui::TopLayout {
         };
         let text = text::Spans::from(vec![
             Span::styled(
-                state.search.as_str(),
+                state.search.0.as_str(),
                 Style::default()
                     .fg(Color::LightYellow)
                     .add_modifier(Modifier::ITALIC),
@@ -382,7 +382,7 @@ impl Default for ui::State<'_> {
             musicbar: VecDeque::new(),
             playlistbar: VecDeque::new(),
             artistbar: VecDeque::new(),
-            search: String::new(),
+            search: (String::new(), String::new()),
             active: ui::Window::Sidebar,
             fetched_page: [None; 3],
             bottom: ui::BottomState {

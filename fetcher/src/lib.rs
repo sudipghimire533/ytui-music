@@ -9,20 +9,24 @@ pub trait ExtendDuration {
     fn from_string(inp: &str) -> Duration;
 }
 
-fn seconds_to_str<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn seconds_to_str<'de, D>(input: D) -> Result<String, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let sec: u64 = Deserialize::deserialize(deserializer)?;
+    // Note: If duration is set to 0:0 from the json response
+    // the the video may be live ({islive: true, ..} in response)
+    // to keep things simple ignore all those details and this will simply return "0:0"
+    // this should be documented to inform the user
+    let sec: u64 = Deserialize::deserialize(input)?;
     let dur: Duration = Duration::from_secs(sec);
     Ok(dur.to_string())
 }
 
-fn yt_vid_id_to_url<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn yt_vid_id_to_url<'de, D>(input: D) -> Result<String, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let id: &str = Deserialize::deserialize(deserializer)?;
+    let id: &str = Deserialize::deserialize(input)?;
     Ok(format!("https://www.youtube.com/watch?v={id}", id = id))
 }
 
@@ -51,9 +55,16 @@ pub struct PlaylistUnit {
     pub name: String,
 }
 
+struct SearchRes {
+    music: (Vec<MusicUnit>, u32),
+    playlist: (Vec<PlaylistUnit>, u32),
+    artist: (Vec<ArtistUnit>, u32),
+}
+
 pub struct Fetcher {
     trending_now: Option<Vec<MusicUnit>>,
     servers: [&'static str; 6],
+    search_res: (String, SearchRes),
     client: reqwest::Client,
     active_server_index: usize,
 }

@@ -7,8 +7,7 @@ use tokio;
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36";
 const MUSIC_FIELDS: &str = "fields=videoId,title,author,lengthSeconds";
 const ITEM_PER_PAGE: usize = 10;
-const REGION: &str = "region=np";
-const SEARCH_TYPE: [&str; 3] = ["video", "playlist", "channel"];
+const REGION: &str = "region=NP";
 
 impl super::ExtendDuration for Duration {
     fn to_string(self) -> String {
@@ -35,6 +34,14 @@ impl Fetcher {
     pub fn new() -> Self {
         super::Fetcher {
             trending_now: None,
+            search_res: (
+                String::new(),
+                super::SearchRes {
+                    music: (Vec::new(), 0),
+                    playlist: (Vec::new(), 0),
+                    artist: (Vec::new(), 0),
+                },
+            ),
             servers: [
                 "https://invidious.snopyta.org/api/v1",
                 "https://vid.puffyan.us/api/v1",
@@ -91,7 +98,7 @@ impl Fetcher {
                 self.change_server();
                 Err(ReturnAction::Retry)
             }
-            _ => Err(ReturnAction::Failed),
+            Err(_) => Err(ReturnAction::Failed),
         }
     }
 
@@ -123,6 +130,47 @@ impl Fetcher {
             return Err(ReturnAction::EOR);
         }
         Ok(&trending_now[lower_limit..upper_limit])
+    }
+
+    pub async fn search_music<'me, 'inp>(
+        &'me mut self,
+        query: &'inp str,
+        page: usize,
+    ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
+        let mut prev_res = Vec::new();
+        // Query string is same. So it is probably the request for next page
+        if query == &self.search_res.0 {
+            let lower_limit = ITEM_PER_PAGE * page as usize;
+            let upper_limit =
+                std::cmp::min(self.search_res.1.music.0.len(), lower_limit + ITEM_PER_PAGE);
+
+            // Before reassigning the search result get the unserved search result from previous fetch
+            if upper_limit > lower_limit {
+                prev_res = self.search_res.1.music.0[lower_limit..upper_limit].to_vec();
+            }
+        }
+
+        if prev_res.len() < ITEM_PER_PAGE {
+            self.search_res.1.music.1 += 1;
+            let suffix = format!(
+                "/search?q={query}&type=video&{region}&page={page}&{fields}",
+                query = query,
+                region = REGION,
+                fields = MUSIC_FIELDS,
+                page = self.search_res.1.music.1
+            );
+            let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 1).await;
+            match obj {
+                Ok(res) => {
+                    self.search_res.1.music.0 = res;
+                    let remaining = ITEM_PER_PAGE - prev_res.len();
+                    prev_res.extend_from_slice(&self.search_res.1.music.0[0..remaining]);
+                }
+                Err(e) => return Err(e),
+            };
+        }
+
+        Ok(prev_res)
     }
 }
 
@@ -161,5 +209,11 @@ mod tests {
                 path: "https://www.youtube.com/watch?v=WNgO6G7uERU".to_string(),
             },
         );
+    }
+    #[tokio::test]
+    async fn check_music_search() {
+        let mut fetcher = Fetcher::new();
+        let obj = fetcher.search_music("Spotify chill&cool=mix", 1).await;
+        eprintln!("{:#?}", obj);
     }
 }
