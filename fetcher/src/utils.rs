@@ -1,8 +1,6 @@
-use super::Fetcher;
+use crate::{Fetcher, ReturnAction};
 use reqwest;
-use std::collections::VecDeque;
 use std::time::Duration;
-use tokio;
 
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36";
 const MUSIC_FIELDS: &str = "fields=videoId,title,author,lengthSeconds";
@@ -61,13 +59,6 @@ impl Fetcher {
     pub fn change_server(&mut self) {
         self.active_server_index = (self.active_server_index + 1) % self.servers.len();
     }
-}
-
-#[derive(Debug)]
-pub enum ReturnAction {
-    Failed,
-    Retry,
-    EOR, // End Of Result
 }
 
 impl Fetcher {
@@ -163,8 +154,14 @@ impl Fetcher {
             match obj {
                 Ok(res) => {
                     self.search_res.1.music.0 = res;
-                    let remaining = ITEM_PER_PAGE - prev_res.len();
-                    prev_res.extend_from_slice(&self.search_res.1.music.0[0..remaining]);
+                    let upper_limit = std::cmp::min(
+                        self.search_res.1.music.0.len(),
+                        ITEM_PER_PAGE - prev_res.len(),
+                    );
+                    prev_res.extend_from_slice(&self.search_res.1.music.0[0..upper_limit]);
+                    if prev_res.is_empty() {
+                        return Err(ReturnAction::EOR);
+                    }
                 }
                 Err(e) => return Err(e),
             };

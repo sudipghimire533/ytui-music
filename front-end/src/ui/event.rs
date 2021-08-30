@@ -135,10 +135,10 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     let activate_search = || {
         let mut state = state_original.lock().unwrap();
         state.active = ui::Window::Searchbar;
-        state
-            .sidebar
-            .0
-            .select(Some(ui::SidebarOption::Search as usize));
+        // Mark search option to be real active
+        // this bring state to same state weather
+        // activated from shortcut key or from sidebar
+        state.sidebar.1 = ui::SidebarOption::Search;
         notifier.notify_all();
     };
     let show_help = || {

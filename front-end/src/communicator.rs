@@ -34,8 +34,12 @@ pub async fn communicator<'st, 'nt>(
                         state.musicbar = VecDeque::from(Vec::from(data));
                         state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = Some(page);
                     }
-                    Err(_e) => {
-                        state.help = "Fetch error..";
+                    Err(e) => {
+                        match e {
+                            fetcher::ReturnAction::EOR => state.help = "Trending EOR..",
+                            fetcher::ReturnAction::Failed => state.help = "Fetch error..",
+                            fetcher::ReturnAction::Retry => { /* TODO: retry */ }
+                        }
                         state.musicbar = VecDeque::new();
                         state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
                     }
@@ -57,8 +61,12 @@ pub async fn communicator<'st, 'nt>(
                             state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] =
                                 Some(m_page as usize);
                         }
-                        Err(_e) => {
-                            state.help = "Search error..";
+                        Err(e) => {
+                            match e {
+                                fetcher::ReturnAction::Failed => state.help = "Search error..",
+                                fetcher::ReturnAction::EOR => state.help = "Search EOR..",
+                                fetcher::ReturnAction::Retry => { /* TODO: retry */ }
+                            }
                             state.musicbar = VecDeque::new();
                             state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
                         }

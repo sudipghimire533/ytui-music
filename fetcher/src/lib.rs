@@ -61,6 +61,13 @@ struct SearchRes {
     artist: (Vec<ArtistUnit>, u32),
 }
 
+#[derive(Debug)]
+pub enum ReturnAction {
+    Failed,
+    Retry,
+    EOR, // End Of Result
+}
+
 pub struct Fetcher {
     trending_now: Option<Vec<MusicUnit>>,
     servers: [&'static str; 6],
