@@ -8,8 +8,8 @@ use std::{
 };
 
 pub const MIDDLE_MUSIC_INDEX: usize = 0;
-pub const MIDDLE_PLAYLIST_INDEX: usize = 0;
-pub const MIDDLE_ARTIST_INDEX: usize = 0;
+pub const MIDDLE_PLAYLIST_INDEX: usize = 1;
+pub const MIDDLE_ARTIST_INDEX: usize = 2;
 const SEARCH_SH_KEY: char = '/';
 const HELP_SH_KEY: char = '?';
 const NEXT_SH_KEY: char = 'n';
@@ -67,6 +67,37 @@ fn get_page(current: &Option<usize>, direction: HeadTo) -> usize {
         },
     };
     page as usize
+}
+
+macro_rules! fill_search {
+    ("music", $state_original: expr, $notifier: expr, $direction: expr) => {
+        fill_search!("@internal-core", $state_original, $notifier, $direction, MIDDLE_MUSIC_INDEX);
+    };
+    ("playlist", $state_original: expr, $notifier: expr, $direction: expr) => {
+        fill_search!("@internal-core", $state_original, $notifier, $direction, MIDDLE_PLAYLIST_INDEX);
+    };
+    ("artist", $state_original: expr, $notifier: expr, $direction: expr) => {
+        fill_search!("@internal-core", $state_original, $notifier, $direction, MIDDLE_ARTIST_INDEX);
+    };
+    ("all", $state_original: expr, $notifier: expr, $direction: expr) => {
+        fill_search!("@internal-core", $state_original, $notifier, $direction, MIDDLE_MUSIC_INDEX, MIDDLE_PLAYLIST_INDEX, MIDDLE_ARTIST_INDEX);
+        $state_original.lock().unwrap().active = ui::Window::Musicbar;
+        $notifier.notify_all();
+    };
+
+    ("@internal-core", $state_original: expr, $notifier: expr, $direction: expr, $($win_index: expr),+  ) => {{
+        let mut state = $state_original.lock().unwrap();
+        let mut to_search = [None; 3];
+        #[allow(unused_mut)]
+        let mut page;
+        $(
+            page = get_page(&state.fetched_page[$win_index], $direction);
+            to_search[$win_index] = Some(page);
+        )+
+        state.to_fetch = ui::FillFetch::Search(state.search.1.clone(), to_search);
+        state.help = "Searching..";
+        $notifier.notify_all();
+    }};
 }
 
 pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut Arc<Condvar>) {
@@ -165,25 +196,13 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     };
 
     let fill_search_music = |direction: HeadTo| {
-        let mut state = state_original.lock().unwrap();
-        let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
-        state.to_fetch = ui::FillFetch::Search(state.search.1.clone(), [Some(page), None, None]);
-        state.help = "Searching..";
-        notifier.notify_all();
+        fill_search!("music", state_original, notifier, direction);
     };
     let fill_search_playlist = |direction: HeadTo| {
-        let mut state = state_original.lock().unwrap();
-        let page = get_page(&state.fetched_page[MIDDLE_PLAYLIST_INDEX], direction);
-        state.to_fetch = ui::FillFetch::Search(state.search.1.clone(), [None, Some(page), None]);
-        state.help = "Searching..";
-        notifier.notify_all();
+        fill_search!("playlist", state_original, notifier, direction);
     };
     let fill_search_artist = |direction: HeadTo| {
-        let mut state = state_original.lock().unwrap();
-        let page = get_page(&state.fetched_page[MIDDLE_ARTIST_INDEX], direction);
-        state.to_fetch = ui::FillFetch::Search(state.search.1.clone(), [None, None, Some(page)]);
-        state.help = "Searching..";
-        notifier.notify_all();
+        fill_search!("artist", state_original, notifier, direction);
     };
 
     let fill_trending_music = |direction: HeadTo| {
@@ -293,9 +312,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                 state.search.1 = state.search.0.trim().to_string();
                 state.fetched_page = [None; 3];
                 std::mem::drop(state);
-                fill_search_music(HeadTo::Initial);
-                fill_search_playlist(HeadTo::Initial);
-                fill_search_artist(HeadTo::Initial);
+                fill_search!("all", state_original, notifier, HeadTo::Initial);
             }
             _ => {}
         }

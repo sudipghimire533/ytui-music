@@ -111,6 +111,7 @@ pub async fn communicator<'st, 'nt>(
                         fetcher::Fetcher::search_playlist
                     );
                 }
+
                 if let Some(a_page) = a_page {
                     search_request!(
                         query,

@@ -10,6 +10,7 @@ const FIELDS: [&str; 3] = [
 ];
 const ITEM_PER_PAGE: usize = 10;
 const REGION: &str = "region=NP";
+const FILTER_TYPE: [&str; 3] = ["music", "playlist", "channel"];
 
 impl crate::ExtendDuration for Duration {
     fn to_string(self) -> String {
@@ -42,6 +43,7 @@ impl Fetcher {
                     music: Vec::new(),
                     playlist: Vec::new(),
                     artist: Vec::new(),
+                    last_fetched: -1,
                 },
             ),
             servers: [
@@ -73,9 +75,8 @@ macro_rules! search {
             $query,
             $page,
             $fetcher.search_res.1.music,
-            "music",
-            super::MusicUnit,
-            FIELDS[0]
+            0,
+            super::MusicUnit
         )
     };
     ("playlist", $fetcher: expr, $query: expr, $page: expr) => {
@@ -85,9 +86,8 @@ macro_rules! search {
             $query,
             $page,
             $fetcher.search_res.1.playlist,
-            "playlist",
-            super::PlaylistUnit,
-            FIELDS[1]
+            1,
+            super::PlaylistUnit
         )
     };
     ("artist", $fetcher: expr, $query: expr, $page: expr) => {
@@ -97,31 +97,31 @@ macro_rules! search {
             $query,
             $page,
             $fetcher.search_res.1.artist,
-            "channel",
-            super::ArtistUnit,
-            FIELDS[2]
+            2,
+            super::ArtistUnit
         )
     };
 
-    ("@internal-core", $fetcher: expr, $query: expr, $page: expr, $store_target: expr, $s_type: expr, $unit_type: ty, $fields: expr) => {{
+    ("@internal-core", $fetcher: expr, $query: expr, $page: expr, $store_target: expr, $filter_index: expr, $unit_type: ty) => {{
         let suffix = format!(
             "/search?q={query}&type={s_type}&{region}&page={page}&{fields}",
             query = $query,
-            s_type = $s_type,
+            s_type = FILTER_TYPE[$filter_index],
             region = REGION,
-            fields = $fields,
+            fields = FIELDS[$filter_index],
             page = $page
         );
         let lower_limit = $page * ITEM_PER_PAGE;
         let mut upper_limit = std::cmp::min($store_target.len(), lower_limit + ITEM_PER_PAGE);
 
         let is_new_query = *$query != $fetcher.search_res.0;
-        let insufficient_data =
-            upper_limit.checked_sub(lower_limit).unwrap_or_default() < ITEM_PER_PAGE;
+        let is_new_type = $fetcher.search_res.1.last_fetched != $filter_index;
+        let insufficient_data = upper_limit.checked_sub(lower_limit).unwrap_or(0) < ITEM_PER_PAGE;
 
-        if is_new_query || insufficient_data {
+        $fetcher.search_res.1.last_fetched = $filter_index;
+        if is_new_query || insufficient_data || is_new_type {
             let obj = $fetcher.send_request::<Vec<$unit_type>>(&suffix, 1).await;
-            if is_new_query {
+            if is_new_query || is_new_type {
                 $store_target.clear();
             }
             match obj {

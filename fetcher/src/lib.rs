@@ -82,6 +82,7 @@ struct SearchRes {
     music: Vec<MusicUnit>,
     playlist: Vec<PlaylistUnit>,
     artist: Vec<ArtistUnit>,
+    last_fetched: i8,
 }
 
 #[derive(Debug)]
