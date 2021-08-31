@@ -38,6 +38,7 @@ impl Fetcher {
         super::Fetcher {
             trending_now: None,
             playlist_content: (String::new(), Vec::new()),
+            artist_content: (String::new(), Vec::new(), Vec::new()),
             search_res: (
                 String::new(),
                 super::SearchRes {
@@ -214,7 +215,7 @@ impl Fetcher {
         let lower_limit = page * ITEM_PER_PAGE;
 
         let is_new_id = playlist_id != &self.playlist_content.0;
-        if is_new_id || self.playlist_content.1.len() == 0 {
+        if is_new_id || self.playlist_content.1.is_empty() {
             self.playlist_content.0 = playlist_id.to_string();
             let suffix = format!(
                 "/playlists/{playlist_id}?fields=videos",
@@ -238,6 +239,75 @@ impl Fetcher {
             Err(ReturnAction::EOR)
         } else {
             let mut res = self.playlist_content.1[lower_limit..upper_limit].to_vec();
+            res.shrink_to_fit();
+            Ok(res)
+        }
+    }
+
+    pub async fn get_playlist_of_channel(
+        &mut self,
+        channel_id: &str,
+        page: usize,
+    ) -> Result<Vec<super::PlaylistUnit>, ReturnAction> {
+        let lower_limit = page * ITEM_PER_PAGE;
+
+        let is_new_id = channel_id != &self.artist_content.0;
+        if is_new_id || self.artist_content.2.is_empty() {
+            self.artist_content.0 = channel_id.to_string();
+            let suffix = format!(
+                "/channels/{channel_id}/playlists?fields=playlists",
+                channel_id = channel_id
+            );
+
+            let obj = self
+                .send_request::<super::FetchArtistPlaylist>(&suffix, 1)
+                .await;
+            match obj {
+                Ok(mut data) => {
+                    data.playlists.shrink_to_fit();
+                    self.artist_content.2 = data.playlists;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        let upper_limit = std::cmp::min(self.artist_content.2.len(), lower_limit + ITEM_PER_PAGE);
+        if lower_limit >= upper_limit {
+            Err(ReturnAction::EOR)
+        } else {
+            let mut res = self.artist_content.2[lower_limit..upper_limit].to_vec();
+            res.shrink_to_fit();
+            Ok(res)
+        }
+    }
+
+    pub async fn get_videos_of_channel(
+        &mut self,
+        channel_id: &str,
+        page: usize,
+    ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
+        let lower_limit = page * ITEM_PER_PAGE;
+
+        let is_new_id = channel_id != &self.artist_content.0;
+        if is_new_id || self.artist_content.1.is_empty() {
+            self.artist_content.0 = channel_id.to_string();
+            let suffix = format!("/channels/{channel_id}/videos", channel_id = channel_id);
+
+            let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 1).await;
+            match obj {
+                Ok(mut data) => {
+                    data.shrink_to_fit();
+                    self.artist_content.1 = data;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        let upper_limit = std::cmp::min(self.artist_content.1.len(), lower_limit + ITEM_PER_PAGE);
+        if lower_limit >= upper_limit {
+            Err(ReturnAction::EOR)
+        } else {
+            let mut res = self.artist_content.1[lower_limit..upper_limit].to_vec();
             res.shrink_to_fit();
             Ok(res)
         }
@@ -330,6 +400,24 @@ mod tests {
         let mut fetcher = Fetcher::new();
         let obj = fetcher
             .get_playlist_content("PLN4UKncphTTE0cIHYDQy534mSToKtFlhA", 0)
+            .await;
+        eprintln!("{:#?}", obj);
+    }
+
+    #[tokio::test]
+    async fn check_artist_content_music() {
+        let mut fetcher = Fetcher::new();
+        let obj = fetcher
+            .get_videos_of_channel("UCJEog_sDzuGyLok8f4p0HRA", 0)
+            .await;
+        eprintln!("{:#?}", obj);
+    }
+
+    #[tokio::test]
+    async fn check_artist_content_playlist() {
+        let mut fetcher = Fetcher::new();
+        let obj = fetcher
+            .get_playlist_of_channel("UCJEog_sDzuGyLok8f4p0HRA", 0)
             .await;
         eprintln!("{:#?}", obj);
     }

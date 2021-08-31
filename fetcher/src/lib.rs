@@ -47,6 +47,11 @@ struct FetchPlaylistContentRes {
     videos: Vec<MusicUnit>,
 }
 
+#[derive(Deserialize, Clone, PartialEq)]
+struct FetchArtistPlaylist {
+    playlists: Vec<PlaylistUnit>,
+}
+
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct MusicUnit {
     #[serde(default)]
@@ -102,6 +107,7 @@ pub enum ReturnAction {
 pub struct Fetcher {
     trending_now: Option<Vec<MusicUnit>>,
     playlist_content: (String, Vec<MusicUnit>),
+    artist_content: (String, Vec<MusicUnit>, Vec<PlaylistUnit>),
     servers: [&'static str; 6],
     search_res: (String, SearchRes),
     client: reqwest::Client,
