@@ -76,7 +76,7 @@ pub async fn communicator<'st, 'nt>(
                             fetcher::ReturnAction::EOR => state.help = "Trending EOR..",
                             fetcher::ReturnAction::Failed => state.help = "Fetch Error..",
                             fetcher::ReturnAction::Retry => {
-                                state.help = "temp Error..";
+                                state.help = "temp error..";
                                 /* TODO: retry */
                             }
                         }

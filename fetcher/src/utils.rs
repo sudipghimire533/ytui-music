@@ -3,7 +3,11 @@ use reqwest;
 use std::time::Duration;
 
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36";
-const MUSIC_FIELDS: &str = "fields=videoId,title,author,lengthSeconds";
+const FIELDS: [&str; 3] = [
+    "fields=videoId,title,author,lengthSeconds",
+    "fields=title,playlistId,author",
+    "fields=author,authorId",
+];
 const ITEM_PER_PAGE: usize = 10;
 const REGION: &str = "region=NP";
 
@@ -70,7 +74,8 @@ macro_rules! search {
             $page,
             $fetcher.search_res.1.music,
             "music",
-            super::MusicUnit
+            super::MusicUnit,
+            FIELDS[0]
         )
     };
     ("playlist", $fetcher: expr, $query: expr, $page: expr) => {
@@ -81,7 +86,8 @@ macro_rules! search {
             $page,
             $fetcher.search_res.1.playlist,
             "playlist",
-            super::PlaylistUnit
+            super::PlaylistUnit,
+            FIELDS[1]
         )
     };
     ("artist", $fetcher: expr, $query: expr, $page: expr) => {
@@ -92,17 +98,18 @@ macro_rules! search {
             $page,
             $fetcher.search_res.1.artist,
             "channel",
-            super::ArtistUnit
+            super::ArtistUnit,
+            FIELDS[2]
         )
     };
 
-    ("@internal-core", $fetcher: expr, $query: expr, $page: expr, $store_target: expr, $s_type: expr, $unit_type: ty) => {{
+    ("@internal-core", $fetcher: expr, $query: expr, $page: expr, $store_target: expr, $s_type: expr, $unit_type: ty, $fields: expr) => {{
         let suffix = format!(
             "/search?q={query}&type={s_type}&{region}&page={page}&{fields}",
             query = $query,
             s_type = $s_type,
             region = REGION,
-            fields = MUSIC_FIELDS,
+            fields = $fields,
             page = $page
         );
         let lower_limit = $page * ITEM_PER_PAGE;
@@ -147,10 +154,9 @@ impl Fetcher {
         let res = self
             .client
             .get(self.servers[self.active_server_index].to_string() + path)
-            .timeout(std::time::Duration::from_secs(5))
+            // .timeout(std::time::Duration::from_secs(5))
             .send()
             .await;
-
         match res {
             Ok(response) => {
                 if let Ok(obj) = response.json::<Res>().await {
@@ -175,7 +181,7 @@ impl Fetcher {
             let suffix = format!(
                 "/trending?type=Music&{region}&{music_field}",
                 region = REGION,
-                music_field = MUSIC_FIELDS
+                music_field = FIELDS[0]
             );
 
             let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 2).await;
@@ -197,25 +203,25 @@ impl Fetcher {
         Ok(&trending_now[lower_limit..upper_limit])
     }
 
-    pub async fn search_music<'me, 'inp>(
-        &'me mut self,
-        query: &'inp str,
+    pub async fn search_music(
+        &mut self,
+        query: &str,
         page: usize,
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
         search!("music", self, query, page)
     }
 
-    pub async fn search_playlist<'me, 'inp>(
-        &'me mut self,
-        query: &'inp str,
+    pub async fn search_playlist(
+        &mut self,
+        query: &str,
         page: usize,
     ) -> Result<Vec<super::PlaylistUnit>, ReturnAction> {
         search!("playlist", self, query, page)
     }
 
-    pub async fn search_artist<'me, 'inp>(
-        &'me mut self,
-        query: &'inp str,
+    pub async fn search_artist(
+        &mut self,
+        query: &str,
         page: usize,
     ) -> Result<Vec<super::ArtistUnit>, ReturnAction> {
         search!("artist", self, query, page)
@@ -261,7 +267,21 @@ mod tests {
     #[tokio::test]
     async fn check_music_search() {
         let mut fetcher = Fetcher::new();
-        let obj = fetcher.search_music("Spotify chill&cool=mix", &mut 1).await;
+        let obj = fetcher.search_music("Bartika Eam Rai", 1).await;
+        eprintln!("{:#?}", obj);
+    }
+
+    #[tokio::test]
+    async fn check_playlist_search() {
+        let mut fetcher = Fetcher::new();
+        let obj = fetcher.search_playlist("Spotify Chill mix", 1).await;
+        eprintln!("{:#?}", obj);
+    }
+
+    #[tokio::test]
+    async fn check_artist_search() {
+        let mut fetcher = Fetcher::new();
+        let obj = fetcher.search_artist("Rachana Dahal", 1).await;
         eprintln!("{:#?}", obj);
     }
 }

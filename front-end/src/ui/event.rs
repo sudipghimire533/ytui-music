@@ -285,8 +285,8 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                 state.fetched_page = [None; 3];
                 std::mem::drop(state);
                 fill_search_music(HeadTo::Initial);
-                //  fill_search_playlist(HeadTo::Initial);
-                // fill_search_artist(HeadTo::Initial);
+                fill_search_playlist(HeadTo::Initial);
+                //fill_search_artist(HeadTo::Initial);
             }
             _ => {}
         }

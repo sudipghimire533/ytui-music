@@ -48,11 +48,18 @@ pub struct MusicUnit {
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct ArtistUnit {
+    #[serde(alias = "author")]
     pub name: String,
+    #[serde(alias = "authorId")]
+    pub id: String,
 }
 #[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct PlaylistUnit {
+    #[serde(alias = "title")]
     pub name: String,
+    #[serde(alias = "playlistId")]
+    pub id: String,
+    pub author: String,
 }
 
 struct SearchRes {
