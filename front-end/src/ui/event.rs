@@ -1,4 +1,3 @@
-use crate::test_backend;
 use crate::ui;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use std::collections::VecDeque;
@@ -172,8 +171,20 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.help = "Searching..";
         notifier.notify_all();
     };
-    let fill_search_playlist = |direction: HeadTo| {};
-    let fill_search_artist = |direction: HeadTo| {};
+    let fill_search_playlist = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        let page = get_page(&state.fetched_page[MIDDLE_PLAYLIST_INDEX], direction);
+        state.to_fetch = ui::FillFetch::Search(state.search.1.clone(), [None, Some(page), None]);
+        state.help = "Searching..";
+        notifier.notify_all();
+    };
+    let fill_search_artist = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        let page = get_page(&state.fetched_page[MIDDLE_ARTIST_INDEX], direction);
+        state.to_fetch = ui::FillFetch::Search(state.search.1.clone(), [None, None, Some(page)]);
+        state.help = "Searching..";
+        notifier.notify_all();
+    };
 
     let fill_trending_music = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
@@ -239,15 +250,26 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             ui::Window::Sidebar => {
                 let side_select =
                     ui::SidebarOption::try_from(state.sidebar.0.selected().unwrap()).unwrap();
-                std::mem::drop(state);
 
                 match side_select {
-                    ui::SidebarOption::Trending => fill_trending_music(HeadTo::Initial),
-                    ui::SidebarOption::YoutubeCommunity => fill_community_music(HeadTo::Initial),
-                    ui::SidebarOption::Favourates => fill_favourates_music(HeadTo::Initial),
-                    ui::SidebarOption::Followings => fill_following_artist(HeadTo::Initial),
-                    ui::SidebarOption::RecentlyPlayed => fill_recents_music(HeadTo::Initial),
-                    ui::SidebarOption::Search => activate_search(),
+                    ui::SidebarOption::Trending => {
+                        state.fetched_page[MIDDLE_MUSIC_INDEX] = None;
+                        drop_and_call!(state, fill_trending_music, HeadTo::Initial);
+                    }
+                    ui::SidebarOption::YoutubeCommunity => {
+                        drop_and_call!(state, fill_community_music, HeadTo::Initial);
+                    }
+                    ui::SidebarOption::Favourates => {
+                        drop_and_call!(state, fill_favourates_music, HeadTo::Initial);
+                    }
+                    ui::SidebarOption::Followings => {
+                        state.fetched_page[MIDDLE_ARTIST_INDEX] = None;
+                        drop_and_call!(state, fill_following_artist, HeadTo::Initial);
+                    }
+                    ui::SidebarOption::RecentlyPlayed => {
+                        drop_and_call!(state, fill_recents_music, HeadTo::Initial);
+                    }
+                    ui::SidebarOption::Search => drop_and_call!(state, activate_search),
                     _ => {}
                 }
                 state_original.lock().unwrap().sidebar.1 = side_select;
@@ -260,10 +282,11 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             }
             ui::Window::Searchbar => {
                 state.search.1 = state.search.0.trim().to_string();
+                state.fetched_page = [None; 3];
                 std::mem::drop(state);
-                fill_search_playlist(HeadTo::Initial);
-                fill_search_artist(HeadTo::Initial);
                 fill_search_music(HeadTo::Initial);
+                //  fill_search_playlist(HeadTo::Initial);
+                // fill_search_artist(HeadTo::Initial);
             }
             _ => {}
         }
@@ -334,9 +357,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                 Event::Mouse(..) => {}
             }
         } else {
-            if state_original.lock().unwrap().refresh_time_elapsed() {
-                notifier.notify_all();
-            }
+            notifier.notify_all();
         }
     }
 }

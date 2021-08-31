@@ -56,9 +56,9 @@ pub struct PlaylistUnit {
 }
 
 struct SearchRes {
-    music: (Vec<MusicUnit>, u32),
-    playlist: (Vec<PlaylistUnit>, u32),
-    artist: (Vec<ArtistUnit>, u32),
+    music: Vec<MusicUnit>,
+    playlist: Vec<PlaylistUnit>,
+    artist: Vec<ArtistUnit>,
 }
 
 #[derive(Debug)]

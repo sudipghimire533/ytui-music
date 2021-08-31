@@ -133,7 +133,7 @@ impl<'parent> ui::MiddleLayout {
                 ]
                 .as_ref(),
             )
-            .column_spacing(1)
+            .column_spacing(2)
             .style(Style::list_idle())
             .highlight_style(Style::list_hilight())
             .block(block);
@@ -424,7 +424,7 @@ impl ui::State<'_> {
             notifier.notify_all();
         }
     }
-    pub fn refresh_time_elapsed(&mut self) -> bool {
+    pub fn refresh_time_elapsed(&mut self) {
         // It may be better to use wait event method from mpv
         // but for that we need tp spawn seperate thread/task
         // and also we are updating the ui anway so it may also be affordable to just query mpv in
@@ -433,7 +433,6 @@ impl ui::State<'_> {
             match self.player.get_property::<i64>("audio-pts") {
                 Ok(time) => {
                     self.bottom.music_elapse = Duration::from_secs(time as u64);
-                    return true;
                 }
                 Err(_e) => {
                     // This error is generally expected to be -10 (property exist but not available
@@ -445,7 +444,6 @@ impl ui::State<'_> {
                 }
             }
         }
-        false
     }
 
     pub fn toggle_pause(&mut self, notifier: &Arc<std::sync::Condvar>) {

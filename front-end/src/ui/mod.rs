@@ -206,8 +206,8 @@ pub struct State<'p> {
     // second memeber of tuple is only changed when user press ENTER on given SidebarOption
     sidebar: (ListState, SidebarOption),
     pub musicbar: VecDeque<fetcher::MusicUnit>,
-    pub playlistbar: VecDeque<PlaylistUnit>,
-    pub artistbar: VecDeque<ArtistUnit>,
+    pub playlistbar: VecDeque<fetcher::PlaylistUnit>,
+    pub artistbar: VecDeque<fetcher::ArtistUnit>,
     bottom: BottomState,
     // First string is the actual string being typed on searchbar (to actually render)
     // If (musicbar or playlistbar or artistbar) is filled with search result

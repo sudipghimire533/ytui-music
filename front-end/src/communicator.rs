@@ -2,7 +2,44 @@ use crate::ui;
 use fetcher;
 use std::collections::VecDeque;
 use std::sync::{Arc, Condvar, Mutex};
-use tokio;
+
+macro_rules! search_request {
+    ($query: expr, $page: expr, $state_original: expr, $window_index: expr, $target: expr, $fetcher: expr, $fetcher_func: path) => {{
+        let res_data = $fetcher_func($fetcher, $query.as_str(), $page).await;
+        let mut state = $state_original.lock().unwrap();
+
+        let res;
+        match res_data {
+            Ok(data) => {
+                state.help = "Press ?";
+                res = VecDeque::from(data);
+                state.fetched_page[$window_index] = Some($page);
+            }
+            Err(e) => {
+                res = VecDeque::new();
+                match e {
+                    fetcher::ReturnAction::Failed => {
+                        state.help = "Search error..";
+                        state.fetched_page[$window_index] = None;
+                    }
+                    fetcher::ReturnAction::EOR => {
+                        state.help = "Search EOR..";
+                        state.fetched_page[$window_index] = None;
+                    }
+                    fetcher::ReturnAction::Retry => {
+                        state.help = "temp error..";
+                        /* TODO: retry */
+                    }
+                }
+            }
+        }
+
+        // $target is recived as state_original.lock().unwrap().<musibac|paylistbar|artistbar>
+        // So previous lock to state should be released
+        std::mem::drop(state);
+        $target = res;
+    }};
+}
 
 pub async fn communicator<'st, 'nt>(
     state_original: &'st mut Arc<Mutex<ui::State<'_>>>,
@@ -37,8 +74,11 @@ pub async fn communicator<'st, 'nt>(
                     Err(e) => {
                         match e {
                             fetcher::ReturnAction::EOR => state.help = "Trending EOR..",
-                            fetcher::ReturnAction::Failed => state.help = "Fetch error..",
-                            fetcher::ReturnAction::Retry => { /* TODO: retry */ }
+                            fetcher::ReturnAction::Failed => state.help = "Fetch Error..",
+                            fetcher::ReturnAction::Retry => {
+                                state.help = "temp Error..";
+                                /* TODO: retry */
+                            }
                         }
                         state.musicbar = VecDeque::new();
                         state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
@@ -50,31 +90,40 @@ pub async fn communicator<'st, 'nt>(
             }
             ui::FillFetch::Search(query, [m_page, p_page, a_page]) => {
                 if let Some(m_page) = m_page {
-                    let res_music = fetcher.search_music(query.as_str(), m_page).await;
-                    let mut state = state_original.lock().unwrap();
-
-                    match res_music {
-                        Ok(data) => {
-                            state.help = "Press ?";
-                            state.musicbar = VecDeque::from(data);
-                            state.active = ui::Window::Musicbar;
-                            state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] =
-                                Some(m_page as usize);
-                        }
-                        Err(e) => {
-                            match e {
-                                fetcher::ReturnAction::Failed => state.help = "Search error..",
-                                fetcher::ReturnAction::EOR => state.help = "Search EOR..",
-                                fetcher::ReturnAction::Retry => { /* TODO: retry */ }
-                            }
-                            state.musicbar = VecDeque::new();
-                            state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
-                        }
-                    }
+                    search_request!(
+                        query,
+                        m_page,
+                        state_original,
+                        ui::event::MIDDLE_MUSIC_INDEX,
+                        state_original.lock().unwrap().musicbar,
+                        &mut fetcher,
+                        fetcher::Fetcher::search_music
+                    );
+                }
+                if let Some(p_page) = p_page {
+                    search_request!(
+                        query,
+                        p_page,
+                        state_original,
+                        ui::event::MIDDLE_PLAYLIST_INDEX,
+                        state_original.lock().unwrap().playlistbar,
+                        &mut fetcher,
+                        fetcher::Fetcher::search_playlist
+                    );
+                }
+                if let Some(a_page) = a_page {
+                    search_request!(
+                        query,
+                        a_page,
+                        state_original,
+                        ui::event::MIDDLE_ARTIST_INDEX,
+                        state_original.lock().unwrap().artistbar,
+                        &mut fetcher,
+                        fetcher::Fetcher::search_artist
+                    );
                 }
 
-                let mut state = state_original.lock().unwrap();
-                state.to_fetch = ui::FillFetch::None;
+                state_original.lock().unwrap().to_fetch = ui::FillFetch::None;
                 notifier.notify_all();
             }
         }

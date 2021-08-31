@@ -7,7 +7,7 @@ const MUSIC_FIELDS: &str = "fields=videoId,title,author,lengthSeconds";
 const ITEM_PER_PAGE: usize = 10;
 const REGION: &str = "region=NP";
 
-impl super::ExtendDuration for Duration {
+impl crate::ExtendDuration for Duration {
     fn to_string(self) -> String {
         let seconds: u64 = self.as_secs();
         let mut res = format!(
@@ -35,9 +35,9 @@ impl Fetcher {
             search_res: (
                 String::new(),
                 super::SearchRes {
-                    music: (Vec::new(), 0),
-                    playlist: (Vec::new(), 0),
-                    artist: (Vec::new(), 0),
+                    music: Vec::new(),
+                    playlist: Vec::new(),
+                    artist: Vec::new(),
                 },
             ),
             servers: [
@@ -59,6 +59,80 @@ impl Fetcher {
     pub fn change_server(&mut self) {
         self.active_server_index = (self.active_server_index + 1) % self.servers.len();
     }
+}
+
+macro_rules! search {
+    ("music", $fetcher: expr, $query: expr, $page: expr) => {
+        search!(
+            "@internal-core",
+            $fetcher,
+            $query,
+            $page,
+            $fetcher.search_res.1.music,
+            "music",
+            super::MusicUnit
+        )
+    };
+    ("playlist", $fetcher: expr, $query: expr, $page: expr) => {
+        search!(
+            "@internal-core",
+            $fetcher,
+            $query,
+            $page,
+            $fetcher.search_res.1.playlist,
+            "playlist",
+            super::PlaylistUnit
+        )
+    };
+    ("artist", $fetcher: expr, $query: expr, $page: expr) => {
+        search!(
+            "@internal-core",
+            $fetcher,
+            $query,
+            $page,
+            $fetcher.search_res.1.artist,
+            "channel",
+            super::ArtistUnit
+        )
+    };
+
+    ("@internal-core", $fetcher: expr, $query: expr, $page: expr, $store_target: expr, $s_type: expr, $unit_type: ty) => {{
+        let suffix = format!(
+            "/search?q={query}&type={s_type}&{region}&page={page}&{fields}",
+            query = $query,
+            s_type = $s_type,
+            region = REGION,
+            fields = MUSIC_FIELDS,
+            page = $page
+        );
+        let lower_limit = $page * ITEM_PER_PAGE;
+        let mut upper_limit = std::cmp::min($store_target.len(), lower_limit + ITEM_PER_PAGE);
+
+        let is_new_query = *$query != $fetcher.search_res.0;
+        let insufficient_data =
+            upper_limit.checked_sub(lower_limit).unwrap_or_default() < ITEM_PER_PAGE;
+
+        if is_new_query || insufficient_data {
+            let obj = $fetcher.send_request::<Vec<$unit_type>>(&suffix, 1).await;
+            if is_new_query {
+                $store_target.clear();
+            }
+            match obj {
+                Ok(data) => {
+                    $fetcher.search_res.0 = $query.to_string();
+                    $store_target.extend_from_slice(data.as_slice());
+                    upper_limit = std::cmp::min($store_target.len(), lower_limit + ITEM_PER_PAGE);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        if upper_limit > lower_limit {
+            Ok($store_target[lower_limit..upper_limit].to_vec())
+        } else {
+            Err(ReturnAction::EOR)
+        }
+    }};
 }
 
 impl Fetcher {
@@ -128,46 +202,23 @@ impl Fetcher {
         query: &'inp str,
         page: usize,
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
-        let mut prev_res = Vec::new();
-        // Query string is same. So it is probably the request for next page
-        if query == &self.search_res.0 {
-            let lower_limit = ITEM_PER_PAGE * page as usize;
-            let upper_limit =
-                std::cmp::min(self.search_res.1.music.0.len(), lower_limit + ITEM_PER_PAGE);
+        search!("music", self, query, page)
+    }
 
-            // Before reassigning the search result get the unserved search result from previous fetch
-            if upper_limit > lower_limit {
-                prev_res = self.search_res.1.music.0[lower_limit..upper_limit].to_vec();
-            }
-        }
+    pub async fn search_playlist<'me, 'inp>(
+        &'me mut self,
+        query: &'inp str,
+        page: usize,
+    ) -> Result<Vec<super::PlaylistUnit>, ReturnAction> {
+        search!("playlist", self, query, page)
+    }
 
-        if prev_res.len() < ITEM_PER_PAGE {
-            self.search_res.1.music.1 += 1;
-            let suffix = format!(
-                "/search?q={query}&type=video&{region}&page={page}&{fields}",
-                query = query,
-                region = REGION,
-                fields = MUSIC_FIELDS,
-                page = self.search_res.1.music.1
-            );
-            let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 1).await;
-            match obj {
-                Ok(res) => {
-                    self.search_res.1.music.0 = res;
-                    let upper_limit = std::cmp::min(
-                        self.search_res.1.music.0.len(),
-                        ITEM_PER_PAGE - prev_res.len(),
-                    );
-                    prev_res.extend_from_slice(&self.search_res.1.music.0[0..upper_limit]);
-                    if prev_res.is_empty() {
-                        return Err(ReturnAction::EOR);
-                    }
-                }
-                Err(e) => return Err(e),
-            };
-        }
-
-        Ok(prev_res)
+    pub async fn search_artist<'me, 'inp>(
+        &'me mut self,
+        query: &'inp str,
+        page: usize,
+    ) -> Result<Vec<super::ArtistUnit>, ReturnAction> {
+        search!("artist", self, query, page)
     }
 }
 
@@ -210,7 +261,7 @@ mod tests {
     #[tokio::test]
     async fn check_music_search() {
         let mut fetcher = Fetcher::new();
-        let obj = fetcher.search_music("Spotify chill&cool=mix", 1).await;
+        let obj = fetcher.search_music("Spotify chill&cool=mix", &mut 1).await;
         eprintln!("{:#?}", obj);
     }
 }

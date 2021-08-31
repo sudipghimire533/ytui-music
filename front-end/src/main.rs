@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui::event::event_sender(&mut state_for_handler, &mut cvar_for_handler)
         });
         communicate = thread::spawn(move || {
-            tokio::runtime::Builder::new_current_thread()
+            tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap()
