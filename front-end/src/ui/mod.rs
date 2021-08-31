@@ -16,7 +16,7 @@ mod shared_import {
         backend::Backend,
         layout::{self, Alignment, Constraint, Direction, Layout, Rect},
         style::{self, Color, Modifier, Style},
-        text::{self, Span, Text},
+        text::{self, Span, Text, Spans},
         widgets::{
             self, Block, BorderType, Borders, Cell, Gauge, List, ListItem, ListState, Paragraph,
             Row, Table, TableState, Tabs, Widget,

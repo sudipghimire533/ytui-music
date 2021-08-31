@@ -9,6 +9,16 @@ pub trait ExtendDuration {
     fn from_string(inp: &str) -> Duration;
 }
 
+fn num_to_str<'de, D>(input: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let num: usize = Deserialize::deserialize(input)?;
+    let mut res = num.to_string();
+    res.shrink_to_fit();
+    Ok(res)
+}
+
 fn seconds_to_str<'de, D>(input: D) -> Result<String, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -52,6 +62,9 @@ pub struct ArtistUnit {
     pub name: String,
     #[serde(alias = "authorId")]
     pub id: String,
+    #[serde(alias = "videoCount")]
+    #[serde(deserialize_with = "num_to_str")]
+    pub video_count: String,
 }
 #[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct PlaylistUnit {
@@ -60,6 +73,9 @@ pub struct PlaylistUnit {
     #[serde(alias = "playlistId")]
     pub id: String,
     pub author: String,
+    #[serde(alias = "videoCount")]
+    #[serde(deserialize_with = "num_to_str")]
+    pub video_count: String,
 }
 
 struct SearchRes {

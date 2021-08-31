@@ -5,8 +5,8 @@ use std::time::Duration;
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36";
 const FIELDS: [&str; 3] = [
     "fields=videoId,title,author,lengthSeconds",
-    "fields=title,playlistId,author",
-    "fields=author,authorId",
+    "fields=title,playlistId,author,videoCount",
+    "fields=author,authorId,videoCount",
 ];
 const ITEM_PER_PAGE: usize = 10;
 const REGION: &str = "region=NP";
