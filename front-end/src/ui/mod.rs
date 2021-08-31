@@ -143,25 +143,6 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
         .unwrap_or_else(|_| eprintln!("Failed to show cursor. Try: stty sane"));
 }
 
-#[derive(PartialEq, Clone, Serialize, Deserialize)]
-pub struct MusicUnit {
-    pub liked: bool,
-    pub artist: String,
-    pub name: String,
-    pub duration: String,
-    #[serde(default)]
-    pub path: String,
-}
-
-#[derive(PartialEq, Clone, Serialize, Deserialize)]
-pub struct ArtistUnit {
-    pub name: String,
-}
-#[derive(PartialEq, Clone, Serialize, Deserialize)]
-pub struct PlaylistUnit {
-    pub name: String,
-}
-
 #[derive(Clone)]
 pub enum SidebarOption {
     Trending = 0,

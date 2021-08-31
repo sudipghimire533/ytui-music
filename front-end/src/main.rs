@@ -4,7 +4,6 @@ use std::sync::Mutex;
 use std::thread;
 use tokio;
 mod communicator;
-mod test_backend;
 mod ui;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
