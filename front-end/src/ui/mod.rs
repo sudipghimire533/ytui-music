@@ -16,7 +16,7 @@ mod shared_import {
         backend::Backend,
         layout::{self, Alignment, Constraint, Direction, Layout, Rect},
         style::{self, Color, Modifier, Style},
-        text::{self, Span, Text, Spans},
+        text::{self, Span, Spans, Text},
         widgets::{
             self, Block, BorderType, Borders, Cell, Gauge, List, ListItem, ListState, Paragraph,
             Row, Table, TableState, Tabs, Widget,
@@ -174,9 +174,14 @@ pub struct BottomState {
 
 #[derive(Clone)]
 pub enum FillFetch {
+    // When nothing is required this variant is active
     None,
-    Search(String, [Option<usize>; 3]), // query & page number of Music, Playlist, Artist
-    Trending(usize),                    // Page number of trending page
+    // query & page number of Music, Playlist, Artist
+    Search(String, [Option<usize>; 3]),
+    // Page number of trending page
+    Trending(usize),
+    // Playlist id and required page
+    Playlist(String, usize),
 }
 
 pub struct State<'p> {

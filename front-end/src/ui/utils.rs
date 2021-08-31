@@ -444,6 +444,14 @@ impl ui::State<'_> {
             notifier.notify_all();
         }
     }
+    pub fn select_first_of_playlistbar(&mut self, notifier: &Arc<std::sync::Condvar>) {
+        /*TODO: Play this playlist*/
+        if let Some(playlist) = self.playlistbar.front() {
+            self.to_fetch = ui::FillFetch::Playlist(playlist.id.clone(), 0);
+            self.help = "Fetching..";
+            notifier.notify_all();
+        }
+    }
     pub fn refresh_time_elapsed(&mut self) {
         // It may be better to use wait event method from mpv
         // but for that we need tp spawn seperate thread/task

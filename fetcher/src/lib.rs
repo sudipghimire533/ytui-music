@@ -94,6 +94,7 @@ pub enum ReturnAction {
 
 pub struct Fetcher {
     trending_now: Option<Vec<MusicUnit>>,
+    playlist_content: (String, Vec<MusicUnit>),
     servers: [&'static str; 6],
     search_res: (String, SearchRes),
     client: reqwest::Client,

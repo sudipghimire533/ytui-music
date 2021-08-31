@@ -23,7 +23,7 @@ macro_rules! search_request {
                         state.fetched_page[$window_index] = None;
                     }
                     fetcher::ReturnAction::EOR => {
-                        state.help = "Search EOR..";
+                        state.help = "Result end..";
                         state.fetched_page[$window_index] = None;
                     }
                     fetcher::ReturnAction::Retry => {
@@ -72,16 +72,52 @@ pub async fn communicator<'st, 'nt>(
                         state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = Some(page);
                     }
                     Err(e) => {
+                        state.playlistbar = VecDeque::new();
                         match e {
-                            fetcher::ReturnAction::EOR => state.help = "Trending EOR..",
-                            fetcher::ReturnAction::Failed => state.help = "Fetch Error..",
+                            fetcher::ReturnAction::EOR => {
+                                state.help = "Result end..";
+                                state.fetched_page[ui::event::MIDDLE_PLAYLIST_INDEX] = None;
+                            }
+                            fetcher::ReturnAction::Failed => {
+                                state.help = "Fetch error..";
+                                state.fetched_page[ui::event::MIDDLE_PLAYLIST_INDEX] = None;
+                            }
                             fetcher::ReturnAction::Retry => {
                                 state.help = "temp error..";
-                                /* TODO: retry */
+                                /* TODO: Retry */
                             }
                         }
-                        state.musicbar = VecDeque::new();
-                        state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
+                    }
+                }
+                state.to_fetch = ui::FillFetch::None;
+                state.active = ui::Window::Musicbar;
+                notifier.notify_all();
+            }
+            ui::FillFetch::Playlist(playlist_id, page) => {
+                let playlist_content = fetcher.get_playlist_content(&playlist_id, page).await;
+                let mut state = state_original.lock().unwrap();
+                match playlist_content {
+                    Ok(data) => {
+                        state.help = "Press ?";
+                        state.musicbar = VecDeque::from(data);
+                        state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = Some(page);
+                    }
+                    Err(e) => {
+                        state.playlistbar = VecDeque::new();
+                        match e {
+                            fetcher::ReturnAction::EOR => {
+                                state.help = "Result end..";
+                                state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
+                            }
+                            fetcher::ReturnAction::Failed => {
+                                state.help = "Fetch error..";
+                                state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
+                            }
+                            fetcher::ReturnAction::Retry => {
+                                state.help = "temp error..";
+                                /* TODO: Retry */
+                            }
+                        }
                     }
                 }
                 state.to_fetch = ui::FillFetch::None;

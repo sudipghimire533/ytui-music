@@ -8,7 +8,7 @@ const FIELDS: [&str; 3] = [
     "fields=title,playlistId,author,videoCount",
     "fields=author,authorId,videoCount",
 ];
-const ITEM_PER_PAGE: usize = 10;
+pub const ITEM_PER_PAGE: usize = 10;
 const REGION: &str = "region=NP";
 const FILTER_TYPE: [&str; 3] = ["music", "playlist", "channel"];
 
@@ -37,6 +37,7 @@ impl Fetcher {
     pub fn new() -> Self {
         super::Fetcher {
             trending_now: None,
+            playlist_content: (String::new(), Vec::new()),
             search_res: (
                 String::new(),
                 super::SearchRes {
@@ -177,6 +178,8 @@ impl Fetcher {
         &mut self,
         page: usize,
     ) -> Result<&[super::MusicUnit], ReturnAction> {
+        let lower_limit = ITEM_PER_PAGE * page;
+
         if self.trending_now.is_none() {
             let suffix = format!(
                 "/trending?type=Music&{region}&{music_field}",
@@ -195,12 +198,48 @@ impl Fetcher {
         }
 
         let trending_now = self.trending_now.as_ref().unwrap();
-        let lower_limit = ITEM_PER_PAGE * page;
         let upper_limit = std::cmp::min(trending_now.len(), lower_limit + ITEM_PER_PAGE);
+
         if lower_limit >= upper_limit {
-            return Err(ReturnAction::EOR);
+            Err(ReturnAction::EOR)
+        } else {
+            Ok(&trending_now[lower_limit..upper_limit])
         }
-        Ok(&trending_now[lower_limit..upper_limit])
+    }
+
+    pub async fn get_playlist_content(
+        &mut self,
+        playlist_id: &str,
+        page: usize,
+    ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
+        let lower_limit = page * ITEM_PER_PAGE;
+
+        let is_new_id = playlist_id != &self.playlist_content.0;
+        if is_new_id || self.playlist_content.1.len() == 0 {
+            self.playlist_content.0 = playlist_id.to_string();
+            let suffix = format!(
+                "/playlists/{playlist_id}?fields=videos",
+                playlist_id = playlist_id
+            );
+
+            let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 1).await;
+            match obj {
+                Ok(mut data) => {
+                    data.shrink_to_fit();
+                    self.playlist_content.1 = data;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        let upper_limit = std::cmp::min(self.playlist_content.1.len(), lower_limit + ITEM_PER_PAGE);
+        if lower_limit >= upper_limit {
+            Err(ReturnAction::EOR)
+        } else {
+            let mut res = self.playlist_content.1[lower_limit..upper_limit].to_vec();
+            res.shrink_to_fit();
+            Ok(res)
+        }
     }
 
     pub async fn search_music(
@@ -282,6 +321,15 @@ mod tests {
     async fn check_artist_search() {
         let mut fetcher = Fetcher::new();
         let obj = fetcher.search_artist("Rachana Dahal", 1).await;
+        eprintln!("{:#?}", obj);
+    }
+
+    #[tokio::test]
+    async fn check_playlist_content() {
+        let mut fetcher = Fetcher::new();
+        let obj = fetcher
+            .get_playlist_content("PLo4CR7vlB7oIokHy6JOnPLAmSiilJq7ms", 1)
+            .await;
         eprintln!("{:#?}", obj);
     }
 }
