@@ -206,7 +206,16 @@ impl<'parent> ui::MiddleBottom {
         let playlist_list = List::new(
             data_list
                 .iter()
-                .map(|playlist| ListItem::new(Span::styled(&playlist.name, Style::list_idle())))
+                .map(|artist| {
+                    let text = Spans::from(vec![
+                        Span::styled(
+                            format!("[{}] ", &artist.video_count),
+                            Style::list_idle().fg(Color::LightYellow),
+                        ),
+                        Span::styled(&artist.name, Style::list_idle()),
+                    ]);
+                    ListItem::new(text)
+                })
                 .collect::<Vec<ListItem>>(),
         )
         .highlight_style(Style::list_hilight())
@@ -250,4 +259,267 @@ impl<'parent> ui::BottomLayout {
         ui::BottomLayout { layout }
     }
 
-    pub fn get_controller(state: &'pare
+    pub fn get_controller(state: &'parent ui::State) -> Gauge<'parent> {
+        let title = if let Some((title, _)) = &state.bottom.playing {
+            title
+        } else {
+            ">> Play some Music <<"
+        };
+
+        let block = Block::new(format!(
+            " {} / {} ",
+            state.bottom.music_elapse.to_string(),
+            &state.bottom.music_duration.to_string()
+        ))
+        .title_alignment(Alignment::Center);
+        let mut ratio =
+            state.bottom.music_elapse.as_secs_f64() / state.bottom.music_duration.as_secs_f64();
+        ratio = if ratio > 1.0 {
+            1.0
+        } else if ratio.is_nan() {
+            0.0
+        } else {
+            ratio
+        };
+
+        Gauge::default()
+            .ratio(ratio)
+            .gauge_style(Style::default().fg(Color::DarkGray))
+            .label(Span::styled(
+                &title[0..std::cmp::min(title.len(), CURRENT_TITLE_LEN)],
+                Style::default().fg(Color::White),
+            ))
+            .block(block)
+    }
+}
+
+pub trait ExtendBlock<'a> {
+    fn new(title: String) -> Self;
+    fn active(title: String) -> Self;
+}
+pub trait ExtendStyle {
+    fn list_hilight() -> Style;
+    fn block_title() -> Style;
+    fn list_idle() -> Style;
+}
+
+impl ExtendStyle for Style {
+    fn list_hilight() -> Style {
+        Style::default().fg(Color::White)
+    }
+    fn block_title() -> Style {
+        Style {
+            fg: Some(Color::LightMagenta),
+            bg: None,
+            add_modifier: Modifier::BOLD | Modifier::ITALIC,
+            sub_modifier: Modifier::empty(),
+        }
+    }
+    fn list_idle() -> Style {
+        Style {
+            fg: Some(Color::Yellow),
+            bg: None,
+            add_modifier: Modifier::BOLD,
+            sub_modifier: Modifier::empty(),
+        }
+    }
+}
+
+impl<'a> ExtendBlock<'a> for Block<'_> {
+    fn new(title: String) -> Self {
+        Block::default()
+            .title(Span::styled(title, Style::block_title()))
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::White))
+            .borders(Borders::ALL)
+    }
+    fn active(title: String) -> Self {
+        Block::default()
+            .title(Span::styled(title, Style::block_title().fg(Color::Cyan)))
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::Cyan))
+            .borders(Borders::ALL)
+    }
+}
+
+impl ui::Position {
+    pub fn caclulate(screen_rect: &Rect) -> Self {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(
+                [
+                    Constraint::Percentage(10),
+                    Constraint::Percentage(80),
+                    Constraint::Length(10),
+                ]
+                .as_ref(),
+            )
+            .split(*screen_rect);
+
+        let (top_section, main_section, bottom_section) = (
+            ui::TopLayout::new(layout[0]),
+            ui::MainLayout::new(layout[1]),
+            ui::BottomLayout::new(layout[2]),
+        );
+        let sidebar = main_section.sidebar;
+        let middle_section = main_section.middle_section;
+        let middle_bottom = middle_section.bottom;
+
+        ui::Position {
+            search: top_section.layout[0],
+            help: top_section.layout[1],
+            shortcut: sidebar.layout,
+            music: middle_section.layout,
+            playlist: middle_bottom.layout[0],
+            artist: middle_bottom.layout[1],
+            controllers: bottom_section.layout,
+        }
+    }
+}
+
+impl Default for ui::State<'_> {
+    fn default() -> Self {
+        let mpv = libmpv::Mpv::new().unwrap();
+        mpv.set_property("video", "no").unwrap();
+        mpv.set_property("cache", "yes").unwrap();
+        mpv.set_property("cache-secs", 10).unwrap();
+        mpv.set_property("cache-pause-wait", 5).unwrap();
+        mpv.set_property("demuxer-readahead-secs", 10).unwrap();
+        mpv.set_property("hwdec", "yes").unwrap();
+        mpv.set_property("cache-pause-wait", 10).unwrap();
+        mpv.set_property("hwdec", "yes").unwrap();
+        mpv.set_property("demuxer-cache-wait", "no").unwrap();
+        mpv.set_property("cache-on-disk", "yes").unwrap();
+        mpv.set_property("ytdl-format", "worst").unwrap();
+        mpv.set_property("script-opts", "ytdl_hook-try_ytdl_first=yes")
+            .unwrap();
+
+        let mut sidebar_list_state = ListState::default();
+        sidebar_list_state.select(Some(0));
+        ui::State {
+            help: "Press ?",
+            sidebar: (sidebar_list_state, ui::SidebarOption::None),
+            musicbar: VecDeque::new(),
+            playlistbar: VecDeque::new(),
+            artistbar: VecDeque::new(),
+            search: (String::new(), String::new()),
+            active: ui::Window::Sidebar,
+            fetched_page: [None; 3],
+            bottom: ui::BottomState {
+                playing: None,
+                music_duration: Duration::new(0, 0),
+                music_elapse: Duration::new(0, 0),
+            },
+            player: mpv,
+            to_fetch: ui::FillFetch::None,
+        }
+    }
+}
+
+impl ui::State<'_> {
+    pub fn play_first_of_musicbar(&mut self, notifier: &Arc<std::sync::Condvar>) {
+        if let Some(music) = self.musicbar.front() {
+            self.help = "Starting..";
+            self.bottom.music_duration = Duration::from_secs(0);
+            self.bottom.music_elapse = Duration::from_secs(0);
+            self.bottom.playing = None;
+            notifier.notify_all();
+
+            match self
+                .player
+                .command("loadfile", [music.path.as_str()].as_ref())
+            {
+                Ok(_) => {
+                    self.bottom.playing = Some((music.name.clone(), true));
+                    self.bottom.music_duration = Duration::from_string(music.duration.as_str());
+                    self.help = "Press ?";
+                }
+                Err(_) => {
+                    self.help = "Error..";
+                    self.bottom.playing = None;
+                    self.bottom.music_elapse = Duration::from_secs(0);
+                    self.bottom.music_duration = Duration::from_secs(0);
+                }
+            }
+            notifier.notify_all();
+        }
+    }
+    pub fn refresh_time_elapsed(&mut self) {
+        // It may be better to use wait event method from mpv
+        // but for that we need tp spawn seperate thread/task
+        // and also we are updating the ui anway so it may also be affordable to just query mpv in
+        // ui updating loop
+        if let Some((_, true)) = self.bottom.playing {
+            match self.player.get_property::<i64>("audio-pts") {
+                Ok(time) => {
+                    self.bottom.music_elapse = Duration::from_secs(time as u64);
+                }
+                Err(_e) => {
+                    // This error is generally expected to be -10 (property exist but not available
+                    // at the moment)
+                    // which means that the mpv has not yet loaded the file
+                    // this depends on the condition of network and amount of task needed to done
+                    // by mpv (ususally depends on the length of stream)
+                    // eprintln!("Err: {}", e);
+                }
+            }
+        }
+    }
+
+    pub fn toggle_pause(&mut self, notifier: &Arc<std::sync::Condvar>) {
+        if let Some((music_title, is_playing)) = &self.bottom.playing {
+            if *is_playing {
+                self.player.pause().unwrap();
+            } else {
+                self.player.unpause().unwrap();
+            }
+            // TODO: music_title.clone() feels like heavy and unneeded
+            // Fight back the compiler
+            self.bottom.playing = Some((music_title.to_string(), !is_playing));
+            notifier.notify_all();
+        }
+    }
+}
+
+impl ui::Window {
+    /* Any components of top bar and bottombar are not focusable instead directly controlled by the shortcut keys */
+    pub fn next(&self) -> ui::Window {
+        match self {
+            ui::Window::Sidebar => ui::Window::Musicbar,
+            ui::Window::Musicbar => ui::Window::Playlistbar,
+            ui::Window::Playlistbar => ui::Window::Artistbar,
+            ui::Window::Searchbar | ui::Window::Helpbar | ui::Window::Artistbar => {
+                ui::Window::Sidebar
+            }
+            ui::Window::None => unreachable!(),
+        }
+    }
+
+    pub fn prev(&self) -> ui::Window {
+        match self {
+            ui::Window::Artistbar => ui::Window::Playlistbar,
+            ui::Window::Playlistbar => ui::Window::Musicbar,
+            ui::Window::Musicbar => ui::Window::Sidebar,
+            ui::Window::Searchbar | ui::Window::Helpbar | ui::Window::Sidebar => {
+                ui::Window::Artistbar
+            }
+            ui::Window::None => unreachable!(),
+        }
+    }
+}
+
+impl std::convert::TryFrom<usize> for ui::SidebarOption {
+    type Error = &'static str;
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(ui::SidebarOption::Trending),
+            1 => Ok(ui::SidebarOption::YoutubeCommunity),
+            2 => Ok(ui::SidebarOption::RecentlyPlayed),
+            3 => Ok(ui::SidebarOption::Followings),
+            4 => Ok(ui::SidebarOption::Favourates),
+            5 => Ok(ui::SidebarOption::MyPlalist),
+            6 => Ok(ui::SidebarOption::Search),
+            _ => Err("No sidebar option found corresponding to this usize"),
+        }
+    }
+}

@@ -238,6 +238,15 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                 ui::SidebarOption::Followings => {
                     drop_and_call!(state, fill_following_artist, direction);
                 }
+                ui::SidebarOption::Search => {
+                    drop_and_call!(state, fill_search_artist, direction);
+                }
+                _ => {}
+            },
+            ui::Window::Playlistbar => match active_sidebar {
+                ui::SidebarOption::Search => {
+                    drop_and_call!(state, fill_search_playlist, direction);
+                }
                 _ => {}
             },
             _ => {}
@@ -286,7 +295,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                 std::mem::drop(state);
                 fill_search_music(HeadTo::Initial);
                 fill_search_playlist(HeadTo::Initial);
-                //fill_search_artist(HeadTo::Initial);
+                fill_search_artist(HeadTo::Initial);
             }
             _ => {}
         }
