@@ -6,14 +6,12 @@ use ui::shared_import::*;
 const HEART_FILLED: &str = "\u{2665}";
 const HEART_OUTLINE: &str = "\u{2661}";
 const CURRENT_TITLE_LEN: usize = 70;
-pub const SIDEBAR_LIST_COUNT: usize = 7;
+pub const SIDEBAR_LIST_COUNT: usize = 5;
 pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
     "Trending",
     "Youtube Communinty",
     "Recently Played",
-    "Followings",
     "Favourates",
-    "My Playlist",
     "Search",
 ];
 
@@ -398,13 +396,18 @@ impl Default for ui::State<'_> {
         sidebar_list_state.select(Some(0));
         ui::State {
             help: "Press ?",
-            sidebar: (sidebar_list_state, ui::SidebarOption::None),
+            sidebar: sidebar_list_state,
             musicbar: VecDeque::new(),
             playlistbar: VecDeque::new(),
             artistbar: VecDeque::new(),
             search: (String::new(), String::new()),
             active: ui::Window::Sidebar,
             fetched_page: [None; 3],
+            filled_source: (
+                ui::MusicbarSource::RecentlyPlayed,
+                ui::PlaylistbarSource::RecentlyPlayed,
+                ui::ArtistbarSource::RecentlyPlayed,
+            ),
             bottom: ui::BottomState {
                 playing: None,
                 music_duration: Duration::new(0, 0),
@@ -447,7 +450,8 @@ impl ui::State<'_> {
     pub fn select_first_of_playlistbar(&mut self, notifier: &Arc<std::sync::Condvar>) {
         /*TODO: Play this playlist*/
         if let Some(playlist) = self.playlistbar.front() {
-            self.to_fetch = ui::FillFetch::Playlist(playlist.id.clone(), 0);
+            self.filled_source.0 = ui::MusicbarSource::Playlist(playlist.id.clone());
+            self.to_fetch = ui::FillFetch::Playlist(0);
             self.help = "Fetching..";
             notifier.notify_all();
         }
@@ -523,10 +527,8 @@ impl std::convert::TryFrom<usize> for ui::SidebarOption {
             0 => Ok(ui::SidebarOption::Trending),
             1 => Ok(ui::SidebarOption::YoutubeCommunity),
             2 => Ok(ui::SidebarOption::RecentlyPlayed),
-            3 => Ok(ui::SidebarOption::Followings),
-            4 => Ok(ui::SidebarOption::Favourates),
-            5 => Ok(ui::SidebarOption::MyPlalist),
-            6 => Ok(ui::SidebarOption::Search),
+            3 => Ok(ui::SidebarOption::Favourates),
+            4 => Ok(ui::SidebarOption::Search),
             _ => Err("No sidebar option found corresponding to this usize"),
         }
     }

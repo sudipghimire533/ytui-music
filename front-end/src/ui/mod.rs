@@ -93,7 +93,7 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                 screen.render_stateful_widget(
                     SideBar::get_shortcuts(&state_unlocked),
                     position.shortcut,
-                    &mut state_unlocked.sidebar.0,
+                    &mut state_unlocked.sidebar,
                 );
 
                 let (music_table, mut music_table_state) =
@@ -148,11 +148,9 @@ pub enum SidebarOption {
     Trending = 0,
     YoutubeCommunity = 1,
     RecentlyPlayed = 2,
-    Followings = 3,
-    Favourates = 4,
-    MyPlalist = 5,
-    Search = 6,
-    None = 7,
+    Favourates = 3,
+    Search = 4,
+    None = 5,
 }
 
 #[derive(PartialEq, Clone)]
@@ -181,7 +179,31 @@ pub enum FillFetch {
     // Page number of trending page
     Trending(usize),
     // Playlist id and required page
-    Playlist(String, usize),
+    Playlist(usize),
+}
+
+#[derive(Clone)]
+pub enum MusicbarSource {
+    Search,
+    Trending,
+    YoutubeCommunity,
+    RecentlyPlayed,
+    Favourates,
+    Playlist(String),
+    Artist(String),
+}
+#[derive(Clone)]
+pub enum PlaylistbarSource {
+    Search,
+    RecentlyPlayed,
+    Favourates,
+    Artist,
+}
+#[derive(Clone)]
+pub enum ArtistbarSource {
+    Search,
+    RecentlyPlayed,
+    Followings,
 }
 
 pub struct State<'p> {
@@ -190,10 +212,11 @@ pub struct State<'p> {
     // And second is the state that is actually active.
     // which remains same even selected() of ListState is changed.
     // second memeber of tuple is only changed when user press ENTER on given SidebarOption
-    sidebar: (ListState, SidebarOption),
+    sidebar: ListState,
     pub musicbar: VecDeque<fetcher::MusicUnit>,
     pub playlistbar: VecDeque<fetcher::PlaylistUnit>,
     pub artistbar: VecDeque<fetcher::ArtistUnit>,
+    pub filled_source: (MusicbarSource, PlaylistbarSource, ArtistbarSource),
     bottom: BottomState,
     // First string is the actual string being typed on searchbar (to actually render)
     // If (musicbar or playlistbar or artistbar) is filled with search result

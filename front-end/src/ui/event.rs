@@ -72,17 +72,24 @@ fn get_page(current: &Option<usize>, direction: HeadTo) -> usize {
 macro_rules! fill_search {
     ("music", $state_original: expr, $notifier: expr, $direction: expr) => {
         fill_search!("@internal-core", $state_original, $notifier, $direction, MIDDLE_MUSIC_INDEX);
+        $state_original.lock().unwrap().filled_source.0 = ui::MusicbarSource::Search;
     };
     ("playlist", $state_original: expr, $notifier: expr, $direction: expr) => {
         fill_search!("@internal-core", $state_original, $notifier, $direction, MIDDLE_PLAYLIST_INDEX);
+        $state_original.lock().unwrap().filled_source.0 = ui::MusicbarSource::Search;
     };
     ("artist", $state_original: expr, $notifier: expr, $direction: expr) => {
         fill_search!("@internal-core", $state_original, $notifier, $direction, MIDDLE_ARTIST_INDEX);
+        $state_original.lock().unwrap().filled_source.0 = ui::MusicbarSource::Search;
     };
     ("all", $state_original: expr, $notifier: expr, $direction: expr) => {
         fill_search!("@internal-core", $state_original, $notifier, $direction, MIDDLE_MUSIC_INDEX, MIDDLE_PLAYLIST_INDEX, MIDDLE_ARTIST_INDEX);
-        $state_original.lock().unwrap().active = ui::Window::Musicbar;
-        $notifier.notify_all();
+        {
+            let mut state = $state_original.lock().unwrap();
+            state.filled_source.0 = ui::MusicbarSource::Search;
+            state.filled_source.1 = ui::PlaylistbarSource::Search;
+            state.filled_source.2 = ui::ArtistbarSource::Search;
+        }
     };
 
     ("@internal-core", $state_original: expr, $notifier: expr, $direction: expr, $($win_index: expr),+  ) => {{
@@ -103,8 +110,8 @@ macro_rules! fill_search {
 pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut Arc<Condvar>) {
     let advance_sidebar = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        let current = state.sidebar.0.selected().unwrap_or_default();
-        state.sidebar.0.select(Some(advance_index(
+        let current = state.sidebar.selected().unwrap_or_default();
+        state.sidebar.select(Some(advance_index(
             current,
             ui::utils::SIDEBAR_LIST_COUNT,
             direction,
@@ -168,7 +175,6 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         // Mark search option to be real active
         // this bring state to same state weather
         // activated from shortcut key or from sidebar
-        state.sidebar.1 = ui::SidebarOption::Search;
         notifier.notify_all();
     };
     let show_help = || {
@@ -212,17 +218,26 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.help = "Fetching..";
         notifier.notify_all();
     };
-    let fill_community_music = |direction: HeadTo| {
+    let fill_community_music = |_direction: HeadTo| {
         //   fill!("community music", direction, state_original, notifier);
     };
-    let fill_recents_music = |direction: HeadTo| {
+    let fill_recents_music = |_direction: HeadTo| {
         // fill!("recents music", direction, state_original, notifier);
     };
-    let fill_favourates_music = |direction: HeadTo| {
+    let fill_favourates_music = |_direction: HeadTo| {
         // fill!("favourates music", direction, state_original, notifier);
     };
-    let fill_following_artist = |direction: HeadTo| {
+    let fill_following_artist = |_direction: HeadTo| {
         // fill!("following artist", direction, state_original, notifier);
+    };
+    let fill_selected_playlist = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        if let Some(playlist) = state.playlistbar.front() {
+            state.filled_source.0 = ui::MusicbarSource::Playlist(playlist.id.clone());
+            let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
+            state.to_fetch = ui::FillFetch::Playlist(page);
+            notifier.notify_all();
+        }
     };
     let handle_play_advance = |direction: HeadTo| {
         advance_music_list(direction);
@@ -233,40 +248,45 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     };
     let handle_page_nav = |direction: HeadTo| {
         let state = state_original.lock().unwrap();
-        let active_sidebar = &state.sidebar.1;
         match state.active {
-            ui::Window::Musicbar => match active_sidebar {
-                ui::SidebarOption::Trending => {
+            ui::Window::Musicbar => match &state.filled_source.0 {
+                ui::MusicbarSource::Trending => {
                     drop_and_call!(state, fill_trending_music, direction);
                 }
-                ui::SidebarOption::YoutubeCommunity => {
+                ui::MusicbarSource::YoutubeCommunity => {
                     drop_and_call!(state, fill_community_music, direction);
                 }
-                ui::SidebarOption::RecentlyPlayed => {
+                ui::MusicbarSource::RecentlyPlayed => {
                     drop_and_call!(state, fill_recents_music, direction);
                 }
-                ui::SidebarOption::Favourates => {
+                ui::MusicbarSource::Favourates => {
                     drop_and_call!(state, fill_favourates_music, direction);
                 }
-                ui::SidebarOption::Search => {
+                ui::MusicbarSource::Search => {
                     drop_and_call!(state, fill_search_music, direction);
                 }
-                _ => {}
-            },
-            ui::Window::Artistbar => match active_sidebar {
-                ui::SidebarOption::Followings => {
-                    drop_and_call!(state, fill_following_artist, direction);
+                ui::MusicbarSource::Playlist(_) => {
+                    drop_and_call!(state, fill_selected_playlist, direction);
                 }
-                ui::SidebarOption::Search => {
-                    drop_and_call!(state, fill_search_artist, direction);
-                }
-                _ => {}
+                ui::MusicbarSource::Artist(_) => {}
             },
-            ui::Window::Playlistbar => match active_sidebar {
-                ui::SidebarOption::Search => {
+            ui::Window::Playlistbar => match state.filled_source.1 {
+                ui::PlaylistbarSource::Search => {
                     drop_and_call!(state, fill_search_playlist, direction);
                 }
-                _ => {}
+                ui::PlaylistbarSource::Artist => {
+                    todo!();
+                }
+                ui::PlaylistbarSource::Favourates | ui::PlaylistbarSource::RecentlyPlayed => {}
+            },
+            ui::Window::Artistbar => match state.filled_source.2 {
+                ui::ArtistbarSource::Followings => {
+                    drop_and_call!(state, fill_following_artist, direction);
+                }
+                ui::ArtistbarSource::Search => {
+                    drop_and_call!(state, fill_search_artist, direction);
+                }
+                ui::ArtistbarSource::RecentlyPlayed => {}
             },
             _ => {}
         }
@@ -277,44 +297,73 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         match active_window {
             ui::Window::Sidebar => {
                 let side_select =
-                    ui::SidebarOption::try_from(state.sidebar.0.selected().unwrap()).unwrap();
+                    ui::SidebarOption::try_from(state.sidebar.selected().unwrap()).unwrap();
 
                 match side_select {
                     ui::SidebarOption::Trending => {
                         state.fetched_page[MIDDLE_MUSIC_INDEX] = None;
+                        state.filled_source.0 = ui::MusicbarSource::Trending;
+                        state.musicbar.clear();
                         drop_and_call!(state, fill_trending_music, HeadTo::Initial);
                     }
                     ui::SidebarOption::YoutubeCommunity => {
+                        state.filled_source.0 = ui::MusicbarSource::YoutubeCommunity;
+                        state.musicbar.clear();
                         drop_and_call!(state, fill_community_music, HeadTo::Initial);
                     }
                     ui::SidebarOption::Favourates => {
+                        // TODOD: also fill favourates artist and playlist
+                        state.filled_source.0 = ui::MusicbarSource::Favourates;
+                        state.filled_source.1 = ui::PlaylistbarSource::Favourates;
+                        state.filled_source.2 = ui::ArtistbarSource::Followings;
+                        state.musicbar.clear();
+                        state.playlistbar.clear();
+                        state.artistbar.clear();
                         drop_and_call!(state, fill_favourates_music, HeadTo::Initial);
                     }
-                    ui::SidebarOption::Followings => {
-                        state.fetched_page[MIDDLE_ARTIST_INDEX] = None;
-                        drop_and_call!(state, fill_following_artist, HeadTo::Initial);
-                    }
                     ui::SidebarOption::RecentlyPlayed => {
+                        // TODO: also fill recently played playlist and artist
+                        state.filled_source.0 = ui::MusicbarSource::RecentlyPlayed;
+                        state.filled_source.1 = ui::PlaylistbarSource::RecentlyPlayed;
+                        state.filled_source.2 = ui::ArtistbarSource::RecentlyPlayed;
+                        state.musicbar.clear();
+                        state.playlistbar.clear();
+                        state.artistbar.clear();
                         drop_and_call!(state, fill_recents_music, HeadTo::Initial);
                     }
                     ui::SidebarOption::Search => drop_and_call!(state, activate_search),
-                    _ => {}
+                    ui::SidebarOption::None => {}
                 }
-                state_original.lock().unwrap().sidebar.1 = side_select;
             }
             ui::Window::Musicbar => {
-                let music_under_selection = !state.musicbar.is_empty();
-                if music_under_selection {
-                    state.play_first_of_musicbar(&notifier);
-                }
+                state.play_first_of_musicbar(&notifier);
             }
             ui::Window::Searchbar => {
                 state.search.1 = state.search.0.trim().to_string();
+                state.search.1.shrink_to_fit();
                 state.fetched_page = [None; 3];
+                state.musicbar.clear();
+                state.playlistbar.clear();
+                state.artistbar.clear();
                 std::mem::drop(state);
                 fill_search!("all", state_original, notifier, HeadTo::Initial);
             }
-            _ => {}
+            ui::Window::Playlistbar => {
+                // Fill the music bar with items in this playlist
+                state.fetched_page[MIDDLE_MUSIC_INDEX] = None;
+                state.musicbar.clear();
+                drop_and_call!(state, fill_selected_playlist, HeadTo::Initial);
+            }
+            ui::Window::Artistbar => {
+                // fill playlistbar & artistbar with items contained in this artist channel
+                state.fetched_page[MIDDLE_MUSIC_INDEX] = None;
+                state.fetched_page[MIDDLE_PLAYLIST_INDEX] = None;
+                state.musicbar.clear();
+                state.playlistbar.clear();
+                // Todo: fill music bar and playlistbar with appropriate data
+                todo!();
+            }
+            ui::Window::None | ui::Window::Helpbar => {}
         }
     };
 

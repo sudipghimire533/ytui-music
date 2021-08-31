@@ -48,8 +48,8 @@ impl Fetcher {
                 },
             ),
             servers: [
-                "https://invidious.snopyta.org/api/v1",
                 "https://vid.puffyan.us/api/v1",
+                "https://invidious.snopyta.org/api/v1",
                 "https://ytprivate.com/api/v1",
                 "https://ytb.trom.tf/api/v1",
                 "https://invidious.namazso.eu/api/v1",
@@ -155,7 +155,6 @@ impl Fetcher {
         let res = self
             .client
             .get(self.servers[self.active_server_index].to_string() + path)
-            // .timeout(std::time::Duration::from_secs(5))
             .send()
             .await;
         match res {
@@ -222,11 +221,13 @@ impl Fetcher {
                 playlist_id = playlist_id
             );
 
-            let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 1).await;
+            let obj = self
+                .send_request::<super::FetchPlaylistContentRes>(&suffix, 1)
+                .await;
             match obj {
                 Ok(mut data) => {
-                    data.shrink_to_fit();
-                    self.playlist_content.1 = data;
+                    data.videos.shrink_to_fit();
+                    self.playlist_content.1 = data.videos;
                 }
                 Err(e) => return Err(e),
             }
@@ -306,21 +307,21 @@ mod tests {
     #[tokio::test]
     async fn check_music_search() {
         let mut fetcher = Fetcher::new();
-        let obj = fetcher.search_music("Bartika Eam Rai", 1).await;
+        let obj = fetcher.search_music("Bartika Eam Rai", 0).await;
         eprintln!("{:#?}", obj);
     }
 
     #[tokio::test]
     async fn check_playlist_search() {
         let mut fetcher = Fetcher::new();
-        let obj = fetcher.search_playlist("Spotify Chill mix", 1).await;
+        let obj = fetcher.search_playlist("Spotify Chill mix", 0).await;
         eprintln!("{:#?}", obj);
     }
 
     #[tokio::test]
     async fn check_artist_search() {
         let mut fetcher = Fetcher::new();
-        let obj = fetcher.search_artist("Rachana Dahal", 1).await;
+        let obj = fetcher.search_artist("Rachana Dahal", 0).await;
         eprintln!("{:#?}", obj);
     }
 
@@ -328,7 +329,7 @@ mod tests {
     async fn check_playlist_content() {
         let mut fetcher = Fetcher::new();
         let obj = fetcher
-            .get_playlist_content("PLo4CR7vlB7oIokHy6JOnPLAmSiilJq7ms", 1)
+            .get_playlist_content("PLN4UKncphTTE0cIHYDQy534mSToKtFlhA", 0)
             .await;
         eprintln!("{:#?}", obj);
     }

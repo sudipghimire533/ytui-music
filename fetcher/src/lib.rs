@@ -1,8 +1,7 @@
 use serde::{self, Deserialize, Serialize};
 pub mod utils;
 use reqwest;
-use serde::de::Deserializer;
-use std::{collections::VecDeque, time::Duration};
+use std::time::Duration;
 
 pub trait ExtendDuration {
     fn to_string(self) -> String;
@@ -38,6 +37,14 @@ where
 {
     let id: &str = Deserialize::deserialize(input)?;
     Ok(format!("https://www.youtube.com/watch?v={id}", id = id))
+}
+
+// While fecthing playlist videos from endpoint /playlists/:plid
+// response is returned as "videos": [ { <Fields of MusicUnit> } ]
+// this structure is only used to convert such response to Vec<MusicUnit>
+#[derive(Deserialize, Clone, PartialEq)]
+struct FetchPlaylistContentRes {
+    videos: Vec<MusicUnit>,
 }
 
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]

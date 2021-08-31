@@ -61,6 +61,8 @@ pub async fn communicator<'st, 'nt>(
         match to_fetch {
             ui::FillFetch::None => {}
             ui::FillFetch::Trending(page) => {
+                state_original.lock().unwrap().musicbar.clear();
+
                 let trending_music = fetcher.get_trending_music(page).await;
                 // Lock state only after fetcher is done with web request
                 let mut state = state_original.lock().unwrap();
@@ -93,36 +95,45 @@ pub async fn communicator<'st, 'nt>(
                 state.active = ui::Window::Musicbar;
                 notifier.notify_all();
             }
-            ui::FillFetch::Playlist(playlist_id, page) => {
-                let playlist_content = fetcher.get_playlist_content(&playlist_id, page).await;
-                let mut state = state_original.lock().unwrap();
-                match playlist_content {
-                    Ok(data) => {
-                        state.help = "Press ?";
-                        state.musicbar = VecDeque::from(data);
-                        state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = Some(page);
-                    }
-                    Err(e) => {
-                        state.playlistbar = VecDeque::new();
-                        match e {
-                            fetcher::ReturnAction::EOR => {
-                                state.help = "Result end..";
-                                state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
-                            }
-                            fetcher::ReturnAction::Failed => {
-                                state.help = "Fetch error..";
-                                state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
-                            }
-                            fetcher::ReturnAction::Retry => {
-                                state.help = "temp error..";
-                                /* TODO: Retry */
+            ui::FillFetch::Playlist(page) => {
+                let state = state_original.lock().unwrap();
+                if let ui::MusicbarSource::Playlist(playlist_id) = state.filled_source.0.clone() {
+                    std::mem::drop(state); // Always free the lock before sending web request
+
+                    let playlist_content = fetcher.get_playlist_content(&playlist_id, page).await;
+                    let mut state = state_original.lock().unwrap();
+                    match playlist_content {
+                        Ok(data) => {
+                            state.help = "Press ?";
+                            state.musicbar = VecDeque::from(data);
+                            state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = Some(page);
+                        }
+                        Err(e) => {
+                            state.musicbar = VecDeque::new();
+                            match e {
+                                fetcher::ReturnAction::EOR => {
+                                    state.help = "Result end..";
+                                    state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
+                                }
+                                fetcher::ReturnAction::Failed => {
+                                    state.help = "Fetch error..";
+                                    state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
+                                }
+                                fetcher::ReturnAction::Retry => {
+                                    state.help = "temp error..";
+                                    /* TODO: Retry */
+                                }
                             }
                         }
                     }
+                    state.to_fetch = ui::FillFetch::None;
+                    state.active = ui::Window::Musicbar;
+                    notifier.notify_all();
+                } else {
+                    // This is hard error. Instead of panicing(which leaves terminal in bad state)
+                    // directly print the info in screen. This will distrub the ui
+                    eprintln!("Tried to fetch playlist content but playlist id is unsupported");
                 }
-                state.to_fetch = ui::FillFetch::None;
-                state.active = ui::Window::Musicbar;
-                notifier.notify_all();
             }
             ui::FillFetch::Search(query, [m_page, p_page, a_page]) => {
                 if let Some(m_page) = m_page {
