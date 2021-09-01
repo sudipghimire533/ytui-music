@@ -414,7 +414,6 @@ impl Default for ui::State<'_> {
                 music_elapse: Duration::new(0, 0),
             },
             player: mpv,
-            to_fetch: ui::FillFetch::None,
         }
     }
 }

@@ -170,40 +170,28 @@ pub struct BottomState {
     playing: Option<(String, bool)>, // Music title and playing status
 }
 
-#[derive(Clone)]
-pub enum FillFetch {
-    // When nothing is required this variant is active
-    None,
-    // query & page number of Music, Playlist, Artist
-    Search(String, [Option<usize>; 3]),
-    // Page number of trending page
-    Trending(usize),
-    // Playlist id and required page
-    Playlist,
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MusicbarSource {
-    Search,
-    Trending,
+    Search(String, usize),
+    Trending(usize),
     YoutubeCommunity,
     RecentlyPlayed,
     Favourates,
-    Playlist(String),
-    Artist(String),
+    Playlist(String, usize),
+    Artist(String, usize),
 }
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum PlaylistbarSource {
-    Search,
+    Search(String, usize),
     RecentlyPlayed,
     Favourates,
-    Artist(String),
+    Artist(String, usize),
 }
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ArtistbarSource {
-    Search,
+    Search(String, usize),
     RecentlyPlayed,
-    Followings,
+    Favourates,
 }
 
 pub struct State<'p> {
@@ -226,5 +214,4 @@ pub struct State<'p> {
     pub active: Window,
     pub fetched_page: [Option<usize>; 3],
     player: libmpv::Mpv,
-    pub to_fetch: FillFetch,
 }
