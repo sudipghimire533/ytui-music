@@ -179,7 +179,7 @@ pub enum FillFetch {
     // Page number of trending page
     Trending(usize),
     // Playlist id and required page
-    Playlist(usize),
+    Playlist,
 }
 
 #[derive(Clone)]
@@ -197,7 +197,7 @@ pub enum PlaylistbarSource {
     Search,
     RecentlyPlayed,
     Favourates,
-    Artist,
+    Artist(String),
 }
 #[derive(Clone)]
 pub enum ArtistbarSource {

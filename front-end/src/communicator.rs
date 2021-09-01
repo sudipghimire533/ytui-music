@@ -95,9 +95,11 @@ pub async fn communicator<'st, 'nt>(
                 state.active = ui::Window::Musicbar;
                 notifier.notify_all();
             }
-            ui::FillFetch::Playlist(page) => {
+            ui::FillFetch::Playlist => {
                 let state = state_original.lock().unwrap();
                 if let ui::MusicbarSource::Playlist(playlist_id) = state.filled_source.0.clone() {
+                    let page =
+                        state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX].unwrap_or_default();
                     std::mem::drop(state); // Always free the lock before sending web request
 
                     let playlist_content = fetcher.get_playlist_content(&playlist_id, page).await;
@@ -106,7 +108,6 @@ pub async fn communicator<'st, 'nt>(
                         Ok(data) => {
                             state.help = "Press ?";
                             state.musicbar = VecDeque::from(data);
-                            state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = Some(page);
                         }
                         Err(e) => {
                             state.musicbar = VecDeque::new();

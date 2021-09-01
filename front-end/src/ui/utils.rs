@@ -432,7 +432,7 @@ impl ui::State<'_> {
                 .player
                 .command("loadfile", [music.path.as_str()].as_ref())
             {
-                Ok(_) => {
+                Ok(..) => {
                     self.bottom.playing = Some((music.name.clone(), true));
                     self.bottom.music_duration = Duration::from_string(music.duration.as_str());
                     self.help = "Press ?";
@@ -444,15 +444,6 @@ impl ui::State<'_> {
                     self.bottom.music_duration = Duration::from_secs(0);
                 }
             }
-            notifier.notify_all();
-        }
-    }
-    pub fn select_first_of_playlistbar(&mut self, notifier: &Arc<std::sync::Condvar>) {
-        /*TODO: Play this playlist*/
-        if let Some(playlist) = self.playlistbar.front() {
-            self.filled_source.0 = ui::MusicbarSource::Playlist(playlist.id.clone());
-            self.to_fetch = ui::FillFetch::Playlist(0);
-            self.help = "Fetching..";
             notifier.notify_all();
         }
     }
