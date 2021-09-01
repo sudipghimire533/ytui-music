@@ -196,7 +196,6 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.artistbar.clear();
         notifier.notify_all();
     };
-
     let fill_trending_music = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
@@ -214,6 +213,24 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             let page = get_page(&Some(*prev_page), direction);
             state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id.to_string(), page);
             state.help = "Fetching playlist..";
+            notifier.notify_all();
+        }
+    };
+    let fill_music_from_artist = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        if let ui::MusicbarSource::Artist(artist_id, prev_page) = &state.filled_source.0 {
+            let page = get_page(&Some(*prev_page), direction);
+            state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.to_string(), page);
+            state.help = "Fetching channel..";
+            notifier.notify_all();
+        }
+    };
+    let fill_playlist_from_artist = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        if let ui::PlaylistbarSource::Artist(artist_id, prev_page) = &state.filled_source.1 {
+            let page = get_page(&Some(*prev_page), direction);
+            state.filled_source.1 = ui::PlaylistbarSource::Artist(artist_id.to_string(), page);
+            state.help = "Fetching channel..";
             notifier.notify_all();
         }
     };
@@ -308,7 +325,12 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             }
             ui::Window::Artistbar => {
                 if let Some(artist) = state.artistbar.front() {
-                    // fill playlistbar & artistbar with items contained in this artist channel
+                    let artist_id = artist.id.clone();
+                    state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.clone(), 0);
+                    state.filled_source.1 = ui::PlaylistbarSource::Artist(artist_id, 0);
+                    std::mem::drop(state);
+                    fill_music_from_artist(HeadTo::Initial);
+                    fill_playlist_from_artist(HeadTo::Initial);
                 }
             }
             ui::Window::None | ui::Window::Helpbar => {}

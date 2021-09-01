@@ -75,7 +75,32 @@ pub async fn communicator<'st, 'nt>(
                         fetcher::Fetcher::search_playlist
                     );
                 }
-                ui::PlaylistbarSource::Artist(_artist_id, _page) => todo!(),
+                ui::PlaylistbarSource::Artist(ref artist_id, page) => {
+                    let playlist_content = fetcher.get_playlist_of_channel(&artist_id, page).await;
+                    let mut state = state_original.lock().unwrap();
+                    match playlist_content {
+                        Ok(data) => {
+                            state.help = "Press ?";
+                            state.playlistbar = VecDeque::from(data);
+                        }
+                        Err(e) => {
+                            match e {
+                                fetcher::ReturnAction::EOR => {
+                                    state.help = "Result end..";
+                                    state.fetched_page[MIDDLE_PLAYLIST_INDEX] = None;
+                                }
+                                fetcher::ReturnAction::Failed => {
+                                    state.help = "Fetch error..";
+                                    state.fetched_page[MIDDLE_PLAYLIST_INDEX] = None;
+                                }
+                                fetcher::ReturnAction::Retry => {
+                                    state.help = "temp error..";
+                                    /* TODO: Retry */
+                                }
+                            }
+                        }
+                    }
+                }
                 ui::PlaylistbarSource::Favourates | ui::PlaylistbarSource::RecentlyPlayed => {}
             }
             state_original.lock().unwrap().active = ui::Window::Playlistbar;
@@ -160,23 +185,22 @@ pub async fn communicator<'st, 'nt>(
                     );
                 }
                 ui::MusicbarSource::Playlist(ref playlist_id, page) => {
-                    let playlist_content = fetcher.get_playlist_content(&playlist_id, page).await;
+                    let music_content = fetcher.get_playlist_content(&playlist_id, page).await;
                     let mut state = state_original.lock().unwrap();
-                    match playlist_content {
+                    match music_content {
                         Ok(data) => {
                             state.help = "Press ?";
                             state.musicbar = VecDeque::from(data);
                         }
                         Err(e) => {
-                            state.musicbar = VecDeque::new();
                             match e {
                                 fetcher::ReturnAction::EOR => {
                                     state.help = "Result end..";
-                                    state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
+                                    state.fetched_page[MIDDLE_MUSIC_INDEX] = None;
                                 }
                                 fetcher::ReturnAction::Failed => {
                                     state.help = "Fetch error..";
-                                    state.fetched_page[ui::event::MIDDLE_MUSIC_INDEX] = None;
+                                    state.fetched_page[MIDDLE_MUSIC_INDEX] = None;
                                 }
                                 fetcher::ReturnAction::Retry => {
                                     state.help = "temp error..";
@@ -186,8 +210,29 @@ pub async fn communicator<'st, 'nt>(
                         }
                     }
                 }
-                ui::MusicbarSource::Artist(_artist_id, _page) => {
-                    todo!()
+                ui::MusicbarSource::Artist(ref artist_id, page) => {
+                    let music_content = fetcher.get_videos_of_channel(&artist_id, page).await;
+                    let mut state = state_original.lock().unwrap();
+                    match music_content {
+                        Ok(data) => {
+                            state.help = "Press ?";
+                            state.musicbar = VecDeque::from(data);
+                        }
+                        Err(e) => match e {
+                            fetcher::ReturnAction::EOR => {
+                                state.help = "Result end..";
+                                state.fetched_page[MIDDLE_MUSIC_INDEX] = None;
+                            }
+                            fetcher::ReturnAction::Failed => {
+                                state.help = "Failed..";
+                                state.fetched_page[MIDDLE_MUSIC_INDEX] = None;
+                            }
+                            fetcher::ReturnAction::Retry => {
+                                state.help = "temp error..";
+                                /* TODO: Retry*/
+                            }
+                        },
+                    }
                 }
                 ui::MusicbarSource::Favourates
                 | ui::MusicbarSource::RecentlyPlayed
