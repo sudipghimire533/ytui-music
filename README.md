@@ -2,7 +2,15 @@
 A test attempt to bring youtube (only audio [not youtube music]) to tui
 
 ## Current Status
-Project is pretty much stuck maybe because of poor state machine design.
+The binary can do following for now:
+* Search for youtube playlist, channel and videos
+* Play the selection from music list
+* Paging of result
+* See trending music
+* See playlist and videos uploaded in a channel
+* See items included in playlist
+This implies that project a bit behind from usable state. However all the base for implementing future goals have been pretty much complete.
+I would love to see you implement those
 
 ## About Project
 I listen to music a lot and youtube music is currently not available in my country (Nepal :love:) and even If it was available I prefer not to give
@@ -11,17 +19,33 @@ This was when I thought to build one. which I thought would be one of another sm
 
 
 ## Future Goal
-I was pretty much excited to bring this project to usable form but It isn't there yet. However the base has been built and only remaining is to implement.
-I would defenetly love to see this project working but I will be able to work on this only after sometime. If you loved the idea of was thinking of doing
-something similar you may for this repo and see the `front-end/src/event.rs`.
-
-I think that's where I failed. To be exact I was stuck to have async call to the `fetcher` backend from `event.rs`. You can see fetecher is only implemented
-to get trending feed from youtube (through awesome project called invidious) but that part will be piece of cake I think.
-
-If you decided to work on this I wil be glad if you ping me. Or just open an issue/PR.
+* Maintain local data of liked song, favourates song, save for offline, following artist
+* Play the whole playlist
+* Make configurable by user. (Currently several configurable paramaters have been hardcoded as global constatnt variable eg: REFRESH_RATE, REGION.)
+* Implement help window
+* Explore whats on youtube music channel through YoutubeCommunity option and so on
+Any suggestion are welcome
 
 ## Tools used
 Programming language: Rust
 Front-end: tui-rs
 http client: reqwest
+backend-player: libmpv-rs (This project seems inactive from long time. Might need reconsider this option or extend the frok)
 Youtube data extractor: Invidious
+
+## Project Architecture
+Project have two workspace memeber
+1) Fetcher
+This is a library crate that handles retriving of data from web or reading the file for local data like favourates music.
+**Content**
+*src/lib.rs* : high level decleration of available function and strructures
+*src/utils.rs* : defination and imlementation which extends the decleration
+
+2) Front end
+This is the binary crate that handles everything else from Fetcher. This majorly include the communication with *Fetcher* and the ui
+**Content**
+*src/mian.rs* : Responsible for initilizing the configuration, parsing command line option and spwawning other worker thread
+*src/communicator.rs* : Responsible for communicating with the fetcher for sending and initiling data
+*src/ui/mod.rs* : High level decleration of ui itself
+*src/ui/utils.rs* : Defination to expend *src/ui/mod.rs*
+*src/ui/event.rs* : Handles the keypress and calling the proper function of *src/communicator.rs*
