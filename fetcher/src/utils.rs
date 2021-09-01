@@ -177,7 +177,7 @@ impl Fetcher {
     pub async fn get_trending_music(
         &mut self,
         page: usize,
-    ) -> Result<&[super::MusicUnit], ReturnAction> {
+    ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
         let lower_limit = ITEM_PER_PAGE * page;
 
         if self.trending_now.is_none() {
@@ -203,7 +203,7 @@ impl Fetcher {
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
         } else {
-            Ok(&trending_now[lower_limit..upper_limit])
+            Ok(trending_now[lower_limit..upper_limit].to_vec())
         }
     }
 
