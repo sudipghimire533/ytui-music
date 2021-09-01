@@ -62,7 +62,6 @@ pub async fn communicator<'st, 'nt>(
             prev_playlistbar_source = state.filled_source.1.clone();
             state.playlistbar.clear();
             std::mem::drop(state);
-            notifier.notify_all();
             match prev_playlistbar_source {
                 ui::PlaylistbarSource::Search(ref term, page) => {
                     let playlists = fetcher.search_playlist(term, page).await;
@@ -97,7 +96,6 @@ pub async fn communicator<'st, 'nt>(
             prev_artistbar_source = state.filled_source.2.clone();
             state.artistbar.clear();
             std::mem::drop(state);
-            notifier.notify_all();
             match prev_artistbar_source {
                 ui::ArtistbarSource::Search(ref term, page) => {
                     let artists = fetcher.search_artist(term, page).await;
@@ -122,7 +120,6 @@ pub async fn communicator<'st, 'nt>(
             prev_musicbar_source = state.filled_source.0.clone();
             state.musicbar.clear();
             std::mem::drop(state);
-            notifier.notify_all();
             // prev_musicbar_source and current musicbar_source are equal at this point
             match prev_musicbar_source {
                 ui::MusicbarSource::Trending(page) => {

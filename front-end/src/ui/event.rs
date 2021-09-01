@@ -320,6 +320,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             ui::Window::Playlistbar => {
                 if let Some(playlist) = state.playlistbar.front() {
                     state.filled_source.0 = ui::MusicbarSource::Playlist(playlist.id.clone(), 0);
+                    state.musicbar.clear();
                     drop_and_call!(state, fill_music_from_playlist, HeadTo::Initial);
                 }
             }
@@ -328,6 +329,8 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                     let artist_id = artist.id.clone();
                     state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.clone(), 0);
                     state.filled_source.1 = ui::PlaylistbarSource::Artist(artist_id, 0);
+                    state.musicbar.clear();
+                    state.playlistbar.clear();
                     std::mem::drop(state);
                     fill_music_from_artist(HeadTo::Initial);
                     fill_playlist_from_artist(HeadTo::Initial);
