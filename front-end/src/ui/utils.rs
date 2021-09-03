@@ -437,16 +437,31 @@ impl ui::State<'_> {
                     self.help = "Press ?";
                 }
                 Err(_) => {
-                    self.help = "Error..";
-                    self.bottom.playing = None;
-                    self.bottom.music_elapse = Duration::from_secs(0);
-                    self.bottom.music_duration = Duration::from_secs(0);
+                    self.help = "Playback error..";
                 }
             }
             notifier.notify_all();
         }
     }
-    pub fn refresh_time_elapsed(&mut self) {
+    pub fn select_first_of_playlistbar(&mut self, playlist: &fetcher::PlaylistUnit) {
+        match self.bottom.playing {
+            // Play this playlist when one of following is true
+            // i) Nothing was being played previously
+            // ii) Something was selected to play but is currently paused
+            Some((_, false)) | None => {
+                // TODO: pass this playlist to play with mpv
+                // While passning this playlist to the mpv it is ease that every required work is
+                // done by mpv but it may be needed to spawn the new thread to listen mpv events because
+                // when mpv plays new item from playlist corresponding title should be rendered
+                // If there exist a mpv property that return the title of currently playing music
+                // then it will be easy
+            }
+            _ => {}
+        }
+    }
+    // This function can also be used to check playing status
+    // Returning true means some music is playing which may be paused or unpaused
+    pub fn refresh_time_elapsed(&mut self) -> bool {
         // It may be better to use wait event method from mpv
         // but for that we need tp spawn seperate thread/task
         // and also we are updating the ui anway so it may also be affordable to just query mpv in
@@ -455,6 +470,7 @@ impl ui::State<'_> {
             match self.player.get_property::<i64>("audio-pts") {
                 Ok(time) => {
                     self.bottom.music_elapse = Duration::from_secs(time as u64);
+                    return true;
                 }
                 Err(_e) => {
                     // This error is generally expected to be -10 (property exist but not available
@@ -466,6 +482,7 @@ impl ui::State<'_> {
                 }
             }
         }
+        false
     }
 
     pub fn toggle_pause(&mut self, notifier: &Arc<std::sync::Condvar>) {
@@ -475,8 +492,6 @@ impl ui::State<'_> {
             } else {
                 self.player.unpause().unwrap();
             }
-            // TODO: music_title.clone() feels like heavy and unneeded
-            // Fight back the compiler
             self.bottom.playing = Some((music_title.to_string(), !is_playing));
             notifier.notify_all();
         }

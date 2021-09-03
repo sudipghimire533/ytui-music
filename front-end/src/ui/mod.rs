@@ -167,7 +167,11 @@ pub enum Window {
 pub struct BottomState {
     music_duration: Duration,
     music_elapse: Duration,
-    playing: Option<(String, bool)>, // Music title and playing status
+    // String inside the Some is the title of song being played
+    // true in Some means that music is currently playing
+    // false in Some means music is paused
+    // None means playing nothing. eg: At the start of program
+    playing: Option<(String, bool)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

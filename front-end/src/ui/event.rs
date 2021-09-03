@@ -142,14 +142,18 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     let show_help = || {
         todo!();
     };
-    let handle_up = || {
+    let handle_up_down = |direction: HeadTo| {
         let state = state_original.lock().unwrap();
         match state.active {
-            ui::Window::Sidebar => drop_and_call!(state, advance_sidebar, HeadTo::Prev),
-            ui::Window::Musicbar => drop_and_call!(state, advance_music_list, HeadTo::Prev),
-            ui::Window::Playlistbar => drop_and_call!(state, advance_playlist_list, HeadTo::Prev),
-            ui::Window::Artistbar => drop_and_call!(state, advance_artist_list, HeadTo::Prev),
-            _ => drop_and_call!(state, moveto_prev_window),
+            ui::Window::Sidebar => drop_and_call!(state, advance_sidebar, direction),
+            ui::Window::Musicbar => drop_and_call!(state, advance_music_list, direction),
+            ui::Window::Playlistbar => drop_and_call!(state, advance_playlist_list, direction),
+            ui::Window::Artistbar => drop_and_call!(state, advance_artist_list, direction),
+            _ => match direction {
+                HeadTo::Next => drop_and_call!(state, moveto_next_window),
+                HeadTo::Prev => drop_and_call!(state, moveto_prev_window),
+                _ => unreachable!(),
+            },
         }
     };
     let handle_down = || {
@@ -345,10 +349,10 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             match event::read().unwrap() {
                 Event::Key(key) => match key.code {
                     KeyCode::Down | KeyCode::PageDown => {
-                        handle_down();
+                        handle_up_down(HeadTo::Next);
                     }
                     KeyCode::Up | KeyCode::PageUp => {
-                        handle_up();
+                        handle_up_down(HeadTo::Prev);
                     }
                     KeyCode::Right | KeyCode::Tab => {
                         moveto_next_window();
