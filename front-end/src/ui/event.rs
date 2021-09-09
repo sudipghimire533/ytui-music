@@ -134,9 +134,6 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     let activate_search = || {
         let mut state = state_original.lock().unwrap();
         state.active = ui::Window::Searchbar;
-        // Mark search option to be real active
-        // this bring state to same state weather
-        // activated from shortcut key or from sidebar
         notifier.notify_all();
     };
     let show_help = || {
@@ -156,17 +153,6 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             },
         }
     };
-    let handle_down = || {
-        let state = state_original.lock().unwrap();
-        match state.active {
-            ui::Window::Sidebar => drop_and_call!(state, advance_sidebar, HeadTo::Next),
-            ui::Window::Musicbar => drop_and_call!(state, advance_music_list, HeadTo::Next),
-            ui::Window::Playlistbar => drop_and_call!(state, advance_playlist_list, HeadTo::Next),
-            ui::Window::Artistbar => drop_and_call!(state, advance_artist_list, HeadTo::Next),
-            _ => drop_and_call!(state, moveto_next_window),
-        }
-    };
-
     let fill_search_music = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
@@ -333,8 +319,6 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                     let artist_id = artist.id.clone();
                     state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.clone(), 0);
                     state.filled_source.1 = ui::PlaylistbarSource::Artist(artist_id, 0);
-                    state.musicbar.clear();
-                    state.playlistbar.clear();
                     std::mem::drop(state);
                     fill_music_from_artist(HeadTo::Initial);
                     fill_playlist_from_artist(HeadTo::Initial);
