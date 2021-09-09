@@ -181,9 +181,6 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.filled_source.0 = ui::MusicbarSource::Search(state.search.1.clone(), 0);
         state.filled_source.1 = ui::PlaylistbarSource::Search(state.search.1.clone(), 0);
         state.filled_source.2 = ui::ArtistbarSource::Search(state.search.1.clone(), 0);
-        state.musicbar.clear();
-        state.playlistbar.clear();
-        state.artistbar.clear();
         notifier.notify_all();
     };
     let fill_trending_music = |direction: HeadTo| {

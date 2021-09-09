@@ -52,6 +52,7 @@ pub async fn communicator<'st, 'nt>(
             state.filled_source.2.clone(),
         )
     };
+    
     'communicator_loop: loop {
         let mut state = notifier.wait(state_original.lock().unwrap()).unwrap();
         if state.active == ui::Window::None {
