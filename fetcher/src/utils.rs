@@ -49,9 +49,9 @@ impl Fetcher {
                 },
             ),
             servers: [
+                "https://ytprivate.com/api/v1",
                 "https://vid.puffyan.us/api/v1",
                 "https://invidious.snopyta.org/api/v1",
-                "https://ytprivate.com/api/v1",
                 "https://ytb.trom.tf/api/v1",
                 "https://invidious.namazso.eu/api/v1",
                 "https://invidious.hub.ne.kr/api/v1",

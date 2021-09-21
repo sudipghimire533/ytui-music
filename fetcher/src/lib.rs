@@ -47,17 +47,35 @@ struct FetchPlaylistContentRes {
     videos: Vec<MusicUnit>,
 }
 
+// Serve same purpose as described in struct FetchPlaylistContentRes but
+// to convert to Vec<PlaylistUnit>
 #[derive(Deserialize, Clone, PartialEq)]
 struct FetchArtistPlaylist {
     playlists: Vec<PlaylistUnit>,
 }
 
+// Represent the single playable music item.
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct MusicUnit {
+    // If user had kept this item in favourates list(uniquely identified by field path)
+    // List of favourates nusic unit are stored and manipulated in local file
+    // This field does not exists in the server response so all the computation is to be done in
+    // serializing function
+    // TODO:
+    // For now this is simple set to false. But once the local storage is maintained to store user data
+    // this should be set accordingly. Possibly, by creating the static hashmap for all favourates
+    // music list and then comparing if this specific item is in there
     #[serde(default)]
     pub liked: bool,
+    // uniquely identifiable id of the youtube channel that represent the publisher of this unit
+    // This field exist to make it possible to navigate to the artist channel from the song alone
+    // server return this field as `author`
     #[serde(alias = "author")]
     pub artist: String,
+    // The name of the music unit itself. This may also contains the unicode or
+    // any unprintable character.
+    // This field simply serves as the music name to be displayed in list
+    // server return this field as `title`
     #[serde(alias = "title")]
     pub name: String,
     #[serde(alias = "lengthSeconds")]
@@ -97,19 +115,79 @@ struct SearchRes {
     last_fetched: i8,
 }
 
+/*
+Return type of the fetch function. This indicates different reason on why no data
+was returned from the fetcher function as stated below.
+*/
 #[derive(Debug)]
 pub enum ReturnAction {
+    // This variat indicates that the fetch has failed and cannot be resolved on retrying
+    // This may be due to several reasons including server down, network failure, parse failure
+    // Also Failed is active when fetcher had retried and now had exceed the retry count
     Failed,
+    // This variant simply indicates that the request has failed but doing the same request for
+    // another time may suceed
     Retry,
-    EOR, // End Of Result
+    // EOR avvrebration of End Of Result indicates that there is nothing more to fetch
+    // At this point the corresponding container have all the data either fetched at once
+    // like or had fetched the maximum page in pagination fetch
+    // A common example is when all the 3/4 page of trending page have been fetched
+    // and user had seen the end. or all the search result have been srved
+    // At this condition the fetch has technicallt suceed and also tells that
+    // another retry on same query will return EOR again and again until new fetch is to be made
+    EOR,
 }
 
 pub struct Fetcher {
+    // None if nothing of the trending music is selected.
+    // Stores the vector of music that is trending in music section in specified region
+    // trending_now, is never cleared in a session. Unlike many others data container
+    // below, this field is only appended and read. When user paginate and there are no more
+    // result in container another web request method is made and result is again stored and never cleared.
+    // This may bring little delay when user explore for first time in a session but after that everything
+    // will be in memory making it smooth.
     trending_now: Option<Vec<MusicUnit>>,
+    //playlist_content stores collection of music contained in a playlist
+    // first field: (String) holds the unique if of playlist that is being read.
+    // All the content in given playlist id is fetched at once and stored meaning
+    // only single web request is needed and no other even when user asks for next page.
+    // On the other hand this means for a playlist with large amount of content
+    // takes more time to initilized.
+    // The needed request will return the array of music data. And currently there is no way
+    // to fetch only the necessary fields inside music struct. Which means even with playlist
+    // of samll size, over data is returend by the data that is just ignored from our side. Thus
+    // increasing the network traffic.
+    // On the positive side, it is not needed to send multiple request when user explore the content
+    // in pagiunation. Just the different chunks of data is returned. Also, this makes possible to
+    // feed the player backend with all the content of playlist which means playing from
+    // playlist don't have to get interrupted for fetching more data once played tha last item of
+    // last fetched data. Playback stops only when playlist ends.
     playlist_content: (String, Vec<MusicUnit>),
+    /*
+    artist_content stores collection of music and also the collection of playlists
+    from the channel
+    First field: (String) holds the unique id of channel being fetched.
+    For more info see documentation on playlist_content above
+    */
     artist_content: (String, Vec<MusicUnit>, Vec<PlaylistUnit>),
+    // List of available servers powered by invidious youtube data fetcher. All the servers should
+    // provide same endpoints to make request to and same pattern of return data. Which actually means
+    // all the servers must be powered by the same mahor version of invidious backend.
+    // Most of the servers do not expect high amount of request to their api. So to protect this
+    // it would be better to frequently change the server time to time even in single session.
+    // To distribute the load between multiple servers it would be better if this list is kept growing
+    // See the utils.rs file to see the format of server url.
     servers: [&'static str; 6],
+    // Container to store the result of search result.
+    // First field: (String) is the query being searched for.
     search_res: (String, SearchRes),
+    // The reqwest client itself. This is only initilized once per session.
     client: reqwest::Client,
+    // index that reference the servers[] field.
+    // When server need to be changes as described in documentation of servers[] field
+    // this index is updated (usually rotated clockwise)
+    // TODO:
+    // It may be more efficient to directly reference the elemnt from searvers[] rather than
+    // storing the index and hence preventing accidintal out-of-index access
     active_server_index: usize,
 }

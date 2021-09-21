@@ -26,6 +26,8 @@ enum HeadTo {
     Prev,
 }
 
+// Helper function to return the index of something depending the current position and direction to
+// move to
 fn advance_index(current: usize, limit: usize, direction: HeadTo) -> usize {
     match direction {
         HeadTo::Next => (current + 1) % limit,
@@ -34,6 +36,9 @@ fn advance_index(current: usize, limit: usize, direction: HeadTo) -> usize {
     }
 }
 
+// Helper function similar to advance_index but indeat it will rotate the given VecDeque directly
+// Additionally, it will return a boolean which indicates if given list is rotated or left
+// untouched
 fn advance_list<T>(list: &mut VecDeque<T>, direction: HeadTo) -> bool {
     if list.is_empty() {
         return false;
@@ -45,17 +50,30 @@ fn advance_list<T>(list: &mut VecDeque<T>, direction: HeadTo) -> bool {
     }
     true
 }
+
+// Helper function to drop the first paramater and call the function in second paramater and
+// optional arguments provided in later arguments
+// This is used to drop the state and call the function as such pattern is found redundant while
+// calling event handeling closure where unlocked state needs to be droppped before calling the
+// corresponding handler
 macro_rules! drop_and_call {
+    // This will call the function in passe in second argument
+    // passed function will not accept any argument
     ($state: expr, $callback: expr) => {{
         std::mem::drop($state);
         $callback()
     }};
+    // This will call the function recived in second argument and pass the later arguments as that
+    // function paramater
     ($state: expr, $callback: expr, $($args: expr)*) => {{
         std::mem::drop($state);
         $callback( $($args)* )
     }};
 }
 
+// Heklper function to get the next page depending on the current page and direction to move
+// This was mainly created to fetch the next page of the musicbar/playlist bar when user
+// hits NEXT_SH_KEY or PREV_SH_KEY
 #[inline]
 fn get_page(current: &Option<usize>, direction: HeadTo) -> usize {
     let page = match current {
@@ -69,7 +87,20 @@ fn get_page(current: &Option<usize>, direction: HeadTo) -> usize {
     page as usize
 }
 
+/*
+* The event_sender function is running in it's own seperate thread.
+* -> A loop is initilized where it waits for any event to happen (keypress and resize for now)
+* and call the corresponding closure to handle event.
+* -> Inside every closure state that are dependent to this event is checked. eg: checks active
+* window shile handleing left/right direction key
+* -> To fetch data, required data paramater is set in a state variable which is shared across all
+* the threads. And another loop is ran in communicator.rs where it wait checks weather anything
+* should be filled from diffrenet source.
+*/
 pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut Arc<Condvar>) {
+    // There is several option in sidebar like trending/ favourates,
+    // this handler will change the selected option from sidebar depending on the direction user
+    // move (Up or DOwn).
     let advance_sidebar = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         let current = state.sidebar.selected().unwrap_or_default();
@@ -80,26 +111,48 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         )));
         notifier.notify_all();
     };
+    // This handler wil advance the list in musicbar(stored in `musicbar` variable of state)
+    // and notify the state change when advance_list function actually rotated the VecDeque
+    // Unlike advance_sidebar the selection is not moved up or down, infact selection always stays
+    // at first element. But to select the another item the list is rotated.
+    // This was done because for now fixed no. of element ITEM_PER_PAGE is shown in the list
+    // irrespective of the window size.
+    // TODO: In future this is to be change. Instead of showinf fixed element that is configured in
+    // conifg file, the no. of element to shown will be beter to calculate according to the app
+    // size, so that no space will be gone waste. Currently, this is done because, for now the size
+    // of screen is not considered noehere.
     let advance_music_list = |move_down: HeadTo| {
         if advance_list(&mut state_original.lock().unwrap().musicbar, move_down) {
             notifier.notify_all();
         }
     };
+    // simialr to advance_music_list but instead rotate data in `artistbar` variable of state
     let advance_artist_list = |move_down: HeadTo| {
         if advance_list(&mut state_original.lock().unwrap().artistbar, move_down) {
             notifier.notify_all();
         }
     };
+    // simialr to advance_artist_list but instead rotate data in `playlistbar` variable of state
     let advance_playlist_list = |move_down: HeadTo| {
         if advance_list(&mut state_original.lock().unwrap().playlistbar, move_down) {
             notifier.notify_all();
         }
     };
+    // When active window is set to NONE, it means user had requested to quit the application,
+    // This handle will fire when user hits QUIT_SH_KEY
+    // Before breaking the loop which this function is running on
+    // this closure will simply set the active_window (`active`) to None so that functions in other
+    // thread can also respond to the event (which is usally again breking the running loop in
+    // thread)
     let quit = || {
         // setting active window to None is to quit
         state_original.lock().unwrap().active = ui::Window::None;
         notifier.notify_all();
     };
+    // This handler will fire up when user request to move between sections like musicbar, sidebar
+    // etc.
+    // TODO: Merge moveto_next_window and move_to_prev window in same closure
+    // which receaves the direction to determine on which direction to move in
     let moveto_next_window = || {
         let mut state = state_original.lock().unwrap();
         state.active = state.active.next();
@@ -110,6 +163,8 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.active = state.active.prev();
         notifier.notify_all();
     };
+    // This handler is fired when user press ESC key,
+    // for now esc key just clear the content in search bar and move to next window
     let handle_esc = || {
         let mut state = state_original.lock().unwrap();
         if state.active == ui::Window::Searchbar {
@@ -117,6 +172,10 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             drop_and_call!(state, moveto_next_window);
         }
     };
+    // This handler is fired when user press BACKSPACE key
+    // backspace key will pop the last character from search query if pressed from searchbar
+    // and if this key is pressed from somewhere else other than searchbar then will simply
+    // move to previous window
     let handle_backspace = || {
         let mut state = state_original.lock().unwrap();
         match state.active {
@@ -127,18 +186,36 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             _ => drop_and_call!(state, moveto_prev_window),
         }
     };
+    // This is fires when user press any character key
+    // this will simpley push the recived character in search query term and update state
+    // so can the added character becomes visible
     let handle_search_input = |ch| {
         state_original.lock().unwrap().search.0.push(ch);
         notifier.notify_all();
     };
+    // This handler is fired when use press SEARCH_SH_KEY
+    // this will move the curson to the searchbar from which user can start to type the query
     let activate_search = || {
         let mut state = state_original.lock().unwrap();
         state.active = ui::Window::Searchbar;
         notifier.notify_all();
     };
+    // This handler will be fired when use press HELP_SH_KEY
+    // this will simply show the basic help on how to use this program including
+    // shortcuts key
     let show_help = || {
-        todo!();
+        // TODO: create a new window that covers all the screen and remove the previous screen
+        // If this became the source of hassale then remove this optionfrom
+        // mod.rs: Window
+        // mod.rs: Active
+        // Enum Window: Help
+        eprintln!("Show help");
     };
+    // This handler will be fired when user hits UP_ARROW or DOWN_ARROW key
+    // UP_ARROW will set the direction to PREV and DOWN_ARROW to NEXT
+    // for now, these key will only handle the moving of list
+    // So, depending on the window which is currently active, this closure will call
+    // the respective handler which will advance the corersponding list
     let handle_up_down = |direction: HeadTo| {
         let state = state_original.lock().unwrap();
         match state.active {
