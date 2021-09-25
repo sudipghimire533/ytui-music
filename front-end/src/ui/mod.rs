@@ -2,6 +2,7 @@ pub mod event;
 mod utils;
 use std::sync::Condvar;
 use tui::{backend::CrosstermBackend, Terminal};
+// These are the imports also used in __utils.rs__ so make this import shareable
 mod shared_import {
     pub use fetcher;
     pub use libmpv;
@@ -29,32 +30,119 @@ use crossterm::{
 };
 use shared_import::*;
 
+
+// Following several state defines the layout of the ui
+// The ui is first splitted into 3 area arranged verticsally in order:
+// --------------------------------------
+// |            TopLayout               |
+// -------------------------------------
+// |                                    |
+// |        MiddleLayout                |
+// |                                    |
+// --------------------------------------
+// |        BottomLaout                 |
+// --------------------------------------
+// TopLayout and Bottom layout are of small height.
+// 3 row for toplayout(2 for border and 1 for single line text) and
+// 3 or 4 row(2 for border and 1 or 2 for music name and icons) for bottom layout
+// bottomlayout. And all the remaining area is given to MiddleLayout
+// TODO: Above specified division of height is not yet implemented. For now the dovision is based
+// hardcoded in percentage. But instead change that to 3/4 row length for top/bottom layout
+// and calculate the remaining row height. If remaining row height is less than like 6/7 row ask
+// user to increase size of terminal window or zoom out/ decrease font size of terminal
+
+// TopLayout is off full width in the top. This again contains two components which are splitted
+// horizontally. These area are for searchbar (which covers more than half of layout) and
+// helpbar (confusignly named as this shows the "Press ?" like message and also show the working
+// status of app like "error occured", "no more result", "requesting data" and so on)
+// They are splitted in such a ratio that searchbar covers much of area but helpbar should also get
+// sufficient enouh so that any printed status is not hidden for now 85%:15% ratio
+// ---------------------------------------
+// |        Search Bar          | HelpBar |
+// ---------------------------------------
 pub struct TopLayout {
     layout: [Rect; 2],
 }
 
+// --------------------------------------
+// |         |                          |
+// |         |      MiddleLayout        |
+// | SideBar |                          |
+// |         |                          |
+// --------------------------------------
+// Sidebar holds the list of available quick navigation defined in struct `SidebarOption`
 pub struct MainLayout {
     sidebar: SideBar,
     middle_section: MiddleLayout,
 }
 
+// TODO: Instead of having seperate struct to hold SideBar Rect define Rect directly in MainLayout
+// So that this struct is removed and type of `MainLayout::sidebar` is Rect
 pub struct SideBar {
     layout: Rect,
 }
 
+// --------------------------------------
+// |                                    |
+// |        Rect (musicbar)             |
+// |                                    |
+// |-------------------------------------
+// |                                    |
+// |        MiddleBottom                | 
+// |                                    |
+// --------------------------------------
+// Split the area vertically. first section is the area where musics are shown which is actually
+// the individual video from youtube. See `Fetcher::MusicUnit` type
+// See `MiddleBottom` for more
 pub struct MiddleLayout {
     layout: Rect,
     bottom: MiddleBottom,
 }
 
+// ---------------------------------------
+// |                  |                  |
+// | Rect(playlisbar) | Rect (artistbar) |
+// |                  |                  |
+// ---------------------------------------
+// splits the given area vertical half where left haf shows the list of playlist which is actually
+// the playlist defined in youtube. See `Fetcher::PlaylistUnit` type
+// right half show the list of artist which is actually
+// the channel from youtube. See `Fetcher::ArtistUnit` type
 pub struct MiddleBottom {
     layout: [Rect; 2],
 }
 
+// -------------------------------------
+// |        Rect (MusicConroller)       |
+// -------------------------------------
+// TODO: Split this area horzontally where small portion in right half shows the info like
+// suffle, repeat, pause/playing using icon
 pub struct BottomLayout {
     layout: Rect,
 }
 
+// This is what final ui looks like
+// ----------------------------------------------------------
+// |    Searchbar                           |  Helpbar      |
+// |--------------------------------------------------------|
+// |         |                                              |
+// |         |                                              |
+// |         |                  MusicBar                    |
+// |         |                                              |
+// |         |                                              |
+// | Sidebar |----------------------------------------------|
+// |         |                      |                       |
+// |         |                      |                       |
+// |         |     PlaylistBar      |      ArtistBar        |
+// |         |                      |                       |
+// |         |                      |                       |
+// |         |                      |                       |
+// |--------------------------------------------------------|
+// |                        BottomBar                       |
+// ----------------------------------------------------------
+
+// Sotres the position on which respective components (in which field is named after)
+// are to be rendered
 #[derive(Default)]
 pub struct Position {
     pub search: Rect,
@@ -66,6 +154,17 @@ pub struct Position {
     pub controllers: Rect,
 }
 
+// This function will:
+// 1) Initilize the terminal backend
+// 2) Get the layout of the ui
+// 3) print content in ui
+// 4) Run a loop waiting for state variable to change
+// if user asks to quit the app(denoted by setting active window to None) -> Quit,
+// else -> Update the ui
+// Ui is always updated when notified. No checkes are done to weather the ui is really updated or
+// not as algorithms defined in ternial backend is responsible for such checks.
+// Ui is also updated in every REFRESH_RATE specified which will then sync the states like
+// played duration to the ui. Also see documentation in __event.rs__ file
 pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
     let mut stdout = std::io::stdout();
     execute!(stdout, EnterAlternateScreen).expect("Failed to enter alternate screen");
@@ -132,6 +231,9 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
         }
     }
 
+    // Attempt to bring terminal in original state before thi appbut when any attempt is failed
+    // do not panic but simply leave the message about failure and user will be responsibe to
+    // handle their terminal on their own
     crossterm::terminal::disable_raw_mode().unwrap_or_else(|_| {
         eprintln!("Failed to leave raw mode. You may need to restart the terminal")
     });
