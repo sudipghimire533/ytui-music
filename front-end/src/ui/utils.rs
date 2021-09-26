@@ -392,6 +392,9 @@ impl Default for ui::State<'_> {
         mpv.set_property("script-opts", "ytdl_hook-try_ytdl_first=yes")
             .unwrap();
 
+        // TODO: set this according the prefernce defined in user config file
+        mpv.set_property("loop-playlist", "inf").unwrap();
+
         let mut sidebar_list_state = ListState::default();
         sidebar_list_state.select(Some(0));
         ui::State {
