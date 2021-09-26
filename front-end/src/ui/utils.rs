@@ -440,6 +440,14 @@ impl ui::State<'_> {
                     self.help = "Playback error..";
                 }
             }
+            // Now as the selection is being played. Add remaining item from musicbar to the play
+            // queue
+            for music in self.musicbar.range(1..) {
+                self.player
+                    .command("loadfile", [music.path.as_str(), "append"].as_ref())
+                    .ok();
+            }
+
             notifier.notify_all();
         }
     }
@@ -482,7 +490,7 @@ impl ui::State<'_> {
     }
     // This function can also be used to check playing status
     // Returning true means some music is playing which may be paused or unpaused
-    pub fn replace_mpv_status(&mut self) {
+    pub fn refresh_mpv_status(&mut self) {
         // It may be better to use wait event method from mpv
         // but for that we need tp spawn seperate thread/task
         // and also we are updating the ui anway so it may also be affordable to just query mpv in
@@ -509,12 +517,12 @@ impl ui::State<'_> {
             let title = self
                 .player
                 .get_property::<String>("media-title")
-                .unwrap_or(">> No title <<".to_string());
+                .unwrap_or(">> Play some music <<".to_string());
             let estimated_duration_reply = self
                 .player
                 .get_property::<i64>("duration")
                 .unwrap_or_default();
-            
+
             self.bottom.playing = Some((title, true)); // at this scope of match playing status is always true
             self.bottom.music_duration =
                 Duration::from_secs(estimated_duration_reply.try_into().unwrap_or_default());
