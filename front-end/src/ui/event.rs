@@ -20,6 +20,8 @@ const SEEK_B_KEY: char = '<';
 const TOGGLE_PAUSE_KEY: char = ' ';
 const REFRESH_RATE: u64 = 950;
 
+const YOUTUBE_COMMUNITY_CHANNEL: [&str; 1] = ["UC-9-kyTW8ZkZNDHQJ6FgpwQ"];
+
 enum HeadTo {
     Initial,
     Next,
@@ -98,6 +100,13 @@ fn get_page(current: &Option<usize>, direction: HeadTo) -> usize {
 * should be filled from diffrenet source.
 */
 pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut Arc<Condvar>) {
+    // Some predefined source
+    let youtube_community_channels = VecDeque::from(vec![fetcher::ArtistUnit {
+        name: "Youtube Music Global Charts".to_string(),
+        id: "UCrKZcyOJVWnJ60zM1XWllNw".to_string(),
+        video_count: "NaN".to_string(),
+    }]);
+
     // There is several option in sidebar like trending/ favourates,
     // this handler will change the selected option from sidebar depending on the direction user
     // move (Up or DOwn).
@@ -267,7 +276,12 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.help = "Fetching..";
         notifier.notify_all();
     };
-    let fill_community_music = |_direction: HeadTo| {};
+    let fill_community_source = || {
+        let mut state = state_original.lock().unwrap();
+        state.artistbar = youtube_community_channels.clone();
+        state.active = ui::Window::Artistbar;
+        notifier.notify_all();
+    };
     let fill_recents_music = |_direction: HeadTo| {};
     let fill_favourates_music = |_direction: HeadTo| {};
     let fill_favourates_artist = |_direction: HeadTo| {};
@@ -313,7 +327,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                     drop_and_call!(state, fill_trending_music, direction);
                 }
                 ui::MusicbarSource::YoutubeCommunity => {
-                    drop_and_call!(state, fill_community_music, direction);
+                    drop_and_call!(state, fill_community_source);
                 }
                 ui::MusicbarSource::RecentlyPlayed => {
                     drop_and_call!(state, fill_recents_music, direction);
@@ -363,7 +377,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                         drop_and_call!(state, fill_trending_music, HeadTo::Initial);
                     }
                     ui::SidebarOption::YoutubeCommunity => {
-                        drop_and_call!(state, fill_community_music, HeadTo::Initial);
+                        drop_and_call!(state, fill_community_source);
                     }
                     ui::SidebarOption::Favourates => {
                         drop_and_call!(state, fill_favourates_music, HeadTo::Initial);
