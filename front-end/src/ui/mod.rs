@@ -211,7 +211,7 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                     MiddleBottom::get_artist_container(&state_unlocked);
                 screen.render_stateful_widget(artist_list, position.artist, &mut artist_list_state);
 
-                state_unlocked.refresh_time_elapsed();
+                state_unlocked.replace_mpv_status();
                 screen.render_widget(
                     BottomLayout::get_controller(&state_unlocked),
                     position.controllers,

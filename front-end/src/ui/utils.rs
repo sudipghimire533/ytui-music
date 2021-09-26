@@ -443,7 +443,15 @@ impl ui::State<'_> {
             notifier.notify_all();
         }
     }
-    pub fn select_first_of_playlistbar(&mut self, playlist: &fetcher::PlaylistUnit) {
+    // This function is called when user press enter in non-empty list of playlistbar
+    pub fn select_first_of_playlistbar(&mut self) {
+        let playlist: &fetcher::PlaylistUnit;
+        if let Some(pl) = self.playlistbar.front() {
+            playlist = pl;
+        } else {
+            return;
+        }
+
         match self.bottom.playing {
             // Play this playlist when one of following is true
             // i) Nothing was being played previously
@@ -455,13 +463,26 @@ impl ui::State<'_> {
                 // when mpv plays new item from playlist corresponding title should be rendered
                 // If there exist a mpv property that return the title of currently playing music
                 // then it will be easy
+                match self.player.command(
+                    "loadfile",
+                    [format!("https://www.youtube.com/playlist?list={}", &playlist.id).as_str()]
+                        .as_ref(),
+                ) {
+                    Ok(_) => {
+                        self.help = "Press ?";
+                        self.bottom.playing = Some((playlist.name.clone(), true));
+                    }
+                    Err(_) => {
+                        self.help = "Playback error..";
+                    }
+                }
             }
             _ => {}
         }
     }
     // This function can also be used to check playing status
     // Returning true means some music is playing which may be paused or unpaused
-    pub fn refresh_time_elapsed(&mut self) -> bool {
+    pub fn replace_mpv_status(&mut self) {
         // It may be better to use wait event method from mpv
         // but for that we need tp spawn seperate thread/task
         // and also we are updating the ui anway so it may also be affordable to just query mpv in
@@ -470,7 +491,6 @@ impl ui::State<'_> {
             match self.player.get_property::<i64>("audio-pts") {
                 Ok(time) => {
                     self.bottom.music_elapse = Duration::from_secs(time as u64);
-                    return true;
                 }
                 Err(_e) => {
                     // This error is generally expected to be -10 (property exist but not available
@@ -481,8 +501,24 @@ impl ui::State<'_> {
                     // eprintln!("Err: {}", e);
                 }
             }
+
+            // These will update the status from mpv in real time. This will always show to correct
+            // title of the music that is being playing even from playlist so we there is no need
+            // to listen to mpv event for playlist index change just to change the title and
+            // duration of currently playing music.
+            let title = self
+                .player
+                .get_property::<String>("media-title")
+                .unwrap_or(">> No title <<".to_string());
+            let estimated_duration_reply = self
+                .player
+                .get_property::<i64>("duration")
+                .unwrap_or_default();
+            
+            self.bottom.playing = Some((title, true)); // at this scope of match playing status is always true
+            self.bottom.music_duration =
+                Duration::from_secs(estimated_duration_reply.try_into().unwrap_or_default());
         }
-        false
     }
 
     pub fn toggle_pause(&mut self, notifier: &Arc<std::sync::Condvar>) {

@@ -396,10 +396,12 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                 drop_and_call!(state, start_search);
             }
             ui::Window::Playlistbar => {
+                state.select_first_of_playlistbar();
                 if let Some(playlist) = state.playlistbar.front() {
                     state.filled_source.0 = ui::MusicbarSource::Playlist(playlist.id.clone(), 0);
                     state.musicbar.clear();
                     drop_and_call!(state, fill_music_from_playlist, HeadTo::Initial);
+                    notifier.notify_all();
                 }
             }
             ui::Window::Artistbar => {
