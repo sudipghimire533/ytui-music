@@ -20,8 +20,6 @@ const SEEK_B_KEY: char = '<';
 const TOGGLE_PAUSE_KEY: char = ' ';
 const REFRESH_RATE: u64 = 950;
 
-const YOUTUBE_COMMUNITY_CHANNEL: [&str; 1] = ["UC-9-kyTW8ZkZNDHQJ6FgpwQ"];
-
 enum HeadTo {
     Initial,
     Next,

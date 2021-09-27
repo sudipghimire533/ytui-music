@@ -407,10 +407,10 @@ mod tests {
     #[tokio::test]
     async fn check_artist_content_music() {
         let mut fetcher = Fetcher::new();
-        let obj = fetcher
-            .get_videos_of_channel("UCJEog_sDzuGyLok8f4p0HRA", 0)
-            .await;
-        eprintln!("{:#?}", obj);
+        for channel_id in ["UCJEog_sDzuGyLok8f4p0HRA", "UCIwFjwMjI0y7PDBVEO9-bkQ"] {
+            let obj = fetcher.get_videos_of_channel(channel_id, 0).await;
+            eprintln!("{:#?}", obj);
+        }
     }
 
     #[tokio::test]
