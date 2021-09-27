@@ -342,13 +342,16 @@ impl<'a> ExtendBlock<'a> for Block<'_> {
 
 impl ui::Position {
     pub fn caclulate(screen_rect: &Rect) -> Self {
+        // 3 line for each bottom and top bar (1 for content and 2 for border)
+        // remaining height for middlebar
+        let for_middle = screen_rect.height - (2 * 3);
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(
                 [
-                    Constraint::Percentage(10),
-                    Constraint::Percentage(80),
-                    Constraint::Length(10),
+                    Constraint::Length(3),
+                    Constraint::Length(for_middle),
+                    Constraint::Length(3),
                 ]
                 .as_ref(),
             )
