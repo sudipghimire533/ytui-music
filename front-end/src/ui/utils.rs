@@ -111,9 +111,9 @@ impl<'parent> ui::MiddleLayout {
                         true => HEART_FILLED,
                         false => HEART_OUTLINE,
                     },
-                    &music.name,
-                    &music.artist,
-                    &music.duration,
+                    music.name.as_str(),
+                    music.artist.as_str(),
+                    music.duration.as_str(),
                 ])
             })
             .collect();
@@ -152,74 +152,76 @@ impl<'parent> ui::MiddleBottom {
         }
     }
 
-    pub fn get_playlist_container(state: &'parent ui::State) -> (List<'parent>, ListState) {
-        let mut list_state = ListState::default();
+    pub fn get_playlist_container(state: &'parent ui::State) -> (Table<'parent>, TableState) {
+        let mut tb_state = TableState::default();
         let block = match state.active {
             ui::Window::Playlistbar => {
-                list_state.select(Some(0));
+                tb_state.select(Some(0));
                 Block::active("Playlist ".to_owned())
             }
             _ => {
-                list_state.select(None);
+                tb_state.select(None);
                 Block::new("Playlist ".to_owned())
             }
         };
         let data_list = &state.playlistbar;
-        let artist_list = List::new(
-            data_list
-                .iter()
-                .map(|playlist| {
-                    let text = Spans::from(vec![
-                        Span::styled(
-                            format!("[{}] ", &playlist.video_count),
-                            Style::list_idle().fg(Color::LightYellow),
-                        ),
-                        Span::styled(&playlist.name, Style::list_idle()),
-                        Span::styled(" by ", Style::list_hilight()),
-                        Span::styled(&playlist.author, Style::list_idle().fg(Color::LightYellow)),
-                    ]);
-                    ListItem::new(text)
-                })
-                .collect::<Vec<ListItem>>(),
-        )
-        .highlight_style(Style::list_hilight())
-        .block(block);
+        let items: Vec<Row> = data_list
+            .iter()
+            .map(|playlist| {
+                Row::new(vec![
+                    playlist.video_count.as_str(),
+                    playlist.name.as_str(),
+                    playlist.author.as_str(),
+                ])
+            })
+            .collect();
+        let table = Table::new(items)
+            .header(
+                Row::new(vec!["#", "Name", "Creator"])
+                    .style(Style::default().fg(Color::LightYellow)),
+            )
+            .widths(
+                [
+                    Constraint::Percentage(10),
+                    Constraint::Percentage(60),
+                    Constraint::Percentage(30),
+                ]
+                .as_ref(),
+            )
+            .column_spacing(1)
+            .style(Style::list_idle())
+            .highlight_style(Style::list_hilight())
+            .block(block);
 
-        (artist_list, list_state)
+        (table, tb_state)
     }
 
-    pub fn get_artist_container(state: &'parent ui::State) -> (List<'parent>, ListState) {
-        let mut list_state = ListState::default();
+    pub fn get_artist_container(state: &'parent ui::State) -> (Table<'parent>, TableState) {
+        let mut tb_state = TableState::default();
         let block = match state.active {
             ui::Window::Artistbar => {
-                list_state.select(Some(0));
+                tb_state.select(Some(0));
                 Block::active("Artist ".to_owned())
             }
             _ => {
-                list_state.select(None);
+                tb_state.select(None);
                 Block::new("Artist ".to_owned())
             }
         };
         let data_list = &state.artistbar;
-        let playlist_list = List::new(
-            data_list
-                .iter()
-                .map(|artist| {
-                    let text = Spans::from(vec![
-                        Span::styled(
-                            format!("[{}] ", &artist.video_count),
-                            Style::list_idle().fg(Color::LightYellow),
-                        ),
-                        Span::styled(&artist.name, Style::list_idle()),
-                    ]);
-                    ListItem::new(text)
-                })
-                .collect::<Vec<ListItem>>(),
-        )
-        .highlight_style(Style::list_hilight())
-        .block(block);
+        let items: Vec<Row> = data_list
+            .iter()
+            .map(|artist| Row::new(vec![artist.video_count.as_str(), artist.name.as_str()]))
+            .collect();
+        let table = Table::new(items)
+            .header(Row::new(vec!["#", "Name"]).style(Style::default().fg(Color::LightYellow)))
+            .widths([Constraint::Percentage(10), Constraint::Percentage(90)].as_ref())
+            .column_spacing(1)
+            .style(Style::list_idle())
+            .highlight_style(Style::list_hilight())
+            .block(block);
 
-        (playlist_list, list_state)
+        (table, tb_state)
     }
 }
 
