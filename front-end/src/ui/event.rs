@@ -162,9 +162,8 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         notifier.notify_all();
     };
     // This handler will fire up when user request to move between sections like musicbar, sidebar
-    // etc.
-    // TODO: Merge moveto_next_window and move_to_prev window in same closure
-    // which receaves the direction to determine on which direction to move in
+    // etc. Similar handler moveto_next_window / moveto_prev_window are not merged as these
+    // closures as these handlers are frequently called so avoid more branching
     let moveto_next_window = || {
         let mut state = state_original.lock().unwrap();
         state.active = state.active.next();
@@ -241,31 +240,6 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                 _ => unreachable!(),
             },
         }
-    };
-    let fill_search_music = |direction: HeadTo| {
-        let mut state = state_original.lock().unwrap();
-        state.fetched_page[MIDDLE_MUSIC_INDEX] =
-            Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
-        state.help = "Searching..";
-        notifier.notify_all();
-    };
-    let fill_search_playlist = |direction: HeadTo| {
-        let mut state = state_original.lock().unwrap();
-        state.fetched_page[MIDDLE_PLAYLIST_INDEX] = Some(get_page(
-            &state.fetched_page[MIDDLE_PLAYLIST_INDEX],
-            direction,
-        ));
-        state.help = "Searching..";
-        notifier.notify_all();
-    };
-    let fill_search_artist = |direction: HeadTo| {
-        let mut state = state_original.lock().unwrap();
-        state.fetched_page[MIDDLE_ARTIST_INDEX] = Some(get_page(
-            &state.fetched_page[MIDDLE_ARTIST_INDEX],
-            direction,
-        ));
-        state.help = "Searching..";
-        notifier.notify_all();
     };
     let start_search = || {
         let mut state = state_original.lock().unwrap();
