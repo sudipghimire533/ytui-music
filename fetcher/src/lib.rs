@@ -99,11 +99,26 @@ pub struct PlaylistUnit {
     pub video_count: String,
 }
 
+#[derive(Default)]
 struct SearchRes {
     music: Vec<MusicUnit>,
     playlist: Vec<PlaylistUnit>,
     artist: Vec<ArtistUnit>,
+    query: String,
     last_fetched: i8,
+}
+
+#[derive(Default)]
+struct ArtistRes {
+    music: Vec<MusicUnit>,
+    playlist: Vec<PlaylistUnit>,
+    id: String,
+}
+
+#[derive(Default)]
+struct PlaylistRes {
+    music: Vec<MusicUnit>,
+    id: String,
 }
 
 /*
@@ -153,14 +168,14 @@ pub struct Fetcher {
     // feed the player backend with all the content of playlist which means playing from
     // playlist don't have to get interrupted for fetching more data once played tha last item of
     // last fetched data. Playback stops only when playlist ends.
-    playlist_content: (String, Vec<MusicUnit>),
+    playlist_content: PlaylistRes,
     /*
     artist_content stores collection of music and also the collection of playlists
     from the channel
     First field: (String) holds the unique id of channel being fetched.
     For more info see documentation on playlist_content above
     */
-    artist_content: (String, Vec<MusicUnit>, Vec<PlaylistUnit>),
+    artist_content: ArtistRes,
     // List of available servers powered by invidious youtube data fetcher. All the servers should
     // provide same endpoints to make request to and same pattern of return data. Which actually means
     // all the servers must be powered by the same mahor version of invidious backend.
@@ -171,7 +186,7 @@ pub struct Fetcher {
     servers: [&'static str; 6],
     // Container to store the result of search result.
     // First field: (String) is the query being searched for.
-    search_res: (String, SearchRes),
+    search_res: SearchRes,
     // The reqwest client itself. This is only initilized once per session.
     client: reqwest::Client,
     // index that reference the servers[] field.

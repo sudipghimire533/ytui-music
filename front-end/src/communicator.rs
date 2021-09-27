@@ -12,17 +12,16 @@ macro_rules! handle_response {
             Ok(data) => {
                 state.help = "Press ?";
                 state.$target.0 = data;
-                state.fetched_page[$win_index] = Some($page);
             }
             Err(e) => {
                 match e {
                     fetcher::ReturnAction::Failed => {
                         state.help = "Fetch error..";
-                        state.fetched_page[$win_index] = None;
                     }
                     fetcher::ReturnAction::EOR => {
                         state.help = "Result end..";
-                        state.fetched_page[$win_index] = None;
+                        // again show the result of first page to create cycle
+                        state.fetched_page[$win_index] = Some(0);
                     }
                     fetcher::ReturnAction::Retry => {
                         // the respective function from which the data is exptracted
@@ -52,6 +51,11 @@ pub async fn communicator<'st, 'nt>(
             state.filled_source.2.clone(),
         )
     };
+    let (mut prev_music_page, mut prev_playlist_page, mut prev_artist_page): (
+        Option<usize>,
+        Option<usize>,
+        Option<usize>,
+    ) = (None, None, None);
 
     'communicator_loop: loop {
         let mut state = notifier.wait(state_original.lock().unwrap()).unwrap();
@@ -59,12 +63,16 @@ pub async fn communicator<'st, 'nt>(
             break 'communicator_loop;
         }
 
-        if state.filled_source.1 != prev_playlistbar_source {
+        if state.filled_source.1 != prev_playlistbar_source
+            || state.fetched_page[MIDDLE_PLAYLIST_INDEX] != prev_playlist_page
+        {
             prev_playlistbar_source = state.filled_source.1.clone();
+            prev_playlist_page = state.fetched_page[MIDDLE_PLAYLIST_INDEX];
             state.playlistbar.0.clear();
+            let page = state.fetched_page[MIDDLE_PLAYLIST_INDEX].unwrap_or_default();
             std::mem::drop(state);
             match prev_playlistbar_source {
-                ui::PlaylistbarSource::Search(ref term, page) => {
+                ui::PlaylistbarSource::Search(ref term) => {
                     let playlists = fetcher.search_playlist(term, page).await;
                     handle_response!(
                         playlists,
@@ -74,7 +82,7 @@ pub async fn communicator<'st, 'nt>(
                         playlistbar
                     );
                 }
-                ui::PlaylistbarSource::Artist(ref artist_id, page) => {
+                ui::PlaylistbarSource::Artist(ref artist_id) => {
                     let playlist_content = fetcher.get_playlist_of_channel(&artist_id, page).await;
                     handle_response!(
                         playlist_content,
@@ -93,12 +101,16 @@ pub async fn communicator<'st, 'nt>(
         }
 
         let mut state = state_original.lock().unwrap();
-        if state.filled_source.2 != prev_artistbar_source {
+        if state.filled_source.2 != prev_artistbar_source
+            || state.fetched_page[MIDDLE_ARTIST_INDEX] != prev_artist_page
+        {
             prev_artistbar_source = state.filled_source.2.clone();
+            prev_artist_page = state.fetched_page[MIDDLE_ARTIST_INDEX];
             state.artistbar.0.clear();
+            let page = state.fetched_page[MIDDLE_ARTIST_INDEX].unwrap_or_default();
             std::mem::drop(state);
             match prev_artistbar_source {
-                ui::ArtistbarSource::Search(ref term, page) => {
+                ui::ArtistbarSource::Search(ref term) => {
                     let artists = fetcher.search_artist(term, page).await;
                     handle_response!(
                         artists,
@@ -117,13 +129,17 @@ pub async fn communicator<'st, 'nt>(
         }
 
         let mut state = state_original.lock().unwrap();
-        if state.filled_source.0 != prev_musicbar_source {
+        if state.filled_source.0 != prev_musicbar_source
+            || state.fetched_page[MIDDLE_MUSIC_INDEX] != prev_music_page
+        {
             prev_musicbar_source = state.filled_source.0.clone();
+            prev_music_page = state.fetched_page[MIDDLE_MUSIC_INDEX];
             state.musicbar.0.clear();
+            let page = state.fetched_page[MIDDLE_MUSIC_INDEX].unwrap_or_default();
             std::mem::drop(state);
             // prev_musicbar_source and current musicbar_source are equal at this point
             match prev_musicbar_source {
-                ui::MusicbarSource::Trending(page) => {
+                ui::MusicbarSource::Trending => {
                     let trending_music = fetcher.get_trending_music(page).await;
                     handle_response!(
                         trending_music,
@@ -133,11 +149,11 @@ pub async fn communicator<'st, 'nt>(
                         musicbar
                     );
                 }
-                ui::MusicbarSource::Search(ref term, page) => {
+                ui::MusicbarSource::Search(ref term) => {
                     let musics = fetcher.search_music(term, page).await;
                     handle_response!(musics, page, state_original, MIDDLE_MUSIC_INDEX, musicbar);
                 }
-                ui::MusicbarSource::Playlist(ref playlist_id, page) => {
+                ui::MusicbarSource::Playlist(ref playlist_id) => {
                     let music_content = fetcher.get_playlist_content(&playlist_id, page).await;
                     handle_response!(
                         music_content,
@@ -147,7 +163,7 @@ pub async fn communicator<'st, 'nt>(
                         musicbar
                     );
                 }
-                ui::MusicbarSource::Artist(ref artist_id, page) => {
+                ui::MusicbarSource::Artist(ref artist_id) => {
                     let music_content = fetcher.get_videos_of_channel(&artist_id, page).await;
                     handle_response!(
                         music_content,

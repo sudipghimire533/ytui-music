@@ -37,17 +37,9 @@ impl Fetcher {
     pub fn new() -> Self {
         super::Fetcher {
             trending_now: None,
-            playlist_content: (String::new(), Vec::new()),
-            artist_content: (String::new(), Vec::new(), Vec::new()),
-            search_res: (
-                String::new(),
-                super::SearchRes {
-                    music: Vec::new(),
-                    playlist: Vec::new(),
-                    artist: Vec::new(),
-                    last_fetched: -1,
-                },
-            ),
+            playlist_content: super::PlaylistRes::default(),
+            artist_content: super::ArtistRes::default(),
+            search_res: super::SearchRes::default(),
             servers: [
                 "https://ytprivate.com/api/v1",
                 "https://vid.puffyan.us/api/v1",
@@ -76,7 +68,7 @@ macro_rules! search {
             $fetcher,
             $query,
             $page,
-            $fetcher.search_res.1.music,
+            $fetcher.search_res.music,
             0,
             super::MusicUnit
         )
@@ -87,7 +79,7 @@ macro_rules! search {
             $fetcher,
             $query,
             $page,
-            $fetcher.search_res.1.playlist,
+            $fetcher.search_res.playlist,
             1,
             super::PlaylistUnit
         )
@@ -98,7 +90,7 @@ macro_rules! search {
             $fetcher,
             $query,
             $page,
-            $fetcher.search_res.1.artist,
+            $fetcher.search_res.artist,
             2,
             super::ArtistUnit
         )
@@ -116,11 +108,11 @@ macro_rules! search {
         let lower_limit = $page * ITEM_PER_PAGE;
         let mut upper_limit = std::cmp::min($store_target.len(), lower_limit + ITEM_PER_PAGE);
 
-        let is_new_query = *$query != $fetcher.search_res.0;
-        let is_new_type = $fetcher.search_res.1.last_fetched != $filter_index;
+        let is_new_query = *$query != $fetcher.search_res.query;
+        let is_new_type = $fetcher.search_res.last_fetched != $filter_index;
         let insufficient_data = upper_limit.checked_sub(lower_limit).unwrap_or(0) < ITEM_PER_PAGE;
 
-        $fetcher.search_res.1.last_fetched = $filter_index;
+        $fetcher.search_res.last_fetched = $filter_index;
         if is_new_query || insufficient_data || is_new_type {
             let obj = $fetcher.send_request::<Vec<$unit_type>>(&suffix, 1).await;
             if is_new_query || is_new_type {
@@ -128,7 +120,7 @@ macro_rules! search {
             }
             match obj {
                 Ok(data) => {
-                    $fetcher.search_res.0 = $query.to_string();
+                    $fetcher.search_res.query = $query.to_string();
                     $store_target.extend_from_slice(data.as_slice());
                     upper_limit = std::cmp::min($store_target.len(), lower_limit + ITEM_PER_PAGE);
                 }
@@ -214,9 +206,9 @@ impl Fetcher {
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
         let lower_limit = page * ITEM_PER_PAGE;
 
-        let is_new_id = playlist_id != &self.playlist_content.0;
-        if is_new_id || self.playlist_content.1.is_empty() {
-            self.playlist_content.0 = playlist_id.to_string();
+        let is_new_id = playlist_id != &self.playlist_content.id;
+        if is_new_id {
+            self.playlist_content.id = playlist_id.to_string();
             let suffix = format!(
                 "/playlists/{playlist_id}?fields=videos",
                 playlist_id = playlist_id
@@ -228,17 +220,20 @@ impl Fetcher {
             match obj {
                 Ok(mut data) => {
                     data.videos.shrink_to_fit();
-                    self.playlist_content.1 = data.videos;
+                    self.playlist_content.music = data.videos;
                 }
                 Err(e) => return Err(e),
             }
         }
 
-        let upper_limit = std::cmp::min(self.playlist_content.1.len(), lower_limit + ITEM_PER_PAGE);
+        let upper_limit = std::cmp::min(
+            self.playlist_content.music.len(),
+            lower_limit + ITEM_PER_PAGE,
+        );
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
         } else {
-            let mut res = self.playlist_content.1[lower_limit..upper_limit].to_vec();
+            let mut res = self.playlist_content.music[lower_limit..upper_limit].to_vec();
             res.shrink_to_fit();
             Ok(res)
         }
@@ -251,9 +246,9 @@ impl Fetcher {
     ) -> Result<Vec<super::PlaylistUnit>, ReturnAction> {
         let lower_limit = page * ITEM_PER_PAGE;
 
-        let is_new_id = channel_id != &self.artist_content.0;
-        if is_new_id || self.artist_content.2.is_empty() {
-            self.artist_content.0 = channel_id.to_string();
+        let is_new_id = channel_id != &self.artist_content.id;
+        if is_new_id || self.artist_content.playlist.is_empty() {
+            self.artist_content.id = channel_id.to_string();
             let suffix = format!(
                 "/channels/{channel_id}/playlists?fields=playlists",
                 channel_id = channel_id
@@ -265,17 +260,20 @@ impl Fetcher {
             match obj {
                 Ok(mut data) => {
                     data.playlists.shrink_to_fit();
-                    self.artist_content.2 = data.playlists;
+                    self.artist_content.playlist = data.playlists;
                 }
                 Err(e) => return Err(e),
             }
         }
 
-        let upper_limit = std::cmp::min(self.artist_content.2.len(), lower_limit + ITEM_PER_PAGE);
+        let upper_limit = std::cmp::min(
+            self.artist_content.playlist.len(),
+            lower_limit + ITEM_PER_PAGE,
+        );
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
         } else {
-            let mut res = self.artist_content.2[lower_limit..upper_limit].to_vec();
+            let mut res = self.artist_content.playlist[lower_limit..upper_limit].to_vec();
             res.shrink_to_fit();
             Ok(res)
         }
@@ -288,26 +286,27 @@ impl Fetcher {
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
         let lower_limit = page * ITEM_PER_PAGE;
 
-        let is_new_id = channel_id != &self.artist_content.0;
-        if is_new_id || self.artist_content.1.is_empty() {
-            self.artist_content.0 = channel_id.to_string();
+        let is_new_id = channel_id != &self.artist_content.id;
+        if is_new_id || self.artist_content.music.is_empty() {
+            self.artist_content.id = channel_id.to_string();
             let suffix = format!("/channels/{channel_id}/videos", channel_id = channel_id);
 
             let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 1).await;
             match obj {
                 Ok(mut data) => {
                     data.shrink_to_fit();
-                    self.artist_content.1 = data;
+                    self.artist_content.music = data;
                 }
                 Err(e) => return Err(e),
             }
         }
 
-        let upper_limit = std::cmp::min(self.artist_content.1.len(), lower_limit + ITEM_PER_PAGE);
+        let upper_limit =
+            std::cmp::min(self.artist_content.music.len(), lower_limit + ITEM_PER_PAGE);
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
         } else {
-            let mut res = self.artist_content.1[lower_limit..upper_limit].to_vec();
+            let mut res = self.artist_content.music[lower_limit..upper_limit].to_vec();
             res.shrink_to_fit();
             Ok(res)
         }
@@ -370,7 +369,7 @@ mod tests {
                 artist: "CHHEWANG".to_string(),
                 name: "Some song title".to_string(),
                 duration: "4:31".to_string(),
-                path: "https://www.youtube.com/watch?v=WNgO6G7uERU".to_string(),
+                id: "WNgO6G7uERU".to_string(),
             },
         );
     }

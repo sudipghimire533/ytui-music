@@ -19,6 +19,7 @@ const SEEK_B_KEY: char = '<';
 const TOGGLE_PAUSE_KEY: char = ' ';
 const REFRESH_RATE: u64 = 950;
 
+#[derive(Clone)]
 enum HeadTo {
     Initial,
     Next,
@@ -243,38 +244,44 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     };
     let fill_search_music = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
+        state.fetched_page[MIDDLE_MUSIC_INDEX] =
+            Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
         state.help = "Searching..";
-        state.filled_source.0 = ui::MusicbarSource::Search(state.search.1.clone(), page);
         notifier.notify_all();
     };
     let fill_search_playlist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        let page = get_page(&state.fetched_page[MIDDLE_PLAYLIST_INDEX], direction);
+        state.fetched_page[MIDDLE_PLAYLIST_INDEX] = Some(get_page(
+            &state.fetched_page[MIDDLE_PLAYLIST_INDEX],
+            direction,
+        ));
         state.help = "Searching..";
-        state.filled_source.1 = ui::PlaylistbarSource::Search(state.search.1.clone(), page);
         notifier.notify_all();
     };
     let fill_search_artist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        let page = get_page(&state.fetched_page[MIDDLE_ARTIST_INDEX], direction);
+        state.fetched_page[MIDDLE_ARTIST_INDEX] = Some(get_page(
+            &state.fetched_page[MIDDLE_ARTIST_INDEX],
+            direction,
+        ));
         state.help = "Searching..";
-        state.filled_source.2 = ui::ArtistbarSource::Search(state.search.1.clone(), page);
         notifier.notify_all();
     };
     let start_search = || {
         let mut state = state_original.lock().unwrap();
         state.search.1 = state.search.0.trim().to_string();
+        state.fetched_page = [Some(0); 3];
+        state.filled_source.0 = ui::MusicbarSource::Search(state.search.1.clone());
+        state.filled_source.1 = ui::PlaylistbarSource::Search(state.search.1.clone());
+        state.filled_source.2 = ui::ArtistbarSource::Search(state.search.1.clone());
         state.help = "Searching..";
-        state.filled_source.0 = ui::MusicbarSource::Search(state.search.1.clone(), 0);
-        state.filled_source.1 = ui::PlaylistbarSource::Search(state.search.1.clone(), 0);
-        state.filled_source.2 = ui::ArtistbarSource::Search(state.search.1.clone(), 0);
         notifier.notify_all();
     };
     let fill_trending_music = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
-        state.filled_source.0 = ui::MusicbarSource::Trending(page);
+        state.fetched_page[MIDDLE_MUSIC_INDEX] =
+            Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
+        state.filled_source.0 = ui::MusicbarSource::Trending;
         state.help = "Fetching..";
         notifier.notify_all();
     };
@@ -289,77 +296,56 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     let fill_favourates_artist = |_direction: HeadTo| {};
     let fill_music_from_playlist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        if let ui::MusicbarSource::Playlist(playlist_id, prev_page) = &state.filled_source.0 {
-            let page = get_page(&Some(*prev_page), direction);
-            state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id.to_string(), page);
+        if let ui::MusicbarSource::Playlist(playlist_id) = &state.filled_source.0 {
+            state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id.to_string());
+            state.fetched_page[MIDDLE_MUSIC_INDEX] =
+                Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
             state.help = "Fetching playlist..";
             notifier.notify_all();
         }
     };
     let fill_music_from_artist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        if let ui::MusicbarSource::Artist(artist_id, prev_page) = &state.filled_source.0 {
-            let page = get_page(&Some(*prev_page), direction);
-            state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.to_string(), page);
+        if let ui::MusicbarSource::Artist(artist_id) = &state.filled_source.0 {
+            state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.to_string());
+            state.fetched_page[MIDDLE_MUSIC_INDEX] =
+                Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
             state.help = "Fetching channel..";
             notifier.notify_all();
         }
     };
     let fill_playlist_from_artist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        if let ui::PlaylistbarSource::Artist(artist_id, prev_page) = &state.filled_source.1 {
-            let page = get_page(&Some(*prev_page), direction);
-            state.filled_source.1 = ui::PlaylistbarSource::Artist(artist_id.to_string(), page);
+        if let ui::PlaylistbarSource::Artist(artist_id) = &state.filled_source.1 {
+            state.filled_source.1 = ui::PlaylistbarSource::Artist(artist_id.to_string());
+            state.fetched_page[MIDDLE_PLAYLIST_INDEX] = Some(get_page(
+                &state.fetched_page[MIDDLE_PLAYLIST_INDEX],
+                direction,
+            ));
             state.help = "Fetching channel..";
             notifier.notify_all();
         }
     };
     // play next/previous song from queue
     let handle_play_advance = |_direction: HeadTo| {};
+
+    // navigating page is just changing to fetched_page value to next/prev value
     let handle_page_nav = |direction: HeadTo| {
-        let state = state_original.lock().unwrap();
+        let mut state = state_original.lock().unwrap();
+        let target_index: usize;
         match state.active {
-            ui::Window::Musicbar => match &state.filled_source.0 {
-                ui::MusicbarSource::Trending(_) => {
-                    drop_and_call!(state, fill_trending_music, direction);
-                }
-                ui::MusicbarSource::YoutubeCommunity => {
-                    drop_and_call!(state, fill_community_source);
-                }
-                ui::MusicbarSource::RecentlyPlayed => {
-                    drop_and_call!(state, fill_recents_music, direction);
-                }
-                ui::MusicbarSource::Favourates => {
-                    drop_and_call!(state, fill_favourates_music, direction);
-                }
-                ui::MusicbarSource::Search(..) => {
-                    drop_and_call!(state, fill_search_music, direction);
-                }
-                ui::MusicbarSource::Playlist(_, _) => {
-                    drop_and_call!(state, fill_music_from_playlist, direction);
-                }
-                ui::MusicbarSource::Artist(_, _) => {}
-            },
-            ui::Window::Playlistbar => match state.filled_source.1 {
-                ui::PlaylistbarSource::Search(..) => {
-                    drop_and_call!(state, fill_search_playlist, direction);
-                }
-                ui::PlaylistbarSource::Artist(_, _) => {
-                    todo!();
-                }
-                ui::PlaylistbarSource::Favourates | ui::PlaylistbarSource::RecentlyPlayed => {}
-            },
-            ui::Window::Artistbar => match state.filled_source.2 {
-                ui::ArtistbarSource::Favourates => {
-                    drop_and_call!(state, fill_favourates_artist, direction);
-                }
-                ui::ArtistbarSource::Search(..) => {
-                    drop_and_call!(state, fill_search_artist, direction);
-                }
-                ui::ArtistbarSource::RecentlyPlayed => {}
-            },
-            _ => {}
+            ui::Window::Musicbar => target_index = MIDDLE_MUSIC_INDEX,
+            ui::Window::Playlistbar => target_index = MIDDLE_PLAYLIST_INDEX,
+            ui::Window::Artistbar => target_index = MIDDLE_ARTIST_INDEX,
+            _ => {
+                // If none os above windows are active then nothing to navigate.
+                // Early return instead of initilizing `target_index`
+                return;
+            }
         }
+        let page = get_page(&state.fetched_page[target_index], direction);
+        state.fetched_page[target_index] = Some(page);
+        notifier.notify_all();
     };
     let handle_enter = || {
         let mut state = state_original.lock().unwrap();
@@ -399,7 +385,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                 if let Some(selected_index) = state.playlistbar.1.selected() {
                     let playlist_id = state.playlistbar.0[selected_index].id.clone();
                     state.activate_playlist(&playlist_id);
-                    state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id, 0);
+                    state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id);
                     drop_and_call!(state, fill_music_from_playlist, HeadTo::Initial);
                     notifier.notify_all();
                 }
@@ -407,8 +393,8 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             ui::Window::Artistbar => {
                 if let Some(selected_index) = state.artistbar.1.selected() {
                     let artist_id = state.artistbar.0[selected_index].id.clone();
-                    state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.clone(), 0);
-                    state.filled_source.1 = ui::PlaylistbarSource::Artist(artist_id, 0);
+                    state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.clone());
+                    state.filled_source.1 = ui::PlaylistbarSource::Artist(artist_id);
                     std::mem::drop(state);
                     fill_music_from_artist(HeadTo::Initial);
                     fill_playlist_from_artist(HeadTo::Initial);

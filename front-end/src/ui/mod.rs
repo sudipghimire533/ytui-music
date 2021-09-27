@@ -303,24 +303,24 @@ pub struct BottomState {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MusicbarSource {
-    Search(String, usize),
-    Trending(usize),
+    Search(String),
+    Trending,
     YoutubeCommunity,
     RecentlyPlayed,
     Favourates,
-    Playlist(String, usize),
-    Artist(String, usize),
+    Playlist(String),
+    Artist(String),
 }
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum PlaylistbarSource {
-    Search(String, usize),
+    Search(String),
     RecentlyPlayed,
     Favourates,
-    Artist(String, usize),
+    Artist(String),
 }
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ArtistbarSource {
-    Search(String, usize),
+    Search(String),
     RecentlyPlayed,
     Favourates,
 }
