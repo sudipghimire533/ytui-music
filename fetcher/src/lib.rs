@@ -31,14 +31,6 @@ where
     Ok(dur.to_string())
 }
 
-fn yt_vid_id_to_url<'de, D>(input: D) -> Result<String, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let id: &str = Deserialize::deserialize(input)?;
-    Ok(format!("https://www.youtube.com/watch?v={id}", id = id))
-}
-
 // While fecthing playlist videos from endpoint /playlists/:plid
 // response is returned as "videos": [ { <Fields of MusicUnit> } ]
 // this structure is only used to convert such response to Vec<MusicUnit>
@@ -82,8 +74,7 @@ pub struct MusicUnit {
     #[serde(deserialize_with = "seconds_to_str")]
     pub duration: String,
     #[serde(alias = "videoId")]
-    #[serde(deserialize_with = "yt_vid_id_to_url")]
-    pub path: String,
+    pub id: String,
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]

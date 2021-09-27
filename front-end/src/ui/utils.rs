@@ -89,20 +89,16 @@ impl<'parent> ui::MiddleLayout {
         }
     }
 
-    pub fn get_music_container(state: &'parent ui::State) -> (Table<'parent>, TableState) {
-        let mut tb_state = TableState::default();
+    pub fn get_music_container(state: &'parent mut ui::State) -> Table<'parent> {
         let block = match state.active {
-            ui::Window::Musicbar => {
-                tb_state.select(Some(0));
-                Block::active("Music ".to_owned())
-            }
+            ui::Window::Musicbar => Block::active("Music ".to_owned()),
             _ => {
-                tb_state.select(None);
+                state.musicbar.1.select(None);
                 Block::new("Music ".to_owned())
             }
         };
 
-        let data_list = &state.musicbar;
+        let data_list = &state.musicbar.0;
         let items: Vec<Row> = data_list
             .iter()
             .map(|music| {
@@ -111,9 +107,9 @@ impl<'parent> ui::MiddleLayout {
                         true => HEART_FILLED,
                         false => HEART_OUTLINE,
                     },
-                    music.name.as_str(),
-                    music.artist.as_str(),
-                    music.duration.as_str(),
+                    &music.name,
+                    &music.artist,
+                    &music.duration,
                 ])
             })
             .collect();
@@ -136,7 +132,7 @@ impl<'parent> ui::MiddleLayout {
             .highlight_style(Style::list_hilight())
             .block(block);
 
-        (table, tb_state)
+        table
     }
 }
 
@@ -152,19 +148,15 @@ impl<'parent> ui::MiddleBottom {
         }
     }
 
-    pub fn get_playlist_container(state: &'parent ui::State) -> (Table<'parent>, TableState) {
-        let mut tb_state = TableState::default();
+    pub fn get_playlist_container(state: &'parent mut ui::State) -> Table<'parent> {
         let block = match state.active {
-            ui::Window::Playlistbar => {
-                tb_state.select(Some(0));
-                Block::active("Playlist ".to_owned())
-            }
+            ui::Window::Playlistbar => Block::active("Playlist ".to_owned()),
             _ => {
-                tb_state.select(None);
+                state.playlistbar.1.select(None);
                 Block::new("Playlist ".to_owned())
             }
         };
-        let data_list = &state.playlistbar;
+        let data_list = &state.playlistbar.0;
         let items: Vec<Row> = data_list
             .iter()
             .map(|playlist| {
@@ -193,23 +185,20 @@ impl<'parent> ui::MiddleBottom {
             .highlight_style(Style::list_hilight())
             .block(block);
 
-        (table, tb_state)
+        table
     }
 
-    pub fn get_artist_container(state: &'parent ui::State) -> (Table<'parent>, TableState) {
-        let mut tb_state = TableState::default();
+    pub fn get_artist_container(state: &'parent mut ui::State) -> Table<'parent> {
         let block = match state.active {
-            ui::Window::Artistbar => {
-                tb_state.select(Some(0));
-                Block::active("Artist ".to_owned())
-            }
+            ui::Window::Artistbar => Block::active("Artist ".to_owned()),
             _ => {
-                tb_state.select(None);
+                state.artistbar.1.select(None);
                 Block::new("Artist ".to_owned())
             }
         };
         let data_list = &state.artistbar;
         let items: Vec<Row> = data_list
+            .0
             .iter()
             .map(|artist| Row::new(vec![artist.video_count.as_str(), artist.name.as_str()]))
             .collect();
@@ -221,7 +210,7 @@ impl<'parent> ui::MiddleBottom {
             .highlight_style(Style::list_hilight())
             .block(block);
 
-        (table, tb_state)
+        table
     }
 }
 
@@ -346,7 +335,7 @@ impl ui::Position {
     pub fn caclulate(screen_rect: &Rect) -> Self {
         // 3 line for each bottom and top bar (1 for content and 2 for border)
         // remaining height for middlebar
-        let for_middle = screen_rect.height - (2 * 3);
+        let for_middle = screen_rect.height.checked_sub(3 + 3).unwrap_or_default();
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(
@@ -405,9 +394,9 @@ impl Default for ui::State<'_> {
         ui::State {
             help: "Press ?",
             sidebar: sidebar_list_state,
-            musicbar: VecDeque::new(),
-            playlistbar: VecDeque::new(),
-            artistbar: VecDeque::new(),
+            musicbar: (Vec::new(), TableState::default()),
+            playlistbar: (Vec::new(), TableState::default()),
+            artistbar: (Vec::new(), TableState::default()),
             search: (String::new(), String::new()),
             active: ui::Window::Sidebar,
             fetched_page: [None; 3],
@@ -427,75 +416,70 @@ impl Default for ui::State<'_> {
 }
 
 impl ui::State<'_> {
-    pub fn play_first_of_musicbar(&mut self, notifier: &Arc<std::sync::Condvar>) {
-        if let Some(music) = self.musicbar.front() {
-            self.help = "Starting..";
-            self.bottom.music_duration = Duration::from_secs(0);
-            self.bottom.music_elapse = Duration::from_secs(0);
-            self.bottom.playing = None;
-            notifier.notify_all();
+    pub fn play_music(&mut self, music_id: &String) {
+        match self.player.command(
+            "loadfile",
+            [format!("https://www.youtube.com/watch?v={}", music_id).as_str()].as_ref(),
+        ) {
+            Ok(_) => {
+                // clear any previous thing from bottombar
+                self.bottom.music_duration = Duration::from_secs(0);
+                self.bottom.music_elapse = Duration::from_secs(0);
 
-            match self
-                .player
-                .command("loadfile", [music.path.as_str()].as_ref())
-            {
-                Ok(..) => {
-                    self.bottom.playing = Some((music.name.clone(), true));
-                    self.bottom.music_duration = Duration::from_string(music.duration.as_str());
-                    self.help = "Press ?";
-                }
-                Err(_) => {
-                    self.help = "Playback error..";
-                }
+                self.help = "Press ?";
+                // set currently playing (unpaused) to ture. no need to set real title as it will
+                // be done by refresh_mpv_status() later on
+                self.bottom.playing = Some((String::new(), true))
             }
-            // Now as the selection is being played. Add remaining item from musicbar to the play
-            // queue
-            for music in self.musicbar.range(1..) {
-                self.player
-                    .command("loadfile", [music.path.as_str(), "append"].as_ref())
-                    .ok();
+            Err(_) => self.help = "Playback error..",
+        }
+        // Now as the selection is being played. Add remaining item from musicbar to the play
+        // queue.
+        for music in self.musicbar.0.iter() {
+            // If this is the currently payed song donot add it to prevent having
+            // currently played song two time in queue
+            if music.id == *music_id {
+                continue;
             }
-
-            notifier.notify_all();
-        }
-    }
-    // This function is called when user press enter in non-empty list of playlistbar
-    pub fn select_first_of_playlistbar(&mut self) {
-        let playlist: &fetcher::PlaylistUnit;
-        if let Some(pl) = self.playlistbar.front() {
-            playlist = pl;
-        } else {
-            return;
-        }
-
-        match self.bottom.playing {
-            // Play this playlist when one of following is true
-            // i) Nothing was being played previously
-            // ii) Something was selected to play but is currently paused
-            Some((_, false)) | None => {
-                // TODO: pass this playlist to play with mpv
-                // While passning this playlist to the mpv it is ease that every required work is
-                // done by mpv but it may be needed to spawn the new thread to listen mpv events because
-                // when mpv plays new item from playlist corresponding title should be rendered
-                // If there exist a mpv property that return the title of currently playing music
-                // then it will be easy
-                match self.player.command(
+            self.player
+                .command(
                     "loadfile",
-                    [format!("https://www.youtube.com/playlist?list={}", &playlist.id).as_str()]
-                        .as_ref(),
-                ) {
-                    Ok(_) => {
-                        self.help = "Press ?";
-                        self.bottom.playing = Some((playlist.name.clone(), true));
-                    }
-                    Err(_) => {
-                        self.help = "Playback error..";
-                    }
-                }
-            }
-            _ => {}
+                    [
+                        format!("https://www.youtube.com/watch?v={}", music.id).as_str(),
+                        "append",
+                    ]
+                    .as_ref(),
+                )
+                .ok();
         }
     }
+
+    // This function is called when user press enter in non-empty list of playlistbar
+    pub fn activate_playlist(&mut self, playlist_id: &String) {
+        // Play this playlist when one of following is true
+        // i) Nothing was being played previously
+        // ii) Something was selected to play but is currently paused
+        if let Some((_, false)) | None = self.bottom.playing {
+            match self.player.command(
+                "loadfile",
+                [format!("https://www.youtube.com/playlist?list={}", playlist_id).as_str()]
+                    .as_ref(),
+            ) {
+                Ok(_) => {
+                    // clear any previous thing from bottombar
+                    self.bottom.music_duration = Duration::from_secs(0);
+                    self.bottom.music_elapse = Duration::from_secs(0);
+
+                    self.help = "Press ?";
+                    // set currently playing (unpaused) to ture. no need to set real title as it will
+                    // be done by refresh_mpv_status() later on
+                    self.bottom.playing = Some((String::new(), true));
+                }
+                Err(_) => self.help = "Playback error..",
+            }
+        }
+    }
+
     // This function can also be used to check playing status
     // Returning true means some music is playing which may be paused or unpaused
     pub fn refresh_mpv_status(&mut self) {

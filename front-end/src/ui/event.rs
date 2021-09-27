@@ -1,6 +1,5 @@
 use crate::ui;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
-use std::collections::VecDeque;
 use std::{
     convert::TryFrom,
     sync::{Arc, Condvar, Mutex},
@@ -29,26 +28,15 @@ enum HeadTo {
 // Helper function to return the index of something depending the current position and direction to
 // move to
 fn advance_index(current: usize, limit: usize, direction: HeadTo) -> usize {
+    // This means that the list is empty.
+    if limit == 0 {
+        return 0;
+    }
     match direction {
         HeadTo::Next => (current + 1) % limit,
         HeadTo::Prev => current.checked_sub(1).unwrap_or(limit - 1) % limit,
         HeadTo::Initial => current,
     }
-}
-
-// Helper function similar to advance_index but indeat it will rotate the given VecDeque directly
-// Additionally, it will return a boolean which indicates if given list is rotated or left
-// untouched
-fn advance_list<T>(list: &mut VecDeque<T>, direction: HeadTo) -> bool {
-    if list.is_empty() {
-        return false;
-    }
-    match direction {
-        HeadTo::Next => list.rotate_left(1),
-        HeadTo::Prev => list.rotate_right(1),
-        HeadTo::Initial => return false,
-    }
-    true
 }
 
 // Helper function to drop the first paramater and call the function in second paramater and
@@ -99,11 +87,11 @@ fn get_page(current: &Option<usize>, direction: HeadTo) -> usize {
 */
 pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut Arc<Condvar>) {
     // Some predefined source
-    let youtube_community_channels = VecDeque::from(vec![fetcher::ArtistUnit {
+    let youtube_community_channels = vec![fetcher::ArtistUnit {
         name: "Youtube Music Global Charts".to_string(),
         id: "UCrKZcyOJVWnJ60zM1XWllNw".to_string(),
         video_count: "NaN".to_string(),
-    }]);
+    }];
 
     // There is several option in sidebar like trending/ favourates,
     // this handler will change the selected option from sidebar depending on the direction user
@@ -118,32 +106,48 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         )));
         notifier.notify_all();
     };
-    // This handler wil advance the list in musicbar(stored in `musicbar` variable of state)
-    // and notify the state change when advance_list function actually rotated the VecDeque
-    // Unlike advance_sidebar the selection is not moved up or down, infact selection always stays
-    // at first element. But to select the another item the list is rotated.
-    // This was done because for now fixed no. of element ITEM_PER_PAGE is shown in the list
-    // irrespective of the window size.
-    // TODO: In future this is to be change. Instead of showinf fixed element that is configured in
-    // conifg file, the no. of element to shown will be beter to calculate according to the app
-    // size, so that no space will be gone waste. Currently, this is done because, for now the size
-    // of screen is not considered noehere.
-    let advance_music_list = |move_down: HeadTo| {
-        if advance_list(&mut state_original.lock().unwrap().musicbar, move_down) {
-            notifier.notify_all();
+    // select the next or previous element in musicbar list. This is done simply by setting the
+    // correct index in corresponding TableState
+    let advance_music_list = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        let next_index;
+        match state.musicbar.1.selected() {
+            None => next_index = 0,
+            Some(current) => {
+                next_index = advance_index(current, state.musicbar.0.len(), direction);
+            }
         }
+        state.musicbar.1.select(Some(next_index));
+        notifier.notify_all();
     };
-    // simialr to advance_music_list but instead rotate data in `artistbar` variable of state
-    let advance_artist_list = |move_down: HeadTo| {
-        if advance_list(&mut state_original.lock().unwrap().artistbar, move_down) {
-            notifier.notify_all();
+    // simialr to advance_music_list but instead rotate data in `playlistbar` variable of state
+    let advance_playlist_list = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        let next_index;
+        match state.playlistbar.1.selected() {
+            None => next_index = 0,
+            Some(current) => {
+                next_index = advance_index(current, state.playlistbar.0.len(), direction);
+            }
         }
+        state.playlistbar.1.select(Some(next_index));
+        notifier.notify_all();
     };
-    // simialr to advance_artist_list but instead rotate data in `playlistbar` variable of state
-    let advance_playlist_list = |move_down: HeadTo| {
-        if advance_list(&mut state_original.lock().unwrap().playlistbar, move_down) {
-            notifier.notify_all();
+    // simialr to advance_playlist_list but instead rotate data in `artistbar` variable of state
+    let advance_artist_list = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        // if the list is empty then do nothing else.
+        // It is necessary to return instantly otherwise the next_index will get value 0 and this
+        // closure will endup doing select(Some(0)) to the empty list
+        let next_index;
+        match state.artistbar.1.selected() {
+            None => next_index = 0,
+            Some(current) => {
+                next_index = advance_index(current, state.artistbar.0.len(), direction);
+            }
         }
+        state.artistbar.1.select(Some(next_index));
+        notifier.notify_all();
     };
     // When active window is set to NONE, it means user had requested to quit the application,
     // This handle will fire when user hits QUIT_SH_KEY
@@ -276,7 +280,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     };
     let fill_community_source = || {
         let mut state = state_original.lock().unwrap();
-        state.artistbar = youtube_community_channels.clone();
+        state.artistbar.0 = youtube_community_channels.clone();
         state.active = ui::Window::Artistbar;
         notifier.notify_all();
     };
@@ -310,13 +314,8 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             notifier.notify_all();
         }
     };
-    let handle_play_advance = |direction: HeadTo| {
-        advance_music_list(direction);
-        state_original
-            .lock()
-            .unwrap()
-            .play_first_of_musicbar(notifier);
-    };
+    // play next/previous song from queue
+    let handle_play_advance = |_direction: HeadTo| {};
     let handle_page_nav = |direction: HeadTo| {
         let state = state_original.lock().unwrap();
         match state.active {
@@ -387,24 +386,27 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                     ui::SidebarOption::None => {}
                 }
             }
-            ui::Window::Musicbar => {
-                state.play_first_of_musicbar(&notifier);
-            }
             ui::Window::Searchbar => {
                 drop_and_call!(state, start_search);
             }
+            ui::Window::Musicbar => {
+                if let Some(selected_index) = state.musicbar.1.selected() {
+                    let music_id = state.musicbar.0[selected_index].id.clone();
+                    state.play_music(&music_id);
+                }
+            }
             ui::Window::Playlistbar => {
-                state.select_first_of_playlistbar();
-                if let Some(playlist) = state.playlistbar.front() {
-                    state.filled_source.0 = ui::MusicbarSource::Playlist(playlist.id.clone(), 0);
-                    state.musicbar.clear();
+                if let Some(selected_index) = state.playlistbar.1.selected() {
+                    let playlist_id = state.playlistbar.0[selected_index].id.clone();
+                    state.activate_playlist(&playlist_id);
+                    state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id, 0);
                     drop_and_call!(state, fill_music_from_playlist, HeadTo::Initial);
                     notifier.notify_all();
                 }
             }
             ui::Window::Artistbar => {
-                if let Some(artist) = state.artistbar.front() {
-                    let artist_id = artist.id.clone();
+                if let Some(selected_index) = state.artistbar.1.selected() {
+                    let artist_id = state.artistbar.0[selected_index].id.clone();
                     state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.clone(), 0);
                     state.filled_source.1 = ui::PlaylistbarSource::Artist(artist_id, 0);
                     std::mem::drop(state);

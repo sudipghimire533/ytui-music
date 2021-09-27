@@ -3,7 +3,6 @@ use crate::ui::{
     event::{MIDDLE_ARTIST_INDEX, MIDDLE_MUSIC_INDEX, MIDDLE_PLAYLIST_INDEX},
 };
 use fetcher;
-use std::collections::VecDeque;
 use std::sync::{Arc, Condvar, Mutex};
 
 macro_rules! handle_response {
@@ -12,7 +11,7 @@ macro_rules! handle_response {
         match $response {
             Ok(data) => {
                 state.help = "Press ?";
-                state.$target = VecDeque::from(data);
+                state.$target.0 = data;
                 state.fetched_page[$win_index] = Some($page);
             }
             Err(e) => {
@@ -28,6 +27,7 @@ macro_rules! handle_response {
                     fetcher::ReturnAction::Retry => {
                         // the respective function from which the data is exptracted
                         // specify the no of times to retry. Simple rerun the loop if retry is feasible
+                        // TODO: Refine this.
                         state.help = "Retrying..";
                         continue;
                     }
@@ -52,7 +52,7 @@ pub async fn communicator<'st, 'nt>(
             state.filled_source.2.clone(),
         )
     };
-    
+
     'communicator_loop: loop {
         let mut state = notifier.wait(state_original.lock().unwrap()).unwrap();
         if state.active == ui::Window::None {
@@ -61,7 +61,7 @@ pub async fn communicator<'st, 'nt>(
 
         if state.filled_source.1 != prev_playlistbar_source {
             prev_playlistbar_source = state.filled_source.1.clone();
-            state.playlistbar.clear();
+            state.playlistbar.0.clear();
             std::mem::drop(state);
             match prev_playlistbar_source {
                 ui::PlaylistbarSource::Search(ref term, page) => {
@@ -95,7 +95,7 @@ pub async fn communicator<'st, 'nt>(
         let mut state = state_original.lock().unwrap();
         if state.filled_source.2 != prev_artistbar_source {
             prev_artistbar_source = state.filled_source.2.clone();
-            state.artistbar.clear();
+            state.artistbar.0.clear();
             std::mem::drop(state);
             match prev_artistbar_source {
                 ui::ArtistbarSource::Search(ref term, page) => {
@@ -119,7 +119,7 @@ pub async fn communicator<'st, 'nt>(
         let mut state = state_original.lock().unwrap();
         if state.filled_source.0 != prev_musicbar_source {
             prev_musicbar_source = state.filled_source.0.clone();
-            state.musicbar.clear();
+            state.musicbar.0.clear();
             std::mem::drop(state);
             // prev_musicbar_source and current musicbar_source are equal at this point
             match prev_musicbar_source {

@@ -9,7 +9,6 @@ mod shared_import {
     pub use serde::{Deserialize, Serialize};
     pub use std::convert::{From, Into, TryFrom, TryInto};
     pub use std::{
-        collections::VecDeque,
         sync::{Arc, Mutex},
         time::Duration,
     };
@@ -29,7 +28,6 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use shared_import::*;
-
 
 // Following several state defines the layout of the ui
 // The ui is first splitted into 3 area arranged verticsally in order:
@@ -88,7 +86,7 @@ pub struct SideBar {
 // |                                    |
 // |-------------------------------------
 // |                                    |
-// |        MiddleBottom                | 
+// |        MiddleBottom                |
 // |                                    |
 // --------------------------------------
 // Split the area vertically. first section is the area where musics are shown which is actually
@@ -180,12 +178,21 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
         .hide_cursor()
         .unwrap_or_else(|_| eprintln!("Failed to hide cursor"));
 
+    let mut previous_dimension: Rect = Rect::default();
+    let mut position = Position::caclulate(&previous_dimension);
     let mut paint_ui = || {
         terminal
             .draw(|screen| {
                 let mut state_unlocked = state.lock().unwrap();
 
-                let position = Position::caclulate(&screen.size());
+                // As screen size doesn't change that often (is chaged when terminal window is
+                // resized) so it is unnecessary to calcuate position for components in every draw
+                // loop. Calculate once and recalculate when window size change
+                let current_dimension = screen.size();
+                if previous_dimension != current_dimension {
+                    position = Position::caclulate(&current_dimension);
+                    previous_dimension = current_dimension;
+                }
 
                 screen.render_widget(TopLayout::get_helpbox(&state_unlocked), position.help);
                 screen.render_widget(TopLayout::get_searchbox(&state_unlocked), position.search);
@@ -195,21 +202,33 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                     &mut state_unlocked.sidebar,
                 );
 
-                let (music_table, mut music_table_state) =
-                    MiddleLayout::get_music_container(&state_unlocked);
-                screen.render_stateful_widget(music_table, position.music, &mut music_table_state);
+                // each of below three state keeps data as reference to prevent unnecessaru copy
+                // i.e they holds immutable reference to internal field of state variable so state
+                // is supposed to be borrowed immutable
+                // Again, as render_stateful_widget takes state of widget as mutable reference
+                // which is again inside our state variable so it becomes necessary to have two
+                // reference (one immutable and one mutable) at once
+                // One first thought is to wrap inside some cell but as this loop keeps running in
+                // short time interval copying anything for that purpose would be consuming more
+                // cpu. And it may be good time to play with unsafe
+                let state_ptr = &mut state_unlocked as *mut std::sync::MutexGuard<'_, State<'_>>;
+                let (mut music_state, mut playlist_state, mut artist_state);
+                unsafe {
+                    music_state = &mut (*state_ptr).musicbar.1;
+                    playlist_state = &mut (*state_ptr).playlistbar.1;
+                    artist_state = &mut (*state_ptr).artistbar.1;
+                }
 
-                let (playlist_list, mut playlist_list_state) =
-                    MiddleBottom::get_playlist_container(&state_unlocked);
+                let music_table = MiddleLayout::get_music_container(&mut state_unlocked);
+                screen.render_stateful_widget(music_table, position.music, &mut music_state);
+                let playlist_table = MiddleBottom::get_playlist_container(&mut state_unlocked);
                 screen.render_stateful_widget(
-                    playlist_list,
+                    playlist_table,
                     position.playlist,
-                    &mut playlist_list_state,
+                    &mut playlist_state,
                 );
-
-                let (artist_list, mut artist_list_state) =
-                    MiddleBottom::get_artist_container(&state_unlocked);
-                screen.render_stateful_widget(artist_list, position.artist, &mut artist_list_state);
+                let artist_table = MiddleBottom::get_artist_container(&mut state_unlocked);
+                screen.render_stateful_widget(artist_table, position.artist, &mut artist_state);
 
                 state_unlocked.refresh_mpv_status();
                 screen.render_widget(
@@ -307,9 +326,9 @@ pub struct State<'p> {
     // which remains same even selected() of ListState is changed.
     // second memeber of tuple is only changed when user press ENTER on given SidebarOption
     sidebar: ListState,
-    pub musicbar: VecDeque<fetcher::MusicUnit>,
-    pub playlistbar: VecDeque<fetcher::PlaylistUnit>,
-    pub artistbar: VecDeque<fetcher::ArtistUnit>,
+    pub musicbar: (Vec<fetcher::MusicUnit>, TableState),
+    pub playlistbar: (Vec<fetcher::PlaylistUnit>, TableState),
+    pub artistbar: (Vec<fetcher::ArtistUnit>, TableState),
     pub filled_source: (MusicbarSource, PlaylistbarSource, ArtistbarSource),
     bottom: BottomState,
     // First string is the actual string being typed on searchbar (to actually render)
