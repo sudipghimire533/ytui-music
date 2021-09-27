@@ -5,6 +5,11 @@ use ui::shared_import::*;
 
 const HEART_FILLED: &str = "\u{2665}";
 const HEART_OUTLINE: &str = "\u{2661}";
+const PLAY_BTN: &str = "\u{25B6}";
+const PAUSE_BTN: &str = "\u{23F8}";
+const SUFFLE_BTN: &str = "\u{1F500}";
+const REPEAT_BTN: &str = "\u{1F501}";
+
 const CURRENT_TITLE_LEN: usize = 70;
 pub const SIDEBAR_LIST_COUNT: usize = 5;
 pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
@@ -241,14 +246,19 @@ impl<'parent> ui::SideBar {
 
 impl<'parent> ui::BottomLayout {
     pub fn new(parent: Rect) -> Self {
+        // 15 column for the box to show icons sets
+        let info_width = parent.width.checked_sub(15).unwrap_or_default();
         let layout = Layout::default()
-            .constraints([Constraint::Percentage(100)])
-            .split(parent)[0];
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Length(info_width), Constraint::Length(5)])
+            .split(parent);
 
-        ui::BottomLayout { layout }
+        ui::BottomLayout {
+            layout: [layout[0], layout[1]],
+        }
     }
 
-    pub fn get_controller(state: &'parent ui::State) -> Gauge<'parent> {
+    pub fn get_status_bar(state: &'parent ui::State) -> Gauge<'parent> {
         let title = if let Some((title, _)) = &state.bottom.playing {
             title
         } else {
@@ -279,6 +289,17 @@ impl<'parent> ui::BottomLayout {
                 Style::default().fg(Color::White),
             ))
             .block(block)
+    }
+
+    pub fn get_icons_set(state: &'parent ui::State) -> Paragraph<'parent> {
+        let block = Block::new(String::new());
+        let paragraph = Paragraph::new(format!(
+            "{} {} {} {}",
+            PLAY_BTN, PAUSE_BTN, SUFFLE_BTN, REPEAT_BTN
+        ))
+        .alignment(Alignment::Center)
+        .block(block);
+        paragraph
     }
 }
 
@@ -336,7 +357,8 @@ impl ui::Position {
         // 3 line for each bottom and top bar (1 for content and 2 for border)
         // remaining height for middlebar
         let for_middle = screen_rect.height.checked_sub(3 + 3).unwrap_or_default();
-        let layout = Layout::default()
+
+        let main_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(
                 [
@@ -348,11 +370,9 @@ impl ui::Position {
             )
             .split(*screen_rect);
 
-        let (top_section, main_section, bottom_section) = (
-            ui::TopLayout::new(layout[0]),
-            ui::MainLayout::new(layout[1]),
-            ui::BottomLayout::new(layout[2]),
-        );
+        let top_section = ui::TopLayout::new(main_layout[0]);
+        let main_section = ui::MainLayout::new(main_layout[1]);
+        let bottom_section = ui::BottomLayout::new(main_layout[2]);
         let sidebar = main_section.sidebar;
         let middle_section = main_section.middle_section;
         let middle_bottom = middle_section.bottom;
@@ -364,7 +384,8 @@ impl ui::Position {
             music: middle_section.layout,
             playlist: middle_bottom.layout[0],
             artist: middle_bottom.layout[1],
-            controllers: bottom_section.layout,
+            music_info: bottom_section.layout[0],
+            bottom_icons: bottom_section.layout[1],
         }
     }
 }

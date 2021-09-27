@@ -116,7 +116,7 @@ pub struct MiddleBottom {
 // TODO: Split this area horzontally where small portion in right half shows the info like
 // suffle, repeat, pause/playing using icon
 pub struct BottomLayout {
-    layout: Rect,
+    layout: [Rect; 2],
 }
 
 // This is what final ui looks like
@@ -149,7 +149,8 @@ pub struct Position {
     pub music: Rect,
     pub playlist: Rect,
     pub artist: Rect,
-    pub controllers: Rect,
+    pub music_info: Rect,
+    pub bottom_icons: Rect,
 }
 
 // This function will:
@@ -231,9 +232,14 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                 screen.render_stateful_widget(artist_table, position.artist, &mut artist_state);
 
                 state_unlocked.refresh_mpv_status();
+
                 screen.render_widget(
-                    BottomLayout::get_controller(&state_unlocked),
-                    position.controllers,
+                    BottomLayout::get_status_bar(&state_unlocked),
+                    position.music_info,
+                );
+                screen.render_widget(
+                    BottomLayout::get_icons_set(&state_unlocked),
+                    position.bottom_icons,
                 );
             })
             .unwrap();
