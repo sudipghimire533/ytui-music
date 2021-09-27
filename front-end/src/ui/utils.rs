@@ -417,6 +417,7 @@ impl Default for ui::State<'_> {
 
 impl ui::State<'_> {
     pub fn play_music(&mut self, music_id: &String) {
+        self.player.unpause().ok();
         match self.player.command(
             "loadfile",
             [format!("https://www.youtube.com/watch?v={}", music_id).as_str()].as_ref(),
@@ -460,6 +461,7 @@ impl ui::State<'_> {
         // i) Nothing was being played previously
         // ii) Something was selected to play but is currently paused
         if let Some((_, false)) | None = self.bottom.playing {
+            self.player.unpause().ok();
             match self.player.command(
                 "loadfile",
                 [format!("https://www.youtube.com/playlist?list={}", playlist_id).as_str()]
