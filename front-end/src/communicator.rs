@@ -6,8 +6,10 @@ use fetcher;
 use std::sync::{Arc, Condvar, Mutex};
 
 macro_rules! handle_response {
-    ($response: expr, $state_original: expr, $win_index: expr, $target: ident, $need_retry: expr) => {
+    ($response: expr, $state_original: expr, $win_index: expr, $target: ident) => {{
         let mut state = $state_original.lock().unwrap();
+        // return the boolean which is only truw when response is RETRY
+        let mut need_retry = false;
         match $response {
             Ok(data) => {
                 state.help = "Press ?";
@@ -43,14 +45,14 @@ macro_rules! handle_response {
                         // the respective function from which the data is exptracted
                         // specify the no of times to retry. Simple rerun the loop if retry is feasible
                         state.help = "Retrying..";
-                        $need_retry[$win_index] = true;
-                        continue;
+                        need_retry = true;
                     }
                 }
             }
         }
         std::mem::drop(state);
-    };
+        need_retry
+    }};
 }
 
 pub async fn communicator<'st, 'nt>(
@@ -98,6 +100,7 @@ pub async fn communicator<'st, 'nt>(
         //    added to ensure that it is requesting at least Some page not nothing. eg: when EOR is
         //    reached fetched_page is set to None and for None there is nothing to fetch. See EOR
         //    condition in handle_response! macro
+        // UGH!! this if statement condition check is too ugly. I hate it
         if state.filled_source.1 != prev_playlistbar_source
             || need_retry[MIDDLE_PLAYLIST_INDEX]
             || (state.fetched_page[MIDDLE_PLAYLIST_INDEX] != prev_playlist_page
@@ -106,40 +109,46 @@ pub async fn communicator<'st, 'nt>(
             // clear the target so that noone gets confused if it the response from previous or
             // current request
             state.playlistbar.0.clear();
+
             // condition of if made sure that fetched_page[MIDDLE_PLAYLIST_INDEX] is Some vlaue so
             // unwrapping it is safe.
             let page = state.fetched_page[MIDDLE_PLAYLIST_INDEX].unwrap();
+
             // Save this source as previous source for next iteration
             prev_playlistbar_source = state.filled_source.1.clone();
             prev_playlist_page = Some(page);
+
             // early drop the state so ui is not blocked while this thread send web req. See: else
             // block documentation
             std::mem::drop(state);
+
+            // This is the variable from which the response from matching source is set and later
+            // handled with handle_response! macro
+            let playlist_content;
+
             // At this point state.filled.source.1 and prev_playlistbar_source is same. As state is
             // already dropped we cant match state.filled.source.1 so match this
             match prev_playlistbar_source {
                 ui::PlaylistbarSource::Search(ref term) => {
-                    let playlists = fetcher.search_playlist(term, page).await;
-                    handle_response!(
-                        playlists,
-                        state_original,
-                        MIDDLE_PLAYLIST_INDEX,
-                        playlistbar,
-                        &mut need_retry
-                    );
+                    playlist_content = fetcher.search_playlist(term, page).await;
                 }
                 ui::PlaylistbarSource::Artist(ref artist_id) => {
-                    let playlist_content = fetcher.get_playlist_of_channel(&artist_id, page).await;
-                    handle_response!(
-                        playlist_content,
-                        state_original,
-                        MIDDLE_PLAYLIST_INDEX,
-                        playlistbar,
-                        &mut need_retry
-                    );
+                    playlist_content = fetcher.get_playlist_of_channel(&artist_id, page).await;
                 }
-                ui::PlaylistbarSource::Favourates | ui::PlaylistbarSource::RecentlyPlayed => {}
+                ui::PlaylistbarSource::Favourates | ui::PlaylistbarSource::RecentlyPlayed => {
+                    // TODO
+                    playlist_content = Ok(Vec::new());
+                }
             }
+
+            // if return action is RETRY set so in need_retry so that nex interation will try again
+            let retry = handle_response!(
+                playlist_content,
+                state_original,
+                MIDDLE_PLAYLIST_INDEX,
+                playlistbar
+            );
+            need_retry[MIDDLE_PLAYLIST_INDEX] = retry;
             state_original.lock().unwrap().active = ui::Window::Playlistbar;
             notifier.notify_all();
         } else {
@@ -166,19 +175,25 @@ pub async fn communicator<'st, 'nt>(
             prev_artistbar_source = state.filled_source.2.clone();
             prev_artist_page = Some(page);
             std::mem::drop(state);
+
+            let artist_content;
             match prev_artistbar_source {
                 ui::ArtistbarSource::Search(ref term) => {
-                    let artists = fetcher.search_artist(term, page).await;
-                    handle_response!(
-                        artists,
-                        state_original,
-                        MIDDLE_ARTIST_INDEX,
-                        artistbar,
-                        &mut need_retry
-                    );
+                    artist_content = fetcher.search_artist(term, page).await;
                 }
-                ui::ArtistbarSource::RecentlyPlayed | ui::ArtistbarSource::Favourates => {}
+                ui::ArtistbarSource::RecentlyPlayed | ui::ArtistbarSource::Favourates => {
+                    // TODO:
+                    artist_content = Ok(Vec::new());
+                }
             }
+
+            let retry = handle_response!(
+                artist_content,
+                state_original,
+                MIDDLE_ARTIST_INDEX,
+                artistbar
+            );
+            need_retry[MIDDLE_ARTIST_INDEX] = retry;
             state_original.lock().unwrap().active = ui::Window::Artistbar;
             notifier.notify_all();
         } else {
@@ -190,7 +205,7 @@ pub async fn communicator<'st, 'nt>(
         if state.filled_source.0 != prev_musicbar_source
             || need_retry[MIDDLE_MUSIC_INDEX]
             || (state.fetched_page[MIDDLE_MUSIC_INDEX] != prev_music_page
-                && state.fetched_page[MIDDLE_ARTIST_INDEX].is_some())
+                && state.fetched_page[MIDDLE_MUSIC_INDEX].is_some())
         {
             state.musicbar.0.clear();
             let page = state.fetched_page[MIDDLE_MUSIC_INDEX].unwrap();
@@ -198,51 +213,31 @@ pub async fn communicator<'st, 'nt>(
             prev_music_page = Some(page);
             std::mem::drop(state);
             // prev_musicbar_source and current musicbar_source are equal at this point
+            let music_content;
             match prev_musicbar_source {
                 ui::MusicbarSource::Trending => {
-                    let trending_music = fetcher.get_trending_music(page).await;
-                    handle_response!(
-                        trending_music,
-                        state_original,
-                        MIDDLE_MUSIC_INDEX,
-                        musicbar,
-                        &mut need_retry
-                    );
+                    music_content = fetcher.get_trending_music(page).await;
                 }
                 ui::MusicbarSource::Search(ref term) => {
-                    let musics = fetcher.search_music(term, page).await;
-                    handle_response!(
-                        musics,
-                        state_original,
-                        MIDDLE_MUSIC_INDEX,
-                        musicbar,
-                        &mut need_retry
-                    );
+                    music_content = fetcher.search_music(term, page).await;
                 }
                 ui::MusicbarSource::Playlist(ref playlist_id) => {
-                    let music_content = fetcher.get_playlist_content(&playlist_id, page).await;
-                    handle_response!(
-                        music_content,
-                        state_original,
-                        MIDDLE_MUSIC_INDEX,
-                        musicbar,
-                        &mut need_retry
-                    );
+                    music_content = fetcher.get_playlist_content(&playlist_id, page).await;
                 }
                 ui::MusicbarSource::Artist(ref artist_id) => {
-                    let music_content = fetcher.get_videos_of_channel(&artist_id, page).await;
-                    handle_response!(
-                        music_content,
-                        state_original,
-                        MIDDLE_MUSIC_INDEX,
-                        musicbar,
-                        &mut need_retry
-                    );
+                    music_content = fetcher.get_videos_of_channel(&artist_id, page).await;
                 }
                 ui::MusicbarSource::Favourates
                 | ui::MusicbarSource::RecentlyPlayed
-                | ui::MusicbarSource::YoutubeCommunity => {}
+                | ui::MusicbarSource::YoutubeCommunity => {
+                    // TODO: handle each variant with accurate function
+                    music_content = Ok(Vec::new());
+                }
             }
+
+            let retry =
+                handle_response!(music_content, state_original, MIDDLE_MUSIC_INDEX, musicbar);
+            need_retry[MIDDLE_MUSIC_INDEX] = retry;
             state_original.lock().unwrap().active = ui::Window::Musicbar;
             notifier.notify_all();
         } else {
