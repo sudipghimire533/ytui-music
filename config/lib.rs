@@ -112,7 +112,7 @@ impl Config {
 }
 
 #[derive(Debug)]
-struct ConfigContainer {
+pub struct ConfigContainer {
     config: Config,
     file_path: path::PathBuf,
 }
@@ -176,6 +176,46 @@ impl ConfigContainer {
 
         Some(())
     }
+
+    pub fn get_config_path() -> Option<path::PathBuf> {
+        let config_dir = match dirs::preference_dir() {
+            Some(path) => path,
+            None => {
+                eprintln!("Cannot get your os user config directory...");
+                return None;
+            }
+        };
+
+        let mut path = config_dir.join("ytui_music");
+
+        match std::fs::DirBuilder::new().recursive(true).create(&path) {
+            Ok(_) => {}
+            Err(err) => {
+                eprintln!(
+                    "Cannot create app folder in your config folder as {path}. Error: {err}",
+                    path = &path.as_path().to_string_lossy(),
+                    err = err
+                );
+                return None;
+            }
+        }
+
+        path = path.join("config.json");
+
+        Some(path)
+    }
+
+    pub fn write_defult_config(config_path: &path::Path) -> Option<ConfigContainer> {
+        let default_config = Config::default();
+        let config_container = ConfigContainer {
+            config: default_config,
+            file_path: config_path.into(),
+        };
+
+        config_container.flush();
+
+        Some(config_container)
+    }
 }
 
 #[cfg(test)]
@@ -193,5 +233,11 @@ mod tests {
         assert_eq!(config_from_file.theme, default_config.theme);
         assert_eq!(config_from_file.servers, default_config.servers);
         assert_eq!(config_from_file.shortcut_keys, default_config.shortcut_keys);
+    }
+
+    #[test]
+    fn display_config_path() {
+        let path = ConfigContainer::get_config_path().unwrap();
+        eprintln!("Config path: {}", path.as_path().to_string_lossy());
     }
 }
