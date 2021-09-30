@@ -73,12 +73,12 @@ impl Default for Servers {
     fn default() -> Self {
         Servers {
             list: vec![
-                "https://ytprivate.com/api/v1",
-                "https://vid.puffyan.us/api/v1",
-                "https://invidious.snopyta.org/api/v1",
-                "https://ytb.trom.tf/api/v1",
-                "https://invidious.namazso.eu/api/v1",
-                "https://invidious.hub.ne.kr/api/v1",
+                "https://ytprivate.com/api/v1".to_string(),
+                "https://vid.puffyan.us/api/v1".to_string(),
+                "https://invidious.snopyta.org/api/v1".to_string(),
+                "https://ytb.trom.tf/api/v1".to_string(),
+                "https://invidious.namazso.eu/api/v1".to_string(),
+                "https://invidious.hub.ne.kr/api/v1".to_string(),
             ],
         }
     }
