@@ -3,4 +3,5 @@
 members = [
     "front-end",
     "fetcher",
+    "config"
 ]

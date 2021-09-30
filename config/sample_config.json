@@ -1,0 +1,32 @@
+{
+    "ShortcutsKeys": {
+        "toggle_play": " ",
+        "play_next": "n",
+        "play_prev": "p",
+        "start_search": "/",
+        "downloaad": "d"
+    },
+
+    "Servers": {
+        "list": [
+                "https://ytprivate.com/api/v1",
+                "https://vid.puffyan.us/api/v1",
+                "https://invidious.snopyta.org/api/v1",
+                "https://ytb.trom.tf/api/v1",
+                "https://invidious.namazso.eu/api/v1",
+                "https://invidious.hub.ne.kr/api/v1"
+        ]
+    },
+
+    "Constatnts": {
+        "item_per_list": 10,
+        "server_time_out": 30000
+    },
+
+    "Colors": {
+        "border_idle": [100, 200, 100],
+        "border_hilight": [100, 100, 100],
+        "list_title": [100, 200, 255],
+        "list_hilight": [100, 250, 200]
+    }
+}

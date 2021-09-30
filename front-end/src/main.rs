@@ -5,7 +5,6 @@ use std::thread;
 use tokio;
 mod communicator;
 mod ui;
-
 /*
 * The role of main function is just to spwan two different loop in each thread and again pass
 * control to another loop
