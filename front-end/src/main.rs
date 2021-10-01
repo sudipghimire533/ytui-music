@@ -9,7 +9,8 @@ use config;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref CONFIG: config::Config = config::ConfigContainer::give_me_config().unwrap().config;
+    pub static ref CONFIG: config::Config =
+        config::ConfigContainer::give_me_config().unwrap().config;
 }
 
 /*

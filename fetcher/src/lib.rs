@@ -183,7 +183,7 @@ pub struct Fetcher {
     // it would be better to frequently change the server time to time even in single session.
     // To distribute the load between multiple servers it would be better if this list is kept growing
     // See the utils.rs file to see the format of server url.
-    servers: [&'static str; 6],
+    servers: &'static Vec<String>,
     // Container to store the result of search result.
     // First field: (String) is the query being searched for.
     search_res: SearchRes,

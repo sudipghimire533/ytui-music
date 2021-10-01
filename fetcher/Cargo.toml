@@ -10,3 +10,4 @@ serde = { version = "1.0", features=["derive"] }
 serde_json = "1.0"
 reqwest = { version = "0.11", features = ["json", "gzip"] }
 tokio  = { version = "1", features = ["full"] }
+lazy_static = "1.4.0"

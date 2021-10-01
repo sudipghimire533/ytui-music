@@ -65,7 +65,7 @@ impl Default for Constants {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Servers {
-    list: Vec<String>,
+    pub list: Vec<String>,
 }
 
 impl Default for Servers {

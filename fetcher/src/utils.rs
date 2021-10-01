@@ -34,13 +34,13 @@ impl crate::ExtendDuration for Duration {
 }
 
 impl Fetcher {
-    pub fn new() -> Self {
+    pub fn new(server_list: &'static Vec<String>) -> Self {
         super::Fetcher {
             trending_now: None,
             playlist_content: super::PlaylistRes::default(),
             artist_content: super::ArtistRes::default(),
             search_res: super::SearchRes::default(),
-            servers: servers_list,
+            servers: server_list,
             client: reqwest::ClientBuilder::default()
                 .user_agent(USER_AGENT)
                 .gzip(true)
@@ -334,9 +334,19 @@ impl Fetcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lazy_static::lazy_static;
+
+    lazy_static! {
+        static ref FETCHER: Vec<String> = vec![String::from("https:://")];
+    }
+    fn get_fetcher_for_test() -> Fetcher {
+        let server = vec!["https://invidious.hub.ne.kr/api/v1".to_string()];
+        Fetcher::new(&server)
+    }
+
     #[tokio::test]
     async fn test_trending_extractor() {
-        let mut fetcher = Fetcher::new();
+        let mut fetcher = get_fetcher_for_test();
         let mut page = 0;
 
         while let Ok(data) = fetcher.get_trending_music(page).await {
@@ -368,28 +378,28 @@ mod tests {
     }
     #[tokio::test]
     async fn check_music_search() {
-        let mut fetcher = Fetcher::new();
+        let mut fetcher = get_fetcher_for_test();
         let obj = fetcher.search_music("Bartika Eam Rai", 0).await;
         eprintln!("{:#?}", obj);
     }
 
     #[tokio::test]
     async fn check_playlist_search() {
-        let mut fetcher = Fetcher::new();
+        let mut fetcher = get_fetcher_for_test();
         let obj = fetcher.search_playlist("Spotify Chill mix", 0).await;
         eprintln!("{:#?}", obj);
     }
 
     #[tokio::test]
     async fn check_artist_search() {
-        let mut fetcher = Fetcher::new();
+        let mut fetcher = get_fetcher_for_test();
         let obj = fetcher.search_artist("Rachana Dahal", 0).await;
         eprintln!("{:#?}", obj);
     }
 
     #[tokio::test]
     async fn check_playlist_content() {
-        let mut fetcher = Fetcher::new();
+        let mut fetcher = get_fetcher_for_test();
         let obj = fetcher
             .get_playlist_content("PLN4UKncphTTE0cIHYDQy534mSToKtFlhA", 0)
             .await;
@@ -398,7 +408,7 @@ mod tests {
 
     #[tokio::test]
     async fn check_artist_content_music() {
-        let mut fetcher = Fetcher::new();
+        let mut fetcher = get_fetcher_for_test();
         for channel_id in ["UCJEog_sDzuGyLok8f4p0HRA", "UCIwFjwMjI0y7PDBVEO9-bkQ"] {
             let obj = fetcher.get_videos_of_channel(channel_id, 0).await;
             eprintln!("{:#?}", obj);
@@ -407,7 +417,7 @@ mod tests {
 
     #[tokio::test]
     async fn check_artist_content_playlist() {
-        let mut fetcher = Fetcher::new();
+        let mut fetcher = get_fetcher_for_test();
         let obj = fetcher
             .get_playlist_of_channel("UCJEog_sDzuGyLok8f4p0HRA", 0)
             .await;
