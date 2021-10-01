@@ -29,7 +29,7 @@ impl Default for ShortcutsKeys {
             start_search: '/',
             download: 'd',
             help: '?',
-            quit: 'q',
+            quit: 'c',
             seek_forward: '>',
             seek_backward: '<',
         }

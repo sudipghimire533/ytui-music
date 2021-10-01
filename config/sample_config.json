@@ -4,7 +4,11 @@
         "play_next": "n",
         "play_prev": "p",
         "start_search": "/",
-        "downloaad": "d"
+        "downloaad": "d",
+        "help": "?",
+        "quit": "c",
+        "seek_forward": ">",
+        "seek_backward": "<"
     },
 
     "Servers": {

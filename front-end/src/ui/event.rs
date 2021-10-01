@@ -13,7 +13,7 @@ const SEARCH_SH_KEY: char = '/';
 const HELP_SH_KEY: char = '?';
 const NEXT_SH_KEY: char = 'n';
 const PREV_SH_KEY: char = 'p';
-const QUIT_SH_KEY: char = 'q';
+const QUIT_SH_KEY: char = 'c';
 const SEEK_F_KEY: char = '>';
 const SEEK_B_KEY: char = '<';
 const TOGGLE_PAUSE_KEY: char = ' ';
@@ -381,61 +381,64 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     'listener_loop: loop {
         if event::poll(Duration::from_millis(REFRESH_RATE)).unwrap() {
             match event::read().unwrap() {
-                Event::Key(key) => match key.code {
-                    KeyCode::Down | KeyCode::PageDown => {
-                        handle_up_down(HeadTo::Next);
-                    }
-                    KeyCode::Up | KeyCode::PageUp => {
-                        handle_up_down(HeadTo::Prev);
-                    }
-                    KeyCode::Right | KeyCode::Tab => {
-                        moveto_next_window();
-                    }
-                    KeyCode::Left | KeyCode::BackTab => {
-                        moveto_prev_window();
-                    }
-                    KeyCode::Esc => {
-                        handle_esc();
-                    }
-                    KeyCode::Enter => {
-                        handle_enter();
-                    }
-                    KeyCode::Backspace | KeyCode::Delete => {
-                        handle_backspace();
-                    }
-                    KeyCode::Char(ch) => {
-                        /* If searchbar is active register every char key as input term */
-                        if state_original.lock().unwrap().active == ui::Window::Searchbar {
-                            handle_search_input(ch);
+                Event::Key(key) => {
+                    let is_with_control = key.modifiers.contains(KeyModifiers::CONTROL);
+                    match key.code {
+                        KeyCode::Down | KeyCode::PageDown => {
+                            handle_up_down(HeadTo::Next);
                         }
-                        /* Handle single character key shortcut as it is not in input */
-                        else if ch == SEARCH_SH_KEY {
-                            activate_search();
-                        } else if ch == HELP_SH_KEY {
-                            show_help();
-                        } else if ch == QUIT_SH_KEY {
-                            quit();
-                            break 'listener_loop;
-                        } else if ch == NEXT_SH_KEY {
-                            if key.modifiers.contains(KeyModifiers::CONTROL) {
-                                handle_play_advance(HeadTo::Next);
-                            } else {
-                                handle_page_nav(HeadTo::Next);
-                            }
-                        } else if ch == PREV_SH_KEY {
-                            if key.modifiers.contains(KeyModifiers::CONTROL) {
-                                handle_play_advance(HeadTo::Prev);
-                            } else {
-                                handle_page_nav(HeadTo::Prev);
-                            }
-                        } else if ch == SEEK_F_KEY {
-                        } else if ch == SEEK_B_KEY {
-                        } else if ch == TOGGLE_PAUSE_KEY {
-                            state_original.lock().unwrap().toggle_pause(notifier);
+                        KeyCode::Up | KeyCode::PageUp => {
+                            handle_up_down(HeadTo::Prev);
                         }
+                        KeyCode::Right | KeyCode::Tab => {
+                            moveto_next_window();
+                        }
+                        KeyCode::Left | KeyCode::BackTab => {
+                            moveto_prev_window();
+                        }
+                        KeyCode::Esc => {
+                            handle_esc();
+                        }
+                        KeyCode::Enter => {
+                            handle_enter();
+                        }
+                        KeyCode::Backspace | KeyCode::Delete => {
+                            handle_backspace();
+                        }
+                        KeyCode::Char(ch) => {
+                            /* If searchbar is active register every char key as input term */
+                            if state_original.lock().unwrap().active == ui::Window::Searchbar {
+                                handle_search_input(ch);
+                            }
+                            /* Handle single character key shortcut as it is not in input */
+                            else if ch == SEARCH_SH_KEY {
+                                activate_search();
+                            } else if ch == HELP_SH_KEY {
+                                show_help();
+                            } else if ch == QUIT_SH_KEY && is_with_control {
+                                quit();
+                                break 'listener_loop;
+                            } else if ch == NEXT_SH_KEY {
+                                if is_with_control {
+                                    handle_play_advance(HeadTo::Next);
+                                } else {
+                                    handle_page_nav(HeadTo::Next);
+                                }
+                            } else if ch == PREV_SH_KEY {
+                                if is_with_control {
+                                    handle_play_advance(HeadTo::Prev);
+                                } else {
+                                    handle_page_nav(HeadTo::Prev);
+                                }
+                            } else if ch == SEEK_F_KEY {
+                            } else if ch == SEEK_B_KEY {
+                            } else if ch == TOGGLE_PAUSE_KEY {
+                                state_original.lock().unwrap().toggle_pause(notifier);
+                            }
+                        }
+                        _ => {}
                     }
-                    _ => {}
-                },
+                }
                 Event::Resize(..) => {
                     // just update the layout
                     notifier.notify_all();
