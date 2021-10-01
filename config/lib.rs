@@ -9,11 +9,15 @@ type Color = [u8; 3];
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct ShortcutsKeys {
-    toggle_play: char,
-    play_next: char,
-    play_prev: char,
-    start_search: char,
-    download: char,
+    pub toggle_play: char,
+    pub play_next: char,
+    pub play_prev: char,
+    pub start_search: char,
+    pub download: char,
+    pub help: char,
+    pub quit: char,
+    pub seek_forward: char,
+    pub seek_backward: char,
 }
 
 impl Default for ShortcutsKeys {
@@ -24,6 +28,10 @@ impl Default for ShortcutsKeys {
             play_prev: 'p',
             start_search: '/',
             download: 'd',
+            help: '?',
+            quit: 'q',
+            seek_forward: '>',
+            seek_backward: '<',
         }
     }
 }
