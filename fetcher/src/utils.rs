@@ -40,14 +40,7 @@ impl Fetcher {
             playlist_content: super::PlaylistRes::default(),
             artist_content: super::ArtistRes::default(),
             search_res: super::SearchRes::default(),
-            servers: [
-                "https://ytprivate.com/api/v1",
-                "https://vid.puffyan.us/api/v1",
-                "https://invidious.snopyta.org/api/v1",
-                "https://ytb.trom.tf/api/v1",
-                "https://invidious.namazso.eu/api/v1",
-                "https://invidious.hub.ne.kr/api/v1",
-            ],
+            servers: servers_list,
             client: reqwest::ClientBuilder::default()
                 .user_agent(USER_AGENT)
                 .gzip(true)

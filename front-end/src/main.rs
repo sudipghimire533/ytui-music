@@ -5,6 +5,13 @@ use std::thread;
 use tokio;
 mod communicator;
 mod ui;
+use config;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref CONFIG: config::Config = config::ConfigContainer::give_me_config().unwrap().config;
+}
+
 /*
 * The role of main function is just to spwan two different loop in each thread and again pass
 * control to another loop
@@ -16,18 +23,18 @@ mod ui;
 * And the main thread itself will pass the control to `draw_ui` which handles rendering or painting
 * to the terminal. This painter function as well as other 2 spawned thread above runs in a loop and
 * all those loop and terminated when user hits key to quit the application.
-* 
+*
 * See below files for respective function
 * __ui/mod.rs__: Defines structures as well as draw_ui function which render the content. This files
 * contains the decleration and abstraction to control the layout, state and related things.
-* 
+*
 * __ui/utils.rs__: This files decleare and implementat all the defination in __ui/mod.rs__. This
 * includes building the individual components, defining styles and layout, Initilizing the state
 * and other structs.
-* 
+*
 * __ui/event.rs__: The sole purpose of this file is to wait for user event and responds by either
 * updating the ui or by asking the comminucator to fill the required data
-* 
+*
 * __communicator.rs__: This file reads the state variable, compares it to previous state and change
 * the data to be rendered. This includes calling the fetcher backed, navigating pages and so on.
 *

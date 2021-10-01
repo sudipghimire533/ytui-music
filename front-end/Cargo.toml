@@ -11,3 +11,5 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 libmpv = "2.0"
 fetcher = { path = "../fetcher" }
+lazy_static = "1.4.0"
+config = { path = "../config" }

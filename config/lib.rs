@@ -1,4 +1,3 @@
-use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::default::Default;
@@ -9,7 +8,7 @@ use std::path;
 type Color = [u8; 3];
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
-struct ShortcutsKeys {
+pub struct ShortcutsKeys {
     toggle_play: char,
     play_next: char,
     play_prev: char,
@@ -30,7 +29,7 @@ impl Default for ShortcutsKeys {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-struct Theme {
+pub struct Theme {
     border_idle: Color,
     border_hilight: Color,
     list_title: Color,
@@ -50,7 +49,7 @@ impl Default for Theme {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
-struct Constants {
+pub struct Constants {
     item_per_list: u8,
     server_time_out: u32,
 }
@@ -65,7 +64,7 @@ impl Default for Constants {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
-struct Servers {
+pub struct Servers {
     list: Vec<String>,
 }
 
@@ -85,15 +84,15 @@ impl Default for Servers {
 }
 
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
-struct Config {
+pub struct Config {
     #[serde(default, alias = "ShortcutKeys")]
-    shortcut_keys: ShortcutsKeys,
+    pub shortcut_keys: ShortcutsKeys,
     #[serde(default, alias = "Colors")]
-    theme: Theme,
+    pub theme: Theme,
     #[serde(default, alias = "Servers")]
-    servers: Servers,
+    pub servers: Servers,
     #[serde(default, alias = "Constants")]
-    constants: Constants,
+    pub constants: Constants,
 }
 
 impl Config {
@@ -113,12 +112,12 @@ impl Config {
 
 #[derive(Debug)]
 pub struct ConfigContainer {
-    config: Config,
+    pub config: Config,
     file_path: path::PathBuf,
 }
 
 impl ConfigContainer {
-    pub fn from_file(file_path: &path::Path) -> Option<Self> {
+    fn from_file(file_path: &path::Path) -> Option<Self> {
         let file = match File::open(file_path) {
             Ok(val) => val,
             Err(err) => {
@@ -149,7 +148,7 @@ impl ConfigContainer {
         })
     }
 
-    pub fn flush(&self) -> Option<()> {
+    fn flush(&self) -> Option<()> {
         let content = match self.config.get_string() {
             Some(val) => val,
             None => return None,
@@ -177,7 +176,7 @@ impl ConfigContainer {
         Some(())
     }
 
-    pub fn get_config_path() -> Option<path::PathBuf> {
+    fn get_config_path() -> Option<path::PathBuf> {
         let config_dir = match dirs::preference_dir() {
             Some(path) => path,
             None => {
@@ -205,7 +204,7 @@ impl ConfigContainer {
         Some(path)
     }
 
-    pub fn write_defult_config(config_path: &path::Path) -> Option<ConfigContainer> {
+    fn write_defult_config(config_path: &path::Path) -> Option<ConfigContainer> {
         let default_config = Config::default();
         let config_container = ConfigContainer {
             config: default_config,
@@ -213,6 +212,18 @@ impl ConfigContainer {
         };
 
         config_container.flush();
+
+        Some(config_container)
+    }
+
+    pub fn give_me_config() -> Option<Self> {
+        let config_path = ConfigContainer::get_config_path()?;
+        let config_container: ConfigContainer;
+        if config_path.exists() {
+            config_container = ConfigContainer::from_file(&config_path)?;
+        } else {
+            config_container = ConfigContainer::write_defult_config(&config_path)?;
+        }
 
         Some(config_container)
     }
