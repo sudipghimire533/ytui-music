@@ -11,6 +11,7 @@ const FIELDS: [&str; 3] = [
 pub const ITEM_PER_PAGE: usize = 10;
 const REGION: &str = "region=NP";
 const FILTER_TYPE: [&str; 3] = ["music", "playlist", "channel"];
+const REQUEST_PER_SERVER: u8 = 10;
 
 impl crate::ExtendDuration for Duration {
     fn to_string(self) -> String {
@@ -47,6 +48,7 @@ impl Fetcher {
                 .build()
                 .unwrap(),
             active_server_index: 0,
+            request_sent: 0,
         }
     }
     pub fn change_server(&mut self) {
@@ -130,6 +132,7 @@ macro_rules! search {
 }
 
 impl Fetcher {
+    // All the request should be send from this function
     async fn send_request<'de, Res>(
         &mut self,
         path: &str,
@@ -143,6 +146,13 @@ impl Fetcher {
             .get(self.servers[self.active_server_index].to_string() + path)
             .send()
             .await;
+
+        // Change server time to time.
+        if self.request_sent > REQUEST_PER_SERVER {
+            self.change_server();
+        }
+        self.request_sent += 1;
+
         match res {
             Ok(response) => {
                 if let Ok(obj) = response.json::<Res>().await {
@@ -340,8 +350,8 @@ mod tests {
         static ref FETCHER: Vec<String> = vec![String::from("https:://")];
     }
     fn get_fetcher_for_test() -> Fetcher {
-        let server = vec!["https://invidious.hub.ne.kr/api/v1".to_string()];
-        Fetcher::new(&server)
+        // FIXME: how can I get a static variable for test
+        todo!()
     }
 
     #[tokio::test]
