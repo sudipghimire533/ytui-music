@@ -1,4 +1,5 @@
 use crate::ui;
+use crate::CONFIG;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use std::{
     convert::TryFrom,
@@ -9,15 +10,6 @@ use std::{
 pub const MIDDLE_MUSIC_INDEX: usize = 0;
 pub const MIDDLE_PLAYLIST_INDEX: usize = 1;
 pub const MIDDLE_ARTIST_INDEX: usize = 2;
-const SEARCH_SH_KEY: char = '/';
-const HELP_SH_KEY: char = '?';
-const NEXT_SH_KEY: char = 'n';
-const PREV_SH_KEY: char = 'p';
-const QUIT_SH_KEY: char = 'c';
-const SEEK_F_KEY: char = '>';
-const SEEK_B_KEY: char = '<';
-const TOGGLE_PAUSE_KEY: char = ' ';
-const REFRESH_RATE: u64 = 950;
 
 #[derive(Clone)]
 enum HeadTo {
@@ -379,7 +371,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     };
 
     'listener_loop: loop {
-        if event::poll(Duration::from_millis(REFRESH_RATE)).unwrap() {
+        if event::poll(Duration::from_millis(CONFIG.constants.refresh_rate)).unwrap() {
             match event::read().unwrap() {
                 Event::Key(key) => {
                     let is_with_control = key.modifiers.contains(KeyModifiers::CONTROL);
@@ -411,28 +403,32 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                                 handle_search_input(ch);
                             }
                             /* Handle single character key shortcut as it is not in input */
-                            else if ch == SEARCH_SH_KEY {
+                            else if ch == CONFIG.shortcut_keys.start_search {
                                 activate_search();
-                            } else if ch == HELP_SH_KEY {
+                            } else if ch == CONFIG.shortcut_keys.help {
                                 show_help();
-                            } else if ch == QUIT_SH_KEY && is_with_control {
-                                quit();
-                                break 'listener_loop;
-                            } else if ch == NEXT_SH_KEY {
+                            } else if ch == CONFIG.shortcut_keys.quit {
+                                if is_with_control {
+                                    quit();
+                                    break 'listener_loop;
+                                }
+                            } else if ch == CONFIG.shortcut_keys.next {
+                                handle_page_nav(HeadTo::Next);
+                            } else if ch == CONFIG.shortcut_keys.prev {
+                                handle_page_nav(HeadTo::Prev);
+                            } else if ch == CONFIG.shortcut_keys.forward {
                                 if is_with_control {
                                     handle_play_advance(HeadTo::Next);
                                 } else {
-                                    handle_page_nav(HeadTo::Next);
+                                    // TODO: seek forward
                                 }
-                            } else if ch == PREV_SH_KEY {
+                            } else if ch == CONFIG.shortcut_keys.backward {
                                 if is_with_control {
                                     handle_play_advance(HeadTo::Prev);
                                 } else {
-                                    handle_page_nav(HeadTo::Prev);
+                                    // TODO: seek bacward
                                 }
-                            } else if ch == SEEK_F_KEY {
-                            } else if ch == SEEK_B_KEY {
-                            } else if ch == TOGGLE_PAUSE_KEY {
+                            } else if ch == CONFIG.shortcut_keys.toggle_play {
                                 state_original.lock().unwrap().toggle_pause(notifier);
                             }
                         }

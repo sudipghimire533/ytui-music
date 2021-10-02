@@ -10,28 +10,28 @@ type Color = [u8; 3];
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct ShortcutsKeys {
     pub toggle_play: char,
-    pub play_next: char,
-    pub play_prev: char,
+    pub next: char,
+    pub prev: char,
     pub start_search: char,
     pub download: char,
     pub help: char,
     pub quit: char,
-    pub seek_forward: char,
-    pub seek_backward: char,
+    pub forward: char,
+    pub backward: char,
 }
 
 impl Default for ShortcutsKeys {
     fn default() -> Self {
         ShortcutsKeys {
             toggle_play: ' ',
-            play_next: 'n',
-            play_prev: 'p',
+            next: 'n',
+            prev: 'p',
             start_search: '/',
             download: 'd',
             help: '?',
             quit: 'c',
-            seek_forward: '>',
-            seek_backward: '<',
+            forward: '>',
+            backward: '<',
         }
     }
 }
@@ -58,8 +58,9 @@ impl Default for Theme {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Constants {
-    item_per_list: u8,
-    server_time_out: u32,
+    pub item_per_list: u8,
+    pub server_time_out: u32,
+    pub refresh_rate: u64,
 }
 
 impl Default for Constants {
@@ -67,6 +68,7 @@ impl Default for Constants {
         Constants {
             item_per_list: 10,
             server_time_out: 30_000,
+            refresh_rate: 900,
         }
     }
 }

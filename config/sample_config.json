@@ -1,14 +1,14 @@
 {
     "ShortcutsKeys": {
         "toggle_play": " ",
-        "play_next": "n",
-        "play_prev": "p",
+        "next": "n",
+        "prev": "p",
         "start_search": "/",
         "downloaad": "d",
         "help": "?",
         "quit": "c",
-        "seek_forward": ">",
-        "seek_backward": "<"
+        "forward": ">",
+        "backward": "<"
     },
 
     "Servers": {
@@ -24,7 +24,8 @@
 
     "Constatnts": {
         "item_per_list": 10,
-        "server_time_out": 30000
+        "server_time_out": 30000,
+        "refresh_rate": 900
     },
 
     "Colors": {
