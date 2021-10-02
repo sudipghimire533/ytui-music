@@ -17,35 +17,7 @@ I listen to music a lot and youtube music is currently not available in my count
 a tab of my browser to just listen music. Additionaly, I love to stay in terminal.
 This was when I thought to build one. which I thought would be one of another small project while I learn rust and programming in general.
 
+## Contributing
+I would be pleased to know that you have intrest to cometibute something. This could be anything from suggestion, bug report, issue or the improvement. If you have any suggestion, facing problem or anything feel super duper free to open an issue.
 
-## Future Goal
-* Maintain local data of liked song, favourates song, save for offline, following artist
-* Play the whole playlist
-* Make configurable by user. (Currently several configurable paramaters have been hardcoded as global constatnt variable eg: REFRESH_RATE, REGION.)
-* Implement help window
-* Explore whats on youtube music channel through YoutubeCommunity option and so on
-Any suggestion are welcome
-
-## Tools used
-Programming language: Rust
-Front-end: tui-rs
-http client: reqwest
-backend-player: libmpv-rs (This project seems inactive from long time. Might need reconsider this option or extend the frok)
-Youtube data extractor: Invidious
-
-## Project Architecture
-Project have two workspace memeber
-1) Fetcher
-This is a library crate that handles retriving of data from web or reading the file for local data like favourates music.
-**Content**
-*src/lib.rs* : high level decleration of available function and strructures
-*src/utils.rs* : defination and imlementation which extends the decleration
-
-2) Front end
-This is the binary crate that handles everything else from Fetcher. This majorly include the communication with *Fetcher* and the ui
-**Content**
-*src/mian.rs* : Responsible for initilizing the configuration, parsing command line option and spwawning other worker thread
-*src/communicator.rs* : Responsible for communicating with the fetcher for sending and initiling data
-*src/ui/mod.rs* : High level decleration of ui itself
-*src/ui/utils.rs* : Defination to expend *src/ui/mod.rs*
-*src/ui/event.rs* : Handles the keypress and calling the proper function of *src/communicator.rs*
+Also if you would like to contibute code, you may start with CONTRIBUTING.md
