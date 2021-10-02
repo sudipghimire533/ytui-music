@@ -27,7 +27,10 @@ See Cargo.toml file in each workspace-folder
 ### How are things splitted?
 The project is cargo workspace with three members. Depending on what you want to improve or fix things:
 
-1) fetcher
+1) Config
+This may be simpliest of all. This simple defines the struct and functions needed to read and generate configuration file
+
+2) fetcher
 This lib handles getting and providing data from invidious. If you want to improve something that is related to fetching data from api like getting more field. This is where you should stare.
 
 source files included are
@@ -39,7 +42,7 @@ This file constains the declaration like struct to represent the api result whic
 This contains the defination of required function. The communicator (mentioned below) interact with the function defined here. It is responsible of basic request sending storeing the result in own and serve in pagination manner as mentioned above.
 
 
-2) front-end
+3) front-end
 This is binary crate. This is realtively big bit not-so-confusing (I guess). As you might suspected this handled the ui itself but not only that. It is easy to explain each file
 
 **src/main.rs**
