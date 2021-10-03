@@ -234,11 +234,14 @@ impl<'parent> ui::SideBar {
 
 impl<'parent> ui::BottomLayout {
     pub fn new(parent: Rect) -> Self {
-        // 15 column for the box to show icons sets
-        let info_width = parent.width.checked_sub(15).unwrap_or_default();
+        // 9 columns to show playback behavious (paused, suffle, repeat) 3 col each
+        let progressbar_width = parent.width.checked_sub(9).unwrap_or_default();
         let layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Length(info_width), Constraint::Length(5)])
+            .constraints([
+                Constraint::Length(progressbar_width),
+                Constraint::Length(10),
+            ])
             .split(parent);
 
         ui::BottomLayout {
