@@ -284,27 +284,25 @@ impl<'parent> ui::BottomLayout {
 
     pub fn get_icons_set(state: &'parent ui::State) -> Paragraph<'parent> {
         let block = Block::new(String::new());
-        let suffle;
-        let repeat;
-        let unpaused;
+        let (paused_status, suffle, repeat);
 
         if let Some((_, false)) = state.bottom.playing {
             // is paused
-            unpaused = Span::styled(" P ", Style::default().add_modifier(Modifier::RAPID_BLINK));
+            paused_status = Span::from(" _ ");
         } else {
-            unpaused = Span::from(" P ");
+            paused_status = Span::from(" P ");
         }
 
         match state.playback_behaviour.1 {
             ui::RepeatType::One => repeat = Span::from(" r "),
             ui::RepeatType::Playlist => repeat = Span::from(" R "),
-            ui::RepeatType::None => repeat = Span::from("   "),
+            ui::RepeatType::None => repeat = Span::from(" _ "),
         }
 
         //TODO: Add some indicator to indicate repeat in state
         suffle = Span::from(" S ");
 
-        let paragraph = Paragraph::new(Spans::from(vec![unpaused, suffle, repeat]))
+        let paragraph = Paragraph::new(Spans::from(vec![paused_status, suffle, repeat]))
             .alignment(Alignment::Center)
             .block(block);
         paragraph
