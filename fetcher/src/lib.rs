@@ -49,16 +49,6 @@ struct FetchArtistPlaylist {
 // Represent the single playable music item.
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct MusicUnit {
-    // If user had kept this item in favourates list(uniquely identified by field path)
-    // List of favourates nusic unit are stored and manipulated in local file
-    // This field does not exists in the server response so all the computation is to be done in
-    // serializing function
-    // TODO:
-    // For now this is simple set to false. But once the local storage is maintained to store user data
-    // this should be set accordingly. Possibly, by creating the static hashmap for all favourates
-    // music list and then comparing if this specific item is in there
-    #[serde(default)]
-    pub liked: bool,
     // uniquely identifiable id of the youtube channel that represent the publisher of this unit
     // This field exist to make it possible to navigate to the artist channel from the song alone
     // server return this field as `author`

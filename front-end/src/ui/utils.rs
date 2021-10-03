@@ -3,13 +3,6 @@ use fetcher::ExtendDuration;
 use libmpv;
 use ui::shared_import::*;
 
-const HEART_FILLED: &str = "\u{2665}";
-const HEART_OUTLINE: &str = "\u{2661}";
-const PLAY_BTN: &str = "\u{25B6}";
-const PAUSE_BTN: &str = "\u{23F8}";
-const SUFFLE_BTN: &str = "\u{1F500}";
-const REPEAT_BTN: &str = "\u{1F501}";
-
 const CURRENT_TITLE_LEN: usize = 70;
 pub const SIDEBAR_LIST_COUNT: usize = 5;
 pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
@@ -108,24 +101,19 @@ impl<'parent> ui::MiddleLayout {
             .iter()
             .map(|music| {
                 Row::new(vec![
-                    match music.liked {
-                        true => HEART_FILLED,
-                        false => HEART_OUTLINE,
-                    },
-                    &music.name,
-                    &music.artist,
-                    &music.duration,
+                    music.name.as_str(),
+                    music.artist.as_str(),
+                    music.duration.as_str(),
                 ])
             })
             .collect();
         let table = Table::new(items)
             .header(
-                Row::new(vec!["", "Title", "Artist", "Length"])
+                Row::new(vec!["Title", "Artist", "Length"])
                     .style(Style::default().fg(Color::LightYellow)),
             )
             .widths(
                 [
-                    Constraint::Percentage(5),
                     Constraint::Percentage(50),
                     Constraint::Percentage(30),
                     Constraint::Percentage(20),
@@ -293,12 +281,9 @@ impl<'parent> ui::BottomLayout {
 
     pub fn get_icons_set(state: &'parent ui::State) -> Paragraph<'parent> {
         let block = Block::new(String::new());
-        let paragraph = Paragraph::new(format!(
-            "{} {} {} {}",
-            PLAY_BTN, PAUSE_BTN, SUFFLE_BTN, REPEAT_BTN
-        ))
-        .alignment(Alignment::Center)
-        .block(block);
+        let paragraph = Paragraph::new(format!("P  S  R",))
+            .alignment(Alignment::Center)
+            .block(block);
         paragraph
     }
 }

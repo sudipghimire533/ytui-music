@@ -259,7 +259,6 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     };
     let fill_recents_music = |_direction: HeadTo| {};
     let fill_favourates_music = |_direction: HeadTo| {};
-    let fill_favourates_artist = |_direction: HeadTo| {};
     let fill_music_from_playlist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         if let ui::MusicbarSource::Playlist(playlist_id) = &state.filled_source.0 {
