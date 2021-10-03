@@ -325,6 +325,13 @@ pub enum ArtistbarSource {
     Favourates,
 }
 
+#[derive(Debug)]
+pub enum RepeatType {
+    One,
+    Playlist,
+    None,
+}
+
 pub struct State<'p> {
     pub help: &'p str,
     // First is state of the sidebar list itself
@@ -344,5 +351,6 @@ pub struct State<'p> {
     pub search: (String, String),
     pub active: Window,
     pub fetched_page: [Option<usize>; 3],
-    player: libmpv::Mpv,
+    pub player: libmpv::Mpv,
+    pub playback_behaviour: (bool, RepeatType),
 }

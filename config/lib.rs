@@ -63,6 +63,8 @@ pub struct ShortcutsKeys {
     pub quit: char,
     pub forward: char,
     pub backward: char,
+    pub suffle: char,
+    pub repeat: char,
 }
 
 impl Default for ShortcutsKeys {
@@ -77,6 +79,8 @@ impl Default for ShortcutsKeys {
             quit: 'c',
             forward: '>',
             backward: '<',
+            suffle: 's',
+            repeat: 'r',
         }
     }
 }

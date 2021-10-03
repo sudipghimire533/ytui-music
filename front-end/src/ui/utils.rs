@@ -283,16 +283,23 @@ impl<'parent> ui::BottomLayout {
         let block = Block::new(String::new());
         let suffle;
         let repeat;
-        let mut unpaused = Span::from(" P ");
+        let unpaused;
 
         if let Some((_, false)) = state.bottom.playing {
             // is paused
-            unpaused.style = Style::default().add_modifier(Modifier::RAPID_BLINK);
+            unpaused = Span::styled(" P ", Style::default().add_modifier(Modifier::RAPID_BLINK));
+        } else {
+            unpaused = Span::from(" P ");
         }
 
-        //TODO: Add some indicator to indicate suffle and repeat in state
+        match state.playback_behaviour.1 {
+            ui::RepeatType::One => repeat = Span::from(" r "),
+            ui::RepeatType::Playlist => repeat = Span::from(" R "),
+            ui::RepeatType::None => repeat = Span::from("   "),
+        }
+
+        //TODO: Add some indicator to indicate repeat in state
         suffle = Span::from(" S ");
-        repeat = Span::from(" R ");
 
         let paragraph = Paragraph::new(Spans::from(vec![unpaused, suffle, repeat]))
             .alignment(Alignment::Center)
@@ -391,22 +398,10 @@ impl ui::Position {
 impl Default for ui::State<'_> {
     fn default() -> Self {
         let mpv = libmpv::Mpv::new().unwrap();
-        mpv.set_property("video", "no").unwrap();
-        mpv.set_property("cache", "yes").unwrap();
-        mpv.set_property("cache-secs", 10).unwrap();
-        mpv.set_property("cache-pause-wait", 5).unwrap();
-        mpv.set_property("demuxer-readahead-secs", 10).unwrap();
-        mpv.set_property("hwdec", "yes").unwrap();
-        mpv.set_property("cache-pause-wait", 10).unwrap();
-        mpv.set_property("hwdec", "yes").unwrap();
-        mpv.set_property("demuxer-cache-wait", "no").unwrap();
-        mpv.set_property("cache-on-disk", "yes").unwrap();
-        mpv.set_property("ytdl-format", "worst").unwrap();
-        mpv.set_property("script-opts", "ytdl_hook-try_ytdl_first=yes")
-            .unwrap();
-
-        // TODO: set this according the prefernce defined in user config file
-        mpv.set_property("loop-playlist", "inf").unwrap();
+        mpv.configure_defult();
+        mpv.cache_for(10);
+        // By default repeat the playlist. Set playlist to repeat
+        mpv.repeat_playlist();
 
         let mut sidebar_list_state = ListState::default();
         sidebar_list_state.select(Some(0));
@@ -430,7 +425,52 @@ impl Default for ui::State<'_> {
                 music_elapse: Duration::new(0, 0),
             },
             player: mpv,
+            playback_behaviour: (false, ui::RepeatType::Playlist),
         }
+    }
+}
+
+pub trait ExtendMpv {
+    fn configure_defult(&self);
+    fn repeat_playlist(&self);
+    fn repeat_one(&self);
+    fn repeat_nothing(&self);
+    fn cache_for(&self, time: i64);
+}
+
+impl ExtendMpv for libmpv::Mpv {
+    fn configure_defult(&self) {
+        self.set_property("video", "no").unwrap();
+        self.set_property("cache", "yes").unwrap();
+        self.set_property("demuxer-readahead-secs", 10).ok();
+        self.set_property("hwdec", "yes").ok();
+        self.set_property("cache-pause-wait", 10).ok();
+        self.set_property("demuxer-cache-wait", "no").ok();
+        self.set_property("cache-on-disk", "yes").ok();
+        self.set_property("ytdl-format", "worst").ok();
+        self.set_property("script-opts", "ytdl_hook-try_ytdl_first=yes")
+            .ok();
+    }
+
+    #[inline(always)]
+    fn cache_for(&self, time: i64) {
+        self.set_property("cache-secs", time).ok();
+    }
+
+    #[inline(always)]
+    fn repeat_playlist(&self) {
+        self.set_property("loop-playlist", "inf").unwrap();
+    }
+
+    #[inline(always)]
+    fn repeat_nothing(&self) {
+        self.set_property("loop-playlist", "no").unwrap();
+        self.set_property("loop-file", "no").unwrap();
+    }
+
+    #[inline(always)]
+    fn repeat_one(&self) {
+        self.set_property("loop-file", "inf").unwrap();
     }
 }
 

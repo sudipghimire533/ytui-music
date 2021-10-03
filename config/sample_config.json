@@ -8,7 +8,9 @@
         "help": "?",
         "quit": "c",
         "forward": ">",
-        "backward": "<"
+        "backward": "<",
+        "suffle": "s",
+        "repeat": "r"
     },
 
     "Servers": {

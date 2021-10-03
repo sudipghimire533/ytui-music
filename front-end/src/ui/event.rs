@@ -1,4 +1,4 @@
-use crate::ui;
+use crate::ui::{self, utils::ExtendMpv};
 use crate::CONFIG;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use std::{
@@ -312,6 +312,28 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.fetched_page[target_index] = Some(page);
         notifier.notify_all();
     };
+    let handle_repeat = || {
+        let mut state = state_original.lock().unwrap();
+        // First reset the repeat property of both music and playlist because
+        // the order of priority was not documented by mpv
+        state.player.repeat_nothing();
+        // Change in repeat type is in order of:
+        // one -> playlist -> none -> one -> playlist ....
+        // at the time of writing this handle default was set to playlist in State::default()
+        match state.playback_behaviour.1 {
+            ui::RepeatType::One => {
+                state.playback_behaviour.1 = ui::RepeatType::Playlist;
+            }
+            ui::RepeatType::Playlist => {
+                state.playback_behaviour.1 = ui::RepeatType::None;
+            }
+            ui::RepeatType::None => {
+                state.player.repeat_one();
+                state.playback_behaviour.1 = ui::RepeatType::One;
+            }
+        }
+        notifier.notify_all();
+    };
     let handle_enter = || {
         let mut state = state_original.lock().unwrap();
         let active_window = state.active.clone();
@@ -401,20 +423,20 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                             if state_original.lock().unwrap().active == ui::Window::Searchbar {
                                 handle_search_input(ch);
                             }
-                            /* Handle single character key shortcut as it is not in input */
+                            // No as this is not the input, call the shortcuts action if this key
+                            // is defined in shortcuts
                             else if ch == CONFIG.shortcut_keys.start_search {
                                 activate_search();
                             } else if ch == CONFIG.shortcut_keys.help {
                                 show_help();
-                            } else if ch == CONFIG.shortcut_keys.quit {
-                                if is_with_control {
-                                    quit();
-                                    break 'listener_loop;
-                                }
                             } else if ch == CONFIG.shortcut_keys.next {
                                 handle_page_nav(HeadTo::Next);
                             } else if ch == CONFIG.shortcut_keys.prev {
                                 handle_page_nav(HeadTo::Prev);
+                            } else if ch == CONFIG.shortcut_keys.toggle_play {
+                                state_original.lock().unwrap().toggle_pause(notifier);
+                            } else if ch == CONFIG.shortcut_keys.repeat {
+                                handle_repeat();
                             } else if ch == CONFIG.shortcut_keys.forward {
                                 if is_with_control {
                                     handle_play_advance(HeadTo::Next);
@@ -427,8 +449,11 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                                 } else {
                                     // TODO: seek bacward
                                 }
-                            } else if ch == CONFIG.shortcut_keys.toggle_play {
-                                state_original.lock().unwrap().toggle_pause(notifier);
+                            } else if ch == CONFIG.shortcut_keys.quit {
+                                if is_with_control {
+                                    quit();
+                                    break 'listener_loop;
+                                }
                             }
                         }
                         _ => {}
