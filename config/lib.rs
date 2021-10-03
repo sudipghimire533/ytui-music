@@ -5,6 +5,51 @@ use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path;
 
+// A stupid as fu#k shit logic to get either true or false.
+// Create instant clock.
+// execute some useless statements (which may even removed by compiler optimizer)
+// get the time elapsed in nano second
+// if it is even number return true else return false
+fn get_random_bool() -> bool {
+    let now = std::time::Instant::now();
+    let _ = vec![1; 3];
+    let elapsed = now.elapsed().as_nanos();
+    let res = elapsed % 2 == 0;
+    res
+}
+
+trait Random {
+    #[must_use]
+    fn suffle(&self, timeout: u64) -> Self;
+}
+impl<T> Random for Vec<T>
+where
+    T: std::cmp::PartialEq + Clone,
+{
+    fn suffle(&self, timeout: u64) -> Self {
+        let length = self.len();
+        let mut new_vector = Vec::with_capacity(length);
+
+        let now = std::time::Instant::now();
+        let mut current = 0;
+        while new_vector.len() != length {
+            // When timwout occurs push all the reamining vector directly
+            if now.elapsed().as_secs() > timeout {
+                for val in self {
+                    if !new_vector.contains(val) {
+                        new_vector.push(val.clone());
+                    }
+                }
+            } else if get_random_bool() {
+                new_vector.push(self[current].clone());
+            }
+            current = (current + 1) % length;
+        }
+
+        new_vector
+    }
+}
+
 type Color = [u8; 3];
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
@@ -141,7 +186,7 @@ impl ConfigContainer {
         };
 
         let reader = BufReader::new(file);
-        let config: Config = match serde_json::from_reader(reader) {
+        let mut config: Config = match serde_json::from_reader(reader) {
             Ok(val) => val,
             Err(err) => {
                 eprintln!(
@@ -151,6 +196,12 @@ impl ConfigContainer {
                 return None;
             }
         };
+
+        // Most of invidious server do not expect this much of api calls.
+        // So be sure we dont kill a single server instead distribute the load.
+        // Here, it is achived by rearrenging the server list in random order
+        // so that first server don't always have to be first to send request
+        config.servers.list = config.servers.list.suffle(4);
 
         Some(Self {
             config,
@@ -243,10 +294,13 @@ impl ConfigContainer {
 mod tests {
     use super::*;
 
+    fn get_test_config_path() -> path::PathBuf {
+        path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("sample_config.json")
+    }
+
     #[test]
     fn default_and_file_are_eq() {
-        let file_path = path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
-            .join("sample_config.json");
+        let file_path = get_test_config_path();
         let config_from_file = ConfigContainer::from_file(&file_path).unwrap().config;
         let default_config = Config::default();
 
@@ -260,5 +314,19 @@ mod tests {
     fn display_config_path() {
         let path = ConfigContainer::get_config_path().unwrap();
         eprintln!("Config path: {}", path.as_path().to_string_lossy());
+    }
+
+    #[test]
+    #[ignore]
+    fn inspect_server_list() {
+        let path = get_test_config_path();
+        for _ in 0..4 {
+            let servers = ConfigContainer::from_file(&path)
+                .unwrap()
+                .config
+                .servers
+                .list;
+            eprintln!("{:#?}", servers);
+        }
     }
 }
