@@ -235,12 +235,13 @@ impl<'parent> ui::SideBar {
 impl<'parent> ui::BottomLayout {
     pub fn new(parent: Rect) -> Self {
         // 9 columns to show playback behavious (paused, suffle, repeat) 3 col each
-        let progressbar_width = parent.width.checked_sub(9).unwrap_or_default();
+        // and +2 for border = 11
+        let progressbar_width = parent.width.checked_sub(11).unwrap_or_default();
         let layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
                 Constraint::Length(progressbar_width),
-                Constraint::Length(10),
+                Constraint::Length(11),
             ])
             .split(parent);
 
@@ -293,14 +294,17 @@ impl<'parent> ui::BottomLayout {
             paused_status = Span::from(" P ");
         }
 
-        match state.playback_behaviour.1 {
-            ui::RepeatType::One => repeat = Span::from(" r "),
-            ui::RepeatType::Playlist => repeat = Span::from(" R "),
-            ui::RepeatType::None => repeat = Span::from(" _ "),
+        if state.playback_behaviour.repeat {
+            repeat = Span::from(" R ");
+        } else {
+            repeat = Span::from(" r ");
         }
 
-        //TODO: Add some indicator to indicate repeat in state
-        suffle = Span::from(" S ");
+        if state.playback_behaviour.shuffle {
+            suffle = Span::from(" S ");
+        } else {
+            suffle = Span::from(" _ ");
+        }
 
         let paragraph = Paragraph::new(Spans::from(vec![paused_status, suffle, repeat]))
             .alignment(Alignment::Center)
@@ -426,7 +430,10 @@ impl Default for ui::State<'_> {
                 music_elapse: Duration::new(0, 0),
             },
             player: mpv,
-            playback_behaviour: (false, ui::RepeatType::Playlist),
+            playback_behaviour: ui::PlaybackBehaviour {
+                shuffle: false,
+                repeat: true,
+            },
         }
     }
 }
@@ -436,6 +443,8 @@ pub trait ExtendMpv {
     fn repeat_playlist(&self);
     fn repeat_one(&self);
     fn repeat_nothing(&self);
+    fn shuffle(&self);
+    fn unshuffle(&self);
     fn cache_for(&self, time: i64);
 }
 
@@ -454,6 +463,16 @@ impl ExtendMpv for libmpv::Mpv {
     }
 
     #[inline(always)]
+    fn shuffle(&self) {
+        self.command("playlist-shuffle", &[]).ok();
+    }
+
+    #[inline(always)]
+    fn unshuffle(&self) {
+        self.command("playlist-unshuffle", &[]).ok();
+    }
+
+    #[inline(always)]
     fn cache_for(&self, time: i64) {
         self.set_property("cache-secs", time).ok();
     }
@@ -463,7 +482,6 @@ impl ExtendMpv for libmpv::Mpv {
         self.set_property("loop-playlist", "inf").unwrap();
     }
 
-    #[inline(always)]
     fn repeat_nothing(&self) {
         self.set_property("loop-playlist", "no").unwrap();
         self.set_property("loop-file", "no").unwrap();
@@ -583,7 +601,7 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn toggle_pause(&mut self, notifier: &Arc<std::sync::Condvar>) {
+    pub fn toggle_pause(&mut self) {
         if let Some((music_title, is_playing)) = &self.bottom.playing {
             if *is_playing {
                 self.player.pause().unwrap();
@@ -591,7 +609,6 @@ impl ui::State<'_> {
                 self.player.unpause().unwrap();
             }
             self.bottom.playing = Some((music_title.to_string(), !is_playing));
-            notifier.notify_all();
         }
     }
 }

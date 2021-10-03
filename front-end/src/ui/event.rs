@@ -314,24 +314,26 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     };
     let handle_repeat = || {
         let mut state = state_original.lock().unwrap();
-        // First reset the repeat property of both music and playlist because
-        // the order of priority was not documented by mpv
-        state.player.repeat_nothing();
-        // Change in repeat type is in order of:
-        // one -> playlist -> none -> one -> playlist ....
-        // at the time of writing this handle default was set to playlist in State::default()
-        match state.playback_behaviour.1 {
-            ui::RepeatType::One => {
-                state.playback_behaviour.1 = ui::RepeatType::Playlist;
-            }
-            ui::RepeatType::Playlist => {
-                state.playback_behaviour.1 = ui::RepeatType::None;
-            }
-            ui::RepeatType::None => {
-                state.player.repeat_one();
-                state.playback_behaviour.1 = ui::RepeatType::One;
-            }
+        if state.playback_behaviour.repeat {
+            state.player.repeat_one();
+        } else {
+            state.player.repeat_playlist();
         }
+        state.playback_behaviour.repeat = !state.playback_behaviour.repeat;
+        notifier.notify_all();
+    };
+    let toggle_shuffle = || {
+        let mut state = state_original.lock().unwrap();
+        if state.playback_behaviour.shuffle {
+            state.player.unshuffle();
+        } else {
+            state.player.shuffle();
+        }
+        state.playback_behaviour.shuffle = !state.playback_behaviour.shuffle;
+        notifier.notify_all();
+    };
+    let toggle_play = || {
+        state_original.lock().unwrap().toggle_pause();
         notifier.notify_all();
     };
     let handle_enter = || {
@@ -434,9 +436,11 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                             } else if ch == CONFIG.shortcut_keys.prev {
                                 handle_page_nav(HeadTo::Prev);
                             } else if ch == CONFIG.shortcut_keys.toggle_play {
-                                state_original.lock().unwrap().toggle_pause(notifier);
+                                toggle_play();
                             } else if ch == CONFIG.shortcut_keys.repeat {
                                 handle_repeat();
+                            } else if ch == CONFIG.shortcut_keys.suffle {
+                                toggle_shuffle();
                             } else if ch == CONFIG.shortcut_keys.forward {
                                 if is_with_control {
                                     handle_play_advance(HeadTo::Next);
