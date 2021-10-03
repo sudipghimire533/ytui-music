@@ -114,9 +114,9 @@ impl<'parent> ui::MiddleLayout {
             )
             .widths(
                 [
-                    Constraint::Percentage(50),
+                    Constraint::Percentage(55),
                     Constraint::Percentage(30),
-                    Constraint::Percentage(20),
+                    Constraint::Percentage(15),
                 ]
                 .as_ref(),
             )
@@ -133,7 +133,7 @@ impl<'parent> ui::MiddleBottom {
     pub fn new(parent: Rect) -> Self {
         let layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+            .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
             .split(parent);
 
         ui::MiddleBottom {
@@ -281,7 +281,20 @@ impl<'parent> ui::BottomLayout {
 
     pub fn get_icons_set(state: &'parent ui::State) -> Paragraph<'parent> {
         let block = Block::new(String::new());
-        let paragraph = Paragraph::new(format!("P  S  R",))
+        let suffle;
+        let repeat;
+        let mut unpaused = Span::from(" P ");
+
+        if let Some((_, false)) = state.bottom.playing {
+            // is paused
+            unpaused.style = Style::default().add_modifier(Modifier::RAPID_BLINK);
+        }
+
+        //TODO: Add some indicator to indicate suffle and repeat in state
+        suffle = Span::from(" S ");
+        repeat = Span::from(" R ");
+
+        let paragraph = Paragraph::new(Spans::from(vec![unpaused, suffle, repeat]))
             .alignment(Alignment::Center)
             .block(block);
         paragraph
