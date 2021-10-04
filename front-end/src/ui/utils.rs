@@ -24,6 +24,7 @@ impl<'parent> ui::TopLayout {
             layout: [layout[0], layout[1]],
         }
     }
+
     pub fn get_helpbox(state: &'parent ui::State) -> Paragraph<'parent> {
         Paragraph::new(Span::styled(
             state.help,
@@ -34,6 +35,7 @@ impl<'parent> ui::TopLayout {
         .block(Block::new("Help".to_owned()))
         .block(Block::new("Help".to_owned()))
     }
+
     pub fn get_searchbox(state: &'parent ui::State) -> Paragraph<'parent> {
         let mut cursor_style = Style::default().fg(Color::White);
 
@@ -57,6 +59,24 @@ impl<'parent> ui::TopLayout {
             Span::styled("/", cursor_style),
         ]);
         Paragraph::new(text).block(block)
+    }
+
+    // Showing help window on top of everything is not that bad idea which is what I was thinking
+    // from the beginning. But then we have to handle events like up/down arrow differently meaning
+    // more branching. Let's just leave it and aks user to run with --help.
+    // Help bar cannot be removed as it would require more refractor. Ahh
+    pub fn get_helpwindow() -> Paragraph<'parent> {
+        let block = Block::active(String::from(" Help "));
+        let content = vec![
+            Spans::from(vec![Span::from("")]),
+            Spans::from(vec![Span::from(
+                "Help manual have been removed from here. Please rerun with --help argument. ",
+            )]),
+        ];
+
+        Paragraph::new(content)
+            .alignment(Alignment::Center)
+            .block(block)
     }
 }
 

@@ -186,6 +186,15 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
             .draw(|screen| {
                 let mut state_unlocked = state.lock().unwrap();
 
+                // If help window is active then we can cover the whole screen with just that.
+                if state_unlocked.active == Window::Helpbar {
+                    let help_window = TopLayout::get_helpwindow();
+                    screen.render_widget(help_window, screen.size());
+                    // If below widgets are drawn then it will override the help window.
+                    // So just return
+                    return;
+                }
+
                 // As screen size doesn't change that often (is chaged when terminal window is
                 // resized) so it is unnecessary to calcuate position for components in every draw
                 // loop. Calculate once and recalculate when window size change

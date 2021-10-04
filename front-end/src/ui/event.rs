@@ -167,12 +167,16 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         notifier.notify_all();
     };
     // This handler is fired when user press ESC key,
-    // for now esc key just clear the content in search bar and move to next window
+    // if searchbar is active clear the content in search bar and move to next window
+    // if helpbar is active anway move to sidebar just to hide the help window
     let handle_esc = || {
         let mut state = state_original.lock().unwrap();
         if state.active == ui::Window::Searchbar {
             state.search.0.clear();
             drop_and_call!(state, moveto_next_window);
+        } else if state.active == ui::Window::Helpbar {
+            state.active = ui::Window::Sidebar;
+            notifier.notify_all();
         }
     };
     // This handler is fired when user press BACKSPACE key
@@ -204,15 +208,11 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         notifier.notify_all();
     };
     // This handler will be fired when use press HELP_SH_KEY
-    // this will simply show the basic help on how to use this program including
-    // shortcuts key
+    // this will simply asks user to rerun application with --help argument
+    // Ya boring
     let show_help = || {
-        // TODO: create a new window that covers all the screen and remove the previous screen
-        // If this became the source of hassale then remove this optionfrom
-        // mod.rs: Window
-        // mod.rs: Active
-        // Enum Window: Help
-        eprintln!("Show help");
+        state_original.lock().unwrap().active = ui::Window::Helpbar;
+        notifier.notify_all();
     };
     // This handler will be fired when user hits UP_ARROW or DOWN_ARROW key
     // UP_ARROW will set the direction to PREV and DOWN_ARROW to NEXT
