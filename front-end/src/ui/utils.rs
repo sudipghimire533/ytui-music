@@ -479,7 +479,15 @@ pub trait ExtendMpv {
 
 impl ExtendMpv for libmpv::Mpv {
     fn configure_defult(&self) {
+        let config_dir = config::ConfigContainer::get_config_dir().unwrap();
+        self.set_property("config-dir", config_dir.to_str().unwrap())
+            .unwrap();
+        self.set_property("include", config_dir.join("mpv.conf").to_str().unwrap())
+            .unwrap();
+        
+        // Video is always hidden. Override config file
         self.set_property("video", "no").unwrap();
+        /*
         self.set_property("cache", "yes").unwrap();
         self.set_property("demuxer-readahead-secs", 10).ok();
         self.set_property("hwdec", "yes").ok();
@@ -489,6 +497,7 @@ impl ExtendMpv for libmpv::Mpv {
         self.set_property("ytdl-format", "worst").ok();
         self.set_property("script-opts", "ytdl_hook-try_ytdl_first=yes")
             .ok();
+            */
     }
 
     #[inline(always)]

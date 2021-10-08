@@ -4,6 +4,11 @@ use std::default::Default;
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path;
+use std::time::Duration;
+
+const CONF_DIR_NAME: &str = "ytui_music";
+const CONFIG_FILE_NAME: &str = "config.json";
+const MPV_OPTION_FILE_NAME: &str = "mpv.conf";
 
 // A stupid as fu#k shit logic to get either true or false.
 // Create instant clock.
@@ -20,13 +25,13 @@ fn get_random_bool() -> bool {
 
 trait Random {
     #[must_use]
-    fn suffle(&self, timeout: u64) -> Self;
+    fn suffle(&self, timeout: Duration) -> Self;
 }
 impl<T> Random for Vec<T>
 where
     T: std::cmp::PartialEq + Clone,
 {
-    fn suffle(&self, timeout: u64) -> Self {
+    fn suffle(&self, timeout: Duration) -> Self {
         let length = self.len();
         let mut new_vector = Vec::with_capacity(length);
 
@@ -34,7 +39,7 @@ where
         let mut current = 0;
         while new_vector.len() != length {
             // When timwout occurs push all the reamining vector directly
-            if now.elapsed().as_secs() > timeout {
+            if now.elapsed() > timeout {
                 for val in self {
                     if !new_vector.contains(val) {
                         new_vector.push(val.clone());
@@ -142,6 +147,23 @@ impl Default for Servers {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct MpvOptions {
+    config_path: String,
+}
+
+impl Default for MpvOptions {
+    fn default() -> Self {
+        MpvOptions {
+            config_path: ConfigContainer::get_config_dir()
+                .unwrap()
+                .as_path()
+                .to_string_lossy()
+                .to_string(),
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct Config {
     #[serde(default, alias = "ShortcutKeys")]
@@ -152,6 +174,8 @@ pub struct Config {
     pub servers: Servers,
     #[serde(default, alias = "Constants")]
     pub constants: Constants,
+    #[serde(default, alias = "MpvOptions")]
+    pub mpv: MpvOptions,
 }
 
 impl Config {
@@ -173,6 +197,15 @@ impl Config {
 pub struct ConfigContainer {
     pub config: Config,
     file_path: path::PathBuf,
+}
+
+impl Default for ConfigContainer {
+    fn default() -> Self {
+        ConfigContainer {
+            config: Config::default(),
+            file_path: path::PathBuf::from(Self::get_config_path().unwrap()),
+        }
+    }
 }
 
 impl ConfigContainer {
@@ -205,7 +238,7 @@ impl ConfigContainer {
         // So be sure we dont kill a single server instead distribute the load.
         // Here, it is achived by rearrenging the server list in random order
         // so that first server don't always have to be first to send request
-        config.servers.list = config.servers.list.suffle(4);
+        config.servers.list = config.servers.list.suffle(Duration::from_secs(4));
 
         Some(Self {
             config,
@@ -221,6 +254,7 @@ impl ConfigContainer {
 
         let mut file_handle = match std::fs::OpenOptions::new()
             .write(true)
+            .create(true)
             .open(&self.file_path)
         {
             Ok(val) => val,
@@ -241,41 +275,44 @@ impl ConfigContainer {
         Some(())
     }
 
-    fn get_config_path() -> Option<path::PathBuf> {
-        let config_dir = match dirs::preference_dir() {
-            Some(path) => path,
-            None => {
-                eprintln!("Cannot get your os user config directory...");
-                return None;
+    pub fn get_config_dir() -> Option<path::PathBuf> {
+        match dirs::preference_dir() {
+            Some(mut config_dir) => {
+                config_dir = config_dir.join(CONF_DIR_NAME);
+
+                match std::fs::DirBuilder::new()
+                    .recursive(true)
+                    .create(&config_dir)
+                {
+                    Ok(_) => {
+                        return Some(config_dir);
+                    }
+                    Err(err) => {
+                        eprintln!(
+                            "Cannot create app folder in your config folder as {path}. Error: {err}",
+                            path = &config_dir.as_path().to_string_lossy(),
+                            err = err
+                        );
+                        return None;
+                    }
+                }
             }
-        };
-
-        let mut path = config_dir.join("ytui_music");
-
-        match std::fs::DirBuilder::new().recursive(true).create(&path) {
-            Ok(_) => {}
-            Err(err) => {
-                eprintln!(
-                    "Cannot create app folder in your config folder as {path}. Error: {err}",
-                    path = &path.as_path().to_string_lossy(),
-                    err = err
-                );
+            None => {
+                eprintln!("Cannot get your os user config directory..");
                 return None;
             }
         }
-
-        path = path.join("config.json");
-
-        Some(path)
     }
 
-    fn write_defult_config(config_path: &path::Path) -> Option<ConfigContainer> {
-        let default_config = Config::default();
-        let config_container = ConfigContainer {
-            config: default_config,
-            file_path: config_path.into(),
-        };
+    fn get_config_path() -> Option<path::PathBuf> {
+        let config_dir = Self::get_config_dir()?;
+        let config_path = config_dir.join(CONFIG_FILE_NAME);
 
+        Some(config_path)
+    }
+
+    fn default_config_to_file() -> Option<ConfigContainer> {
+        let config_container = ConfigContainer::default();
         config_container.flush();
 
         Some(config_container)
@@ -283,11 +320,40 @@ impl ConfigContainer {
 
     pub fn give_me_config() -> Option<Self> {
         let config_path = ConfigContainer::get_config_path()?;
-        let config_container: ConfigContainer;
+        let mpv_conf_file = ConfigContainer::get_config_dir()?.join(MPV_OPTION_FILE_NAME);
+
+        if !mpv_conf_file.exists() {
+            let mpv_options = include_str!("./default_mpv_options.conf");
+            match std::fs::OpenOptions::new()
+                .create_new(true)
+                .write(true)
+                .open(&mpv_conf_file)
+            {
+                Ok(mut mpv_conf_file) => {
+                    match mpv_conf_file.write_all(mpv_options.as_bytes()) {
+                        Ok(_) => {}
+                        Err(err) => {
+                            eprintln!("Cannot write default mpv options. Error: {err}", err = err);
+                        }
+                    };
+                }
+                Err(err) => {
+                    eprintln!(
+                        "Cannot open file {path} to write mpv default options. Error: {err}",
+                        path = mpv_conf_file.as_path().to_string_lossy(),
+                        err = err
+                    );
+                    return None;
+                }
+            }
+        }
+
+        let config_container;
+
         if config_path.exists() {
             config_container = ConfigContainer::from_file(&config_path)?;
         } else {
-            config_container = ConfigContainer::write_defult_config(&config_path)?;
+            config_container = ConfigContainer::default_config_to_file()?;
         }
 
         Some(config_container)
