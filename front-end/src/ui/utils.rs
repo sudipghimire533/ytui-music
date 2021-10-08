@@ -202,13 +202,13 @@ impl<'parent> ui::MiddleBottom {
     }
 
     pub fn get_artist_container(state: &'parent mut ui::State) -> Table<'parent> {
-        let block = match state.active {
-            ui::Window::Artistbar => Block::active("Artist ".to_owned()),
-            _ => {
-                state.artistbar.1.select(None);
-                Block::new("Artist ".to_owned())
-            }
-        };
+        let block;
+        if state.active == ui::Window::Artistbar {
+            block = Block::active("Artist ".to_string());
+        } else {
+            block = Block::new("Artist ".to_string());
+            state.artistbar.1.select(None);
+        }
         let data_list = &state.artistbar;
         let items: Vec<Row> = data_list
             .0
@@ -271,33 +271,40 @@ impl<'parent> ui::BottomLayout {
     }
 
     pub fn get_status_bar(state: &'parent ui::State) -> Gauge<'parent> {
-        let title = if let Some((title, _)) = &state.bottom.playing {
-            title
+        let content;
+        if let Some((name, _)) = &state.bottom.playing {
+            content = name.as_str()
         } else {
-            ">> Play some Music <<"
+            content = ">> Play some Music <<"
         };
 
-        let block = Block::new(format!(
-            " {} / {} ",
+        let heading = format!(
+            "{} / {}",
             state.bottom.music_elapse.to_string(),
-            &state.bottom.music_duration.to_string()
-        ))
-        .title_alignment(Alignment::Center);
+            state.bottom.music_duration.to_string()
+        );
+
+        let mut block;
+        if state.active == ui::Window::BottomControl {
+            block = Block::active(heading);
+        } else {
+            block = Block::new(heading);
+        }
+        block = block.title_alignment(Alignment::Center);
+
         let mut ratio =
             state.bottom.music_elapse.as_secs_f64() / state.bottom.music_duration.as_secs_f64();
-        ratio = if ratio > 1.0 {
-            1.0
+        if ratio > 1.0 {
+            ratio = 1.0
         } else if ratio.is_nan() {
-            0.0
-        } else {
-            ratio
-        };
+            ratio = 0.0
+        }
 
         Gauge::default()
             .ratio(ratio)
             .gauge_style(Style::default().fg(Color::DarkGray))
             .label(Span::styled(
-                &title[0..std::cmp::min(title.len(), CURRENT_TITLE_LEN)],
+                &content[0..std::cmp::min(content.len(), CURRENT_TITLE_LEN)],
                 Style::default().fg(Color::White),
             ))
             .block(block)
@@ -466,6 +473,8 @@ pub trait ExtendMpv {
     fn shuffle(&self);
     fn unshuffle(&self);
     fn cache_for(&self, time: i64);
+    fn play_next(&self);
+    fn play_prev(&self);
 }
 
 impl ExtendMpv for libmpv::Mpv {
@@ -510,6 +519,16 @@ impl ExtendMpv for libmpv::Mpv {
     #[inline(always)]
     fn repeat_one(&self) {
         self.set_property("loop-file", "inf").unwrap();
+    }
+
+    #[inline(always)]
+    fn play_next(&self) {
+        self.playlist_next_weak().unwrap();
+    }
+
+    #[inline(always)]
+    fn play_prev(&self) {
+        self.playlist_previous_weak().unwrap();
     }
 }
 
@@ -640,9 +659,10 @@ impl ui::Window {
             ui::Window::Sidebar => ui::Window::Musicbar,
             ui::Window::Musicbar => ui::Window::Playlistbar,
             ui::Window::Playlistbar => ui::Window::Artistbar,
-            ui::Window::Searchbar | ui::Window::Helpbar | ui::Window::Artistbar => {
-                ui::Window::Sidebar
-            }
+            ui::Window::Searchbar
+            | ui::Window::Artistbar
+            | ui::Window::BottomControl
+            | ui::Window::Helpbar => ui::Window::Sidebar,
             ui::Window::None => unreachable!(),
         }
     }
@@ -652,9 +672,10 @@ impl ui::Window {
             ui::Window::Artistbar => ui::Window::Playlistbar,
             ui::Window::Playlistbar => ui::Window::Musicbar,
             ui::Window::Musicbar => ui::Window::Sidebar,
-            ui::Window::Searchbar | ui::Window::Helpbar | ui::Window::Sidebar => {
-                ui::Window::Artistbar
-            }
+            ui::Window::Searchbar
+            | ui::Window::Sidebar
+            | ui::Window::BottomControl
+            | ui::Window::Helpbar => ui::Window::Artistbar,
             ui::Window::None => unreachable!(),
         }
     }

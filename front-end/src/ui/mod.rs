@@ -297,6 +297,7 @@ pub enum Window {
     Musicbar,
     Playlistbar,
     Artistbar,
+    BottomControl,
     None,
 }
 

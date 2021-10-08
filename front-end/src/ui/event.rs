@@ -171,12 +171,24 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
     // if helpbar is active anway move to sidebar just to hide the help window
     let handle_esc = || {
         let mut state = state_original.lock().unwrap();
-        if state.active == ui::Window::Searchbar {
-            state.search.0.clear();
-            drop_and_call!(state, moveto_next_window);
-        } else if state.active == ui::Window::Helpbar {
-            state.active = ui::Window::Sidebar;
-            notifier.notify_all();
+        match state.active {
+            ui::Window::Searchbar => {
+                state.search.0.clear();
+                drop_and_call!(state, moveto_next_window);
+            }
+            ui::Window::Helpbar | ui::Window::BottomControl => {
+                drop_and_call!(state, moveto_next_window);
+            }
+            ui::Window::Sidebar
+            | ui::Window::Musicbar
+            | ui::Window::Playlistbar
+            | ui::Window::Artistbar => {
+                state.active = ui::Window::BottomControl;
+                notifier.notify_all();
+            }
+            ui::Window::None => {
+                unreachable!();
+            }
         }
     };
     // This handler is fired when user press BACKSPACE key
@@ -292,21 +304,32 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         }
     };
     // play next/previous song from queue
-    let handle_play_advance = |_direction: HeadTo| {};
+    let change_track = |direction: HeadTo| match direction {
+        HeadTo::Next => state_original.lock().unwrap().player.play_next(),
+        HeadTo::Prev => state_original.lock().unwrap().player.play_prev(),
+        HeadTo::Initial => unreachable!(),
+    };
 
     // navigating page is just changing to fetched_page value to next/prev value
-    let handle_page_nav = |direction: HeadTo| {
+    // or changing the prev/next track
+    let handle_nav = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         let target_index: usize;
         match state.active {
             ui::Window::Musicbar => target_index = MIDDLE_MUSIC_INDEX,
             ui::Window::Playlistbar => target_index = MIDDLE_PLAYLIST_INDEX,
             ui::Window::Artistbar => target_index = MIDDLE_ARTIST_INDEX,
-            _ => {
+            ui::Window::BottomControl => {
+                // On reciving next/prev event when active window is bottom control
+                // It implied to change the track
+                return drop_and_call!(state, change_track, direction);
+            }
+            ui::Window::Searchbar | ui::Window::Sidebar | ui::Window::Helpbar => {
                 // If none os above windows are active then nothing to navigate.
                 // Early return instead of initilizing `target_index`
                 return;
             }
+            ui::Window::None => unreachable!(),
         }
         let page = get_page(&state.fetched_page[target_index], direction);
         state.fetched_page[target_index] = Some(page);
@@ -389,7 +412,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                     fill_playlist_from_artist(HeadTo::Initial);
                 }
             }
-            ui::Window::None | ui::Window::Helpbar => {}
+            ui::Window::None | ui::Window::Helpbar | ui::Window::BottomControl => {}
         }
     };
 
@@ -432,9 +455,9 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                             } else if ch == CONFIG.shortcut_keys.help {
                                 show_help();
                             } else if ch == CONFIG.shortcut_keys.next {
-                                handle_page_nav(HeadTo::Next);
+                                handle_nav(HeadTo::Next);
                             } else if ch == CONFIG.shortcut_keys.prev {
-                                handle_page_nav(HeadTo::Prev);
+                                handle_nav(HeadTo::Prev);
                             } else if ch == CONFIG.shortcut_keys.toggle_play {
                                 toggle_play();
                             } else if ch == CONFIG.shortcut_keys.repeat {
@@ -442,17 +465,9 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                             } else if ch == CONFIG.shortcut_keys.suffle {
                                 toggle_shuffle();
                             } else if ch == CONFIG.shortcut_keys.forward {
-                                if is_with_control {
-                                    handle_play_advance(HeadTo::Next);
-                                } else {
-                                    // TODO: seek forward
-                                }
+                                // TODO: seek forward
                             } else if ch == CONFIG.shortcut_keys.backward {
-                                if is_with_control {
-                                    handle_play_advance(HeadTo::Prev);
-                                } else {
-                                    // TODO: seek bacward
-                                }
+                                // TODO: seek bacward
                             } else if ch == CONFIG.shortcut_keys.quit {
                                 if is_with_control {
                                     quit();
