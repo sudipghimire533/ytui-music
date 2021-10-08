@@ -324,7 +324,7 @@ impl<'parent> ui::BottomLayout {
         if state.playback_behaviour.repeat {
             repeat = Span::from(" R ");
         } else {
-            repeat = Span::from(" r ");
+            repeat = Span::from(" 1 ");
         }
 
         if state.playback_behaviour.shuffle {
@@ -480,24 +480,15 @@ pub trait ExtendMpv {
 impl ExtendMpv for libmpv::Mpv {
     fn configure_defult(&self) {
         let config_dir = config::ConfigContainer::get_config_dir().unwrap();
+
         self.set_property("config-dir", config_dir.to_str().unwrap())
             .unwrap();
-        self.set_property("include", config_dir.join("mpv.conf").to_str().unwrap())
+        let mpv_config_path = config_dir.join(config::MPV_OPTION_FILE_NAME);
+        self.set_property("include", mpv_config_path.to_str().unwrap())
             .unwrap();
-        
+
         // Video is always hidden. Override config file
         self.set_property("video", "no").unwrap();
-        /*
-        self.set_property("cache", "yes").unwrap();
-        self.set_property("demuxer-readahead-secs", 10).ok();
-        self.set_property("hwdec", "yes").ok();
-        self.set_property("cache-pause-wait", 10).ok();
-        self.set_property("demuxer-cache-wait", "no").ok();
-        self.set_property("cache-on-disk", "yes").ok();
-        self.set_property("ytdl-format", "worst").ok();
-        self.set_property("script-opts", "ytdl_hook-try_ytdl_first=yes")
-            .ok();
-            */
     }
 
     #[inline(always)]

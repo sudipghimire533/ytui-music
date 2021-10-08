@@ -337,7 +337,12 @@ pub enum ArtistbarSource {
 
 #[derive(Debug)]
 pub struct PlaybackBehaviour {
+    // true if user wishes to suffle the playlist
+    // false otherwise
     shuffle: bool,
+    // true if user wished to repeat all items from playlist. i.e when last music of playlist ends
+    // play the first music again
+    // flase if user wants to repeat the currently playing music over and over again
     repeat: bool,
 }
 
@@ -361,9 +366,5 @@ pub struct State<'p> {
     pub active: Window,
     pub fetched_page: [Option<usize>; 3],
     pub player: libmpv::Mpv,
-    // first memeber is true only when user wishes to suffle the playback
-    // second member is true when user wishes to repeat the playlist and when false it means that user
-    // wants to repat only current playing music
-    // There is no way to repeat nothing i.e stop after currently playing music
     pub playback_behaviour: PlaybackBehaviour,
 }

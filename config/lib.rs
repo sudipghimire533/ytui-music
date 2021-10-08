@@ -6,9 +6,9 @@ use std::io::{BufReader, Write};
 use std::path;
 use std::time::Duration;
 
-const CONF_DIR_NAME: &str = "ytui_music";
-const CONFIG_FILE_NAME: &str = "config.json";
-const MPV_OPTION_FILE_NAME: &str = "mpv.conf";
+pub const CONF_DIR_NAME: &str = "ytui_music";
+pub const CONFIG_FILE_NAME: &str = "config.json";
+pub const MPV_OPTION_FILE_NAME: &str = "mpv.conf";
 
 // A stupid as fu#k shit logic to get either true or false.
 // Create instant clock.
