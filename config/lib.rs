@@ -303,25 +303,12 @@ mod tests {
     }
 
     #[test]
-    fn default_and_file_are_eq() {
-        let file_path = get_test_config_path();
-        let config_from_file = ConfigContainer::from_file(&file_path).unwrap().config;
-        let default_config = Config::default();
-
-        assert_eq!(config_from_file.constants, default_config.constants);
-        assert_eq!(config_from_file.theme, default_config.theme);
-        assert_eq!(config_from_file.servers, default_config.servers);
-        assert_eq!(config_from_file.shortcut_keys, default_config.shortcut_keys);
-    }
-
-    #[test]
     fn display_config_path() {
         let path = ConfigContainer::get_config_path().unwrap();
         eprintln!("Config path: {}", path.as_path().to_string_lossy());
     }
 
     #[test]
-    #[ignore]
     fn inspect_server_list() {
         let path = get_test_config_path();
         for _ in 0..4 {
