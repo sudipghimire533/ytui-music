@@ -115,6 +115,8 @@ pub struct Constants {
     pub item_per_list: u8,
     pub server_time_out: u32,
     pub refresh_rate: u64,
+    pub seek_forward_secs: u32,
+    pub seek_backward_secs: u32,
 }
 
 impl Default for Constants {
@@ -123,6 +125,8 @@ impl Default for Constants {
             item_per_list: 10,
             server_time_out: 30_000,
             refresh_rate: 900,
+            seek_forward_secs: 10,
+            seek_backward_secs: 10,
         }
     }
 }

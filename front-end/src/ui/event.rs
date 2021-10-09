@@ -335,6 +335,24 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.fetched_page[target_index] = Some(page);
         notifier.notify_all();
     };
+    let seek_forward = || {
+        state_original
+            .lock()
+            .unwrap()
+            .player
+            .seek_forward(CONFIG.constants.seek_forward_secs as f64)
+            .ok();
+        notifier.notify_all();
+    };
+    let seek_backward = || {
+        state_original
+            .lock()
+            .unwrap()
+            .player
+            .seek_backward(CONFIG.constants.seek_backward_secs as f64)
+            .ok();
+            notifier.notify_all();
+    };
     let handle_repeat = || {
         let mut state = state_original.lock().unwrap();
         if state.playback_behaviour.repeat {
@@ -465,9 +483,9 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                             } else if ch == CONFIG.shortcut_keys.suffle {
                                 toggle_shuffle();
                             } else if ch == CONFIG.shortcut_keys.forward {
-                                // TODO: seek forward
+                                seek_forward();
                             } else if ch == CONFIG.shortcut_keys.backward {
-                                // TODO: seek bacward
+                                seek_backward();
                             } else if ch == CONFIG.shortcut_keys.quit {
                                 if is_with_control {
                                     quit();
