@@ -100,9 +100,8 @@ struct SearchRes {
 
 #[derive(Default)]
 struct ArtistRes {
-    music: Vec<MusicUnit>,
-    playlist: Vec<PlaylistUnit>,
-    id: String,
+    music: (String, Vec<MusicUnit>),
+    playlist: (String, Vec<PlaylistUnit>),
 }
 
 #[derive(Default)]

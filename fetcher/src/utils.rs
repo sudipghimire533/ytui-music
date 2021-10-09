@@ -249,9 +249,9 @@ impl Fetcher {
     ) -> Result<Vec<super::PlaylistUnit>, ReturnAction> {
         let lower_limit = page * ITEM_PER_PAGE;
 
-        let is_new_id = channel_id != &self.artist_content.id;
-        if is_new_id || self.artist_content.playlist.is_empty() {
-            self.artist_content.id = channel_id.to_string();
+        let is_new_id = channel_id != &self.artist_content.playlist.0;
+        if is_new_id || self.artist_content.playlist.1.is_empty() {
+            self.artist_content.playlist.0 = channel_id.to_string();
             let suffix = format!(
                 "/channels/{channel_id}/playlists?fields=playlists",
                 channel_id = channel_id
@@ -263,20 +263,20 @@ impl Fetcher {
             match obj {
                 Ok(mut data) => {
                     data.playlists.shrink_to_fit();
-                    self.artist_content.playlist = data.playlists;
+                    self.artist_content.playlist.1 = data.playlists;
                 }
                 Err(e) => return Err(e),
             }
         }
 
         let upper_limit = std::cmp::min(
-            self.artist_content.playlist.len(),
+            self.artist_content.playlist.1.len(),
             lower_limit + ITEM_PER_PAGE,
         );
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
         } else {
-            let mut res = self.artist_content.playlist[lower_limit..upper_limit].to_vec();
+            let mut res = self.artist_content.playlist.1[lower_limit..upper_limit].to_vec();
             res.shrink_to_fit();
             Ok(res)
         }
@@ -289,27 +289,29 @@ impl Fetcher {
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
         let lower_limit = page * ITEM_PER_PAGE;
 
-        let is_new_id = channel_id != &self.artist_content.id;
-        if is_new_id || self.artist_content.music.is_empty() {
-            self.artist_content.id = channel_id.to_string();
+        let is_new_id = channel_id != &self.artist_content.music.0;
+        if is_new_id || self.artist_content.music.1.is_empty() {
+            self.artist_content.music.0 = channel_id.to_string();
             let suffix = format!("/channels/{channel_id}/videos", channel_id = channel_id);
 
             let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 1).await;
             match obj {
                 Ok(mut data) => {
                     data.shrink_to_fit();
-                    self.artist_content.music = data;
+                    self.artist_content.music.1 = data;
                 }
                 Err(e) => return Err(e),
             }
         }
 
-        let upper_limit =
-            std::cmp::min(self.artist_content.music.len(), lower_limit + ITEM_PER_PAGE);
+        let upper_limit = std::cmp::min(
+            self.artist_content.music.1.len(),
+            lower_limit + ITEM_PER_PAGE,
+        );
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
         } else {
-            let mut res = self.artist_content.music[lower_limit..upper_limit].to_vec();
+            let mut res = self.artist_content.music.1[lower_limit..upper_limit].to_vec();
             res.shrink_to_fit();
             Ok(res)
         }
@@ -347,11 +349,11 @@ mod tests {
     use lazy_static::lazy_static;
 
     lazy_static! {
-        static ref FETCHER: Vec<String> = vec![String::from("https:://")];
+        static ref FETCHER: Vec<String> = vec![String::from("https://ytprivate.com/api/v1/")];
     }
     fn get_fetcher_for_test() -> Fetcher {
         // FIXME: how can I get a static variable for test
-        todo!()
+        Fetcher::new(&FETCHER)
     }
 
     #[tokio::test]
@@ -378,7 +380,6 @@ mod tests {
         assert_eq!(
             obj,
             super::super::MusicUnit {
-                liked: false,
                 artist: "CHHEWANG".to_string(),
                 name: "Some song title".to_string(),
                 duration: "4:31".to_string(),
