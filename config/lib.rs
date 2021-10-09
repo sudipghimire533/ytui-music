@@ -78,39 +78,42 @@ impl Default for ShortcutsKeys {
             // This key will pause the playpack if it is currently playing
             // and unpause the playback if is currently paused
             toggle_play: ' ',
-            
+
             // When pressed this key over musicbar/artistbar/playlistbar, it will try to fetch more item and add to the list
             // When pressed this with CTRL key it will play the next track from playlist
             // When pressed from bottom music control, it will play the next track from playlist
             next: 'n',
-            
+
             // Same of p but instead of fetching next data or playing next track it try to fetch
             // previous data or play previous track
             prev: 'p',
-            
+
             // This will move the cursor to the search box
             start_search: '/',
-            
-            // This will downlaod the currently playing song
+
+            // This will downlaod the item currently focused from playlistbar/musicbar.
+            // if an item from musicbar is focused, download that music
+            // if an item from playlistbat is focused, download all content from that playlist
+            // otherwise do nothing
             download: 'd',
-            
+
             // This will show the help manual
             help: '?',
-            
+
             // When this key is pressed with CTRL, it will quit the application
             quit: 'c',
-            
+
             // Seek the playback forward by time specified in config
             forward: '>',
-            
+
             // Same as forward but instead seek backward
             backward: '<',
-            
+
             // Turn suffle on if already is off and vice-versa
             // Suffle on: play the playlist in random order
             // Suffle off: play the playlist in as is order
             suffle: 's',
-            
+
             // Turn repeat on if already is off and vice-versa
             // Repeat on: Play all the items from playlist. If last item ends play first
             // Repeat off: If currenlt playing item ends play same item again. i.e repeat one

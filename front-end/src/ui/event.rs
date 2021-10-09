@@ -99,6 +99,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         )));
         notifier.notify_all();
     };
+    
     // select the next or previous element in musicbar list. This is done simply by setting the
     // correct index in corresponding TableState
     let advance_music_list = |direction: HeadTo| {
@@ -113,6 +114,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.musicbar.1.select(Some(next_index));
         notifier.notify_all();
     };
+    
     // simialr to advance_music_list but instead rotate data in `playlistbar` variable of state
     let advance_playlist_list = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
@@ -126,6 +128,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.playlistbar.1.select(Some(next_index));
         notifier.notify_all();
     };
+    
     // simialr to advance_playlist_list but instead rotate data in `artistbar` variable of state
     let advance_artist_list = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
@@ -142,6 +145,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.artistbar.1.select(Some(next_index));
         notifier.notify_all();
     };
+    
     // When active window is set to NONE, it means user had requested to quit the application,
     // This handle will fire when user hits QUIT_SH_KEY
     // Before breaking the loop which this function is running on
@@ -153,6 +157,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state_original.lock().unwrap().active = ui::Window::None;
         notifier.notify_all();
     };
+    
     // This handler will fire up when user request to move between sections like musicbar, sidebar
     // etc. Similar handler moveto_next_window / moveto_prev_window are not merged as these
     // closures as these handlers are frequently called so avoid more branching
@@ -161,11 +166,13 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.active = state.active.next();
         notifier.notify_all();
     };
+    
     let moveto_prev_window = || {
         let mut state = state_original.lock().unwrap();
         state.active = state.active.prev();
         notifier.notify_all();
     };
+    
     // This handler is fired when user press ESC key,
     // if searchbar is active clear the content in search bar and move to next window
     // if helpbar is active anway move to sidebar just to hide the help window
@@ -191,6 +198,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             }
         }
     };
+    
     // This handler is fired when user press BACKSPACE key
     // backspace key will pop the last character from search query if pressed from searchbar
     // and if this key is pressed from somewhere else other than searchbar then will simply
@@ -205,6 +213,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             _ => drop_and_call!(state, moveto_prev_window),
         }
     };
+    
     // This is fires when user press any character key
     // this will simpley push the recived character in search query term and update state
     // so can the added character becomes visible
@@ -212,6 +221,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state_original.lock().unwrap().search.0.push(ch);
         notifier.notify_all();
     };
+    
     // This handler is fired when use press SEARCH_SH_KEY
     // this will move the curson to the searchbar from which user can start to type the query
     let activate_search = || {
@@ -219,6 +229,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.active = ui::Window::Searchbar;
         notifier.notify_all();
     };
+    
     // This handler will be fired when use press HELP_SH_KEY
     // this will simply asks user to rerun application with --help argument
     // Ya boring
@@ -226,6 +237,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state_original.lock().unwrap().active = ui::Window::Helpbar;
         notifier.notify_all();
     };
+    
     // This handler will be fired when user hits UP_ARROW or DOWN_ARROW key
     // UP_ARROW will set the direction to PREV and DOWN_ARROW to NEXT
     // for now, these key will only handle the moving of list
@@ -245,6 +257,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             },
         }
     };
+    
     let start_search = || {
         let mut state = state_original.lock().unwrap();
         state.search.1 = state.search.0.trim().to_string();
@@ -255,6 +268,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.help = "Searching..";
         notifier.notify_all();
     };
+    
     let fill_trending_music = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         state.fetched_page[MIDDLE_MUSIC_INDEX] =
@@ -263,14 +277,18 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.help = "Fetching..";
         notifier.notify_all();
     };
+    
     let fill_community_source = || {
         let mut state = state_original.lock().unwrap();
         state.artistbar.0 = youtube_community_channels.clone();
         state.active = ui::Window::Artistbar;
         notifier.notify_all();
     };
+    
     let fill_recents_music = |_direction: HeadTo| {};
+    
     let fill_favourates_music = |_direction: HeadTo| {};
+    
     let fill_music_from_playlist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         if let ui::MusicbarSource::Playlist(playlist_id) = &state.filled_source.0 {
@@ -281,6 +299,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             notifier.notify_all();
         }
     };
+    
     let fill_music_from_artist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         if let ui::MusicbarSource::Artist(artist_id) = &state.filled_source.0 {
@@ -291,6 +310,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             notifier.notify_all();
         }
     };
+    
     let fill_playlist_from_artist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         if let ui::PlaylistbarSource::Artist(artist_id) = &state.filled_source.1 {
@@ -303,6 +323,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             notifier.notify_all();
         }
     };
+    
     // play next/previous song from queue
     let change_track = |direction: HeadTo| match direction {
         HeadTo::Next => state_original.lock().unwrap().player.play_next(),
@@ -335,6 +356,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.fetched_page[target_index] = Some(page);
         notifier.notify_all();
     };
+    
     let seek_forward = || {
         state_original
             .lock()
@@ -344,6 +366,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             .ok();
         notifier.notify_all();
     };
+    
     let seek_backward = || {
         state_original
             .lock()
@@ -353,6 +376,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             .ok();
         notifier.notify_all();
     };
+    
     let handle_repeat = || {
         let mut state = state_original.lock().unwrap();
         state.player.repeat_nothing();
@@ -364,6 +388,7 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.playback_behaviour.repeat = !state.playback_behaviour.repeat;
         notifier.notify_all();
     };
+    
     let toggle_shuffle = || {
         let mut state = state_original.lock().unwrap();
         if state.playback_behaviour.shuffle {
@@ -374,10 +399,12 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
         state.playback_behaviour.shuffle = !state.playback_behaviour.shuffle;
         notifier.notify_all();
     };
+    
     let toggle_play = || {
         state_original.lock().unwrap().toggle_pause();
         notifier.notify_all();
     };
+    
     let handle_enter = || {
         let mut state = state_original.lock().unwrap();
         let active_window = state.active.clone();
