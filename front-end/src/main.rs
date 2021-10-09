@@ -58,14 +58,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut cvar_for_communicator = Arc::clone(&cvar);
 
         handler = thread::spawn(move || {
-            ui::event::event_sender(&mut state_for_handler, &mut cvar_for_handler)
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async move {
+                    ui::event::event_sender(&mut state_for_handler, &mut cvar_for_handler).await;
+                });
         });
+        
         communicate = thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap()
-                .block_on(async {
+                .block_on(async move {
                     communicator::communicator(
                         &mut state_for_communicator,
                         &mut cvar_for_communicator,

@@ -185,6 +185,27 @@ impl Default for Servers {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct Downloads {
+    pub path: String,
+    pub format: String,
+}
+
+impl Default for Downloads {
+    fn default() -> Self {
+        let audio_folder = dirs::audio_dir()
+            .expect("Cound not find audio directory")
+            .as_path()
+            .to_string_lossy()
+            .to_string();
+
+        Downloads {
+            path: audio_folder,
+            format: "mp3".to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct MpvOptions {
     config_path: String,
 }
@@ -213,6 +234,8 @@ pub struct Config {
     pub constants: Constants,
     #[serde(default, alias = "MpvOptions")]
     pub mpv: MpvOptions,
+    #[serde(default, alias = "Downloads")]
+    pub download: Downloads,
 }
 
 impl Config {
