@@ -351,10 +351,11 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
             .player
             .seek_backward(CONFIG.constants.seek_backward_secs as f64)
             .ok();
-            notifier.notify_all();
+        notifier.notify_all();
     };
     let handle_repeat = || {
         let mut state = state_original.lock().unwrap();
+        state.player.repeat_nothing();
         if state.playback_behaviour.repeat {
             state.player.repeat_one();
         } else {
@@ -472,10 +473,6 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                                 activate_search();
                             } else if ch == CONFIG.shortcut_keys.help {
                                 show_help();
-                            } else if ch == CONFIG.shortcut_keys.next {
-                                handle_nav(HeadTo::Next);
-                            } else if ch == CONFIG.shortcut_keys.prev {
-                                handle_nav(HeadTo::Prev);
                             } else if ch == CONFIG.shortcut_keys.toggle_play {
                                 toggle_play();
                             } else if ch == CONFIG.shortcut_keys.repeat {
@@ -486,6 +483,18 @@ pub fn event_sender(state_original: &mut Arc<Mutex<ui::State>>, notifier: &mut A
                                 seek_forward();
                             } else if ch == CONFIG.shortcut_keys.backward {
                                 seek_backward();
+                            } else if ch == CONFIG.shortcut_keys.prev {
+                                if is_with_control {
+                                    change_track(HeadTo::Prev);
+                                } else {
+                                    handle_nav(HeadTo::Prev);
+                                }
+                            } else if ch == CONFIG.shortcut_keys.next {
+                                if is_with_control {
+                                    change_track(HeadTo::Next);
+                                } else {
+                                    handle_nav(HeadTo::Next);
+                                }
                             } else if ch == CONFIG.shortcut_keys.quit {
                                 if is_with_control {
                                     quit();

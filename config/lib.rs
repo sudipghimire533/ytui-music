@@ -75,16 +75,45 @@ pub struct ShortcutsKeys {
 impl Default for ShortcutsKeys {
     fn default() -> Self {
         ShortcutsKeys {
+            // This key will pause the playpack if it is currently playing
+            // and unpause the playback if is currently paused
             toggle_play: ' ',
+            
+            // When pressed this key over musicbar/artistbar/playlistbar, it will try to fetch more item and add to the list
+            // When pressed this with CTRL key it will play the next track from playlist
+            // When pressed from bottom music control, it will play the next track from playlist
             next: 'n',
+            
+            // Same of p but instead of fetching next data or playing next track it try to fetch
+            // previous data or play previous track
             prev: 'p',
+            
+            // This will move the cursor to the search box
             start_search: '/',
+            
+            // This will downlaod the currently playing song
             download: 'd',
+            
+            // This will show the help manual
             help: '?',
+            
+            // When this key is pressed with CTRL, it will quit the application
             quit: 'c',
+            
+            // Seek the playback forward by time specified in config
             forward: '>',
+            
+            // Same as forward but instead seek backward
             backward: '<',
+            
+            // Turn suffle on if already is off and vice-versa
+            // Suffle on: play the playlist in random order
+            // Suffle off: play the playlist in as is order
             suffle: 's',
+            
+            // Turn repeat on if already is off and vice-versa
+            // Repeat on: Play all the items from playlist. If last item ends play first
+            // Repeat off: If currenlt playing item ends play same item again. i.e repeat one
             repeat: 'r',
         }
     }
@@ -138,16 +167,17 @@ pub struct Servers {
 
 impl Default for Servers {
     fn default() -> Self {
-        Servers {
-            list: vec![
-                "https://ytprivate.com/api/v1".to_string(),
-                "https://vid.puffyan.us/api/v1".to_string(),
-                "https://invidious.snopyta.org/api/v1".to_string(),
-                "https://ytb.trom.tf/api/v1".to_string(),
-                "https://invidious.namazso.eu/api/v1".to_string(),
-                "https://invidious.hub.ne.kr/api/v1".to_string(),
-            ],
+        let content = include_str!("invidious_servers.list");
+        let mut list: Vec<String> = Vec::new();
+
+        for mut server in content.lines() {
+            server = server.trim();
+            if !server.is_empty() {
+                list.push(server.to_string());
+            }
         }
+
+        Servers { list }
     }
 }
 
