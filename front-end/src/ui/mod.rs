@@ -315,7 +315,6 @@ pub struct BottomState {
 pub enum MusicbarSource {
     Search(String),
     Trending,
-    YoutubeCommunity,
     RecentlyPlayed,
     Favourates,
     Playlist(String),

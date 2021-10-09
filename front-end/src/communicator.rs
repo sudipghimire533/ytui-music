@@ -227,9 +227,7 @@ pub async fn communicator<'st, 'nt>(
                 ui::MusicbarSource::Artist(ref artist_id) => {
                     music_content = fetcher.get_videos_of_channel(&artist_id, page).await;
                 }
-                ui::MusicbarSource::Favourates
-                | ui::MusicbarSource::RecentlyPlayed
-                | ui::MusicbarSource::YoutubeCommunity => {
+                ui::MusicbarSource::Favourates | ui::MusicbarSource::RecentlyPlayed => {
                     // TODO: handle each variant with accurate function
                     music_content = Ok(Vec::new());
                 }
