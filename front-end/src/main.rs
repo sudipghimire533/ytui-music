@@ -2,10 +2,8 @@ use std::sync::Arc;
 use std::sync::Condvar;
 use std::sync::Mutex;
 use std::thread;
-use tokio;
 mod communicator;
 mod ui;
-use config;
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -66,7 +64,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui::event::event_sender(&mut state_for_handler, &mut cvar_for_handler).await;
                 });
         });
-        
+
         communicate = thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
@@ -86,5 +84,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     handler.join().unwrap();
     communicate.join().unwrap();
-    Ok(println!())
+
+    println!();
+    Ok(())
 }

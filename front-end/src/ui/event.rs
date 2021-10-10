@@ -563,18 +563,16 @@ pub async fn event_sender(
                                 } else {
                                     handle_nav(HeadTo::Next);
                                 }
-                            } else if ch == CONFIG.shortcut_keys.quit {
-                                if is_with_control {
-                                    let can_be_quit;
-                                    // SHIFT key is needed to force quit
-                                    if key.modifiers.contains(KeyModifiers::SHIFT) {
-                                        can_be_quit = quit(true);
-                                    } else {
-                                        can_be_quit = quit(false);
-                                    };
-                                    if can_be_quit {
-                                        break 'listener_loop;
-                                    }
+                            } else if ch == CONFIG.shortcut_keys.quit && is_with_control {
+                                let can_be_quit;
+                                // SHIFT key is needed to force quit
+                                if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                    can_be_quit = quit(true);
+                                } else {
+                                    can_be_quit = quit(false);
+                                };
+                                if can_be_quit {
+                                    break 'listener_loop;
                                 }
                             }
                         }

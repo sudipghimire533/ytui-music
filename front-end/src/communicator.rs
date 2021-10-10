@@ -2,7 +2,6 @@ use crate::ui::{
     self,
     event::{MIDDLE_ARTIST_INDEX, MIDDLE_MUSIC_INDEX, MIDDLE_PLAYLIST_INDEX},
 };
-use fetcher;
 use std::sync::{Arc, Condvar, Mutex};
 
 macro_rules! handle_response {
@@ -133,7 +132,7 @@ pub async fn communicator<'st, 'nt>(
                     playlist_content = fetcher.search_playlist(term, page).await;
                 }
                 ui::PlaylistbarSource::Artist(ref artist_id) => {
-                    playlist_content = fetcher.get_playlist_of_channel(&artist_id, page).await;
+                    playlist_content = fetcher.get_playlist_of_channel(artist_id, page).await;
                 }
                 ui::PlaylistbarSource::Favourates | ui::PlaylistbarSource::RecentlyPlayed => {
                     // TODO
@@ -222,10 +221,10 @@ pub async fn communicator<'st, 'nt>(
                     music_content = fetcher.search_music(term, page).await;
                 }
                 ui::MusicbarSource::Playlist(ref playlist_id) => {
-                    music_content = fetcher.get_playlist_content(&playlist_id, page).await;
+                    music_content = fetcher.get_playlist_content(playlist_id, page).await;
                 }
                 ui::MusicbarSource::Artist(ref artist_id) => {
-                    music_content = fetcher.get_videos_of_channel(&artist_id, page).await;
+                    music_content = fetcher.get_videos_of_channel(artist_id, page).await;
                 }
                 ui::MusicbarSource::Favourates | ui::MusicbarSource::RecentlyPlayed => {
                     // TODO: handle each variant with accurate function

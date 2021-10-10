@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::default::Default;
 use std::fs::File;
 use std::io::{BufReader, Write};
@@ -19,8 +18,7 @@ fn get_random_bool() -> bool {
     let now = std::time::Instant::now();
     let _ = vec![1; 3];
     let elapsed = now.elapsed().as_nanos();
-    let res = elapsed % 2 == 0;
-    res
+    elapsed % 2 == 0
 }
 
 trait Random {
@@ -262,7 +260,7 @@ impl Default for ConfigContainer {
     fn default() -> Self {
         ConfigContainer {
             config: Config::default(),
-            file_path: path::PathBuf::from(Self::get_config_path().unwrap()),
+            file_path: Self::get_config_path().unwrap(),
         }
     }
 }
@@ -343,22 +341,20 @@ impl ConfigContainer {
                     .recursive(true)
                     .create(&config_dir)
                 {
-                    Ok(_) => {
-                        return Some(config_dir);
-                    }
+                    Ok(_) => Some(config_dir),
                     Err(err) => {
                         eprintln!(
                             "Cannot create app folder in your config folder as {path}. Error: {err}",
                             path = &config_dir.as_path().to_string_lossy(),
                             err = err
                         );
-                        return None;
+                        None
                     }
                 }
             }
             None => {
                 eprintln!("Cannot get your os user config directory..");
-                return None;
+                None
             }
         }
     }

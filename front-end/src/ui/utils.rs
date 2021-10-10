@@ -1,6 +1,5 @@
 use crate::ui;
 use fetcher::ExtendDuration;
-use libmpv;
 use ui::shared_import::*;
 
 const CURRENT_TITLE_LEN: usize = 70;
@@ -515,7 +514,7 @@ impl ExtendMpv for libmpv::Mpv {
 }
 
 impl ui::State<'_> {
-    pub fn play_music(&mut self, music_id: &String) {
+    pub fn play_music(&mut self, music_id: &str) {
         self.player.unpause().ok();
         match self.player.command(
             "loadfile",
@@ -555,7 +554,7 @@ impl ui::State<'_> {
     }
 
     // This function is called when user press enter in non-empty list of playlistbar
-    pub fn activate_playlist(&mut self, playlist_id: &String) {
+    pub fn activate_playlist(&mut self, playlist_id: &str) {
         // Play this playlist when one of following is true
         // i) Nothing was being played previously
         // ii) Something was selected to play but is currently paused

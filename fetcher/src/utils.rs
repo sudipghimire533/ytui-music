@@ -35,7 +35,7 @@ impl crate::ExtendDuration for Duration {
 }
 
 impl Fetcher {
-    pub fn new(server_list: &'static Vec<String>) -> Self {
+    pub fn new(server_list: &'static [String]) -> Self {
         super::Fetcher {
             trending_now: None,
             playlist_content: super::PlaylistRes::default(),
@@ -209,7 +209,7 @@ impl Fetcher {
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
         let lower_limit = page * ITEM_PER_PAGE;
 
-        let is_new_id = playlist_id != &self.playlist_content.id;
+        let is_new_id = *playlist_id != self.playlist_content.id;
         if is_new_id {
             self.playlist_content.id = playlist_id.to_string();
             let suffix = format!(
@@ -249,7 +249,7 @@ impl Fetcher {
     ) -> Result<Vec<super::PlaylistUnit>, ReturnAction> {
         let lower_limit = page * ITEM_PER_PAGE;
 
-        let is_new_id = channel_id != &self.artist_content.playlist.0;
+        let is_new_id = *channel_id != self.artist_content.playlist.0;
         if is_new_id || self.artist_content.playlist.1.is_empty() {
             self.artist_content.playlist.0 = channel_id.to_string();
             let suffix = format!(
@@ -289,7 +289,7 @@ impl Fetcher {
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
         let lower_limit = page * ITEM_PER_PAGE;
 
-        let is_new_id = channel_id != &self.artist_content.music.0;
+        let is_new_id = *channel_id != self.artist_content.music.0;
         if is_new_id || self.artist_content.music.1.is_empty() {
             self.artist_content.music.0 = channel_id.to_string();
             let suffix = format!("/channels/{channel_id}/videos", channel_id = channel_id);
