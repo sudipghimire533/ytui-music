@@ -123,18 +123,32 @@ impl Default for ShortcutsKeys {
 pub struct Theme {
     border_idle: Color,
     border_hilight: Color,
-    list_title: Color,
+    list_idle: Color,
     list_hilight: Color,
+    color_primary: Color,
+    color_secondary: Color,
 }
 
 impl Default for Theme {
     fn default() -> Self {
         // TODO: Set actual colors
         Theme {
+            // Apply this on the border of blocks when that window is not active
             border_idle: [100, 200, 100],
+
+            // Apply this on the border of blocks when that windows is active
             border_hilight: [100, 100, 100],
-            list_title: [100, 200, 255],
+
+            // Apply to the list items that are idle
+            list_idle: [100, 200, 255],
+
+            // Apply to the list item that is currently under cursor
             list_hilight: [100, 250, 200],
+
+            // Color_promary and Color_secondary are for everything else other than above.
+            // Instead of relying on terminal color, using this will bring more consistency in the ui
+            color_primary: [100, 100, 200],
+            color_secondary: [100, 100, 200],
         }
     }
 }
