@@ -53,7 +53,7 @@ where
     }
 }
 
-type Color = [u8; 3];
+type Color = (u8, u8, u8);
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct ShortcutsKeys {
@@ -121,12 +121,16 @@ impl Default for ShortcutsKeys {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Theme {
-    border_idle: Color,
-    border_hilight: Color,
-    list_idle: Color,
-    list_hilight: Color,
-    color_primary: Color,
-    color_secondary: Color,
+    pub border_idle: Color,
+    pub border_highlight: Color,
+    pub list_idle: Color,
+    pub list_hilight: Color,
+    pub sidebar_list: Color,
+    pub block_title: Color,
+    pub gauge_fill: Color,
+    pub color_primary: Color,
+    pub color_secondary: Color,
+    pub status_text: Color,
 }
 
 impl Default for Theme {
@@ -134,21 +138,33 @@ impl Default for Theme {
         // TODO: Set actual colors
         Theme {
             // Apply this on the border of blocks when that window is not active
-            border_idle: [100, 200, 100],
+            border_idle: (255, 255, 255),
 
             // Apply this on the border of blocks when that windows is active
-            border_hilight: [100, 100, 100],
+            border_highlight: (10, 150, 150),
 
             // Apply to the list items that are idle
-            list_idle: [100, 200, 255],
+            list_idle: (200, 160, 0),
 
             // Apply to the list item that is currently under cursor
-            list_hilight: [100, 250, 200],
+            list_hilight: (255, 255, 255),
 
-            // Color_promary and Color_secondary are for everything else other than above.
+            // Applies to the text in top status bar
+            status_text: (175, 125, 115),
+
+            // Applies to the progress bar of bottom bar
+            gauge_fill: (85, 85, 85),
+
+            // Applies to the sidebar list item when idle
+            sidebar_list: (100, 250, 20),
+
+            // Applies to the title (top-left corner of border) of the block
+            block_title: (175, 125, 115),
+
+            // Color_(promary/secondary/tertiary) are for everything else other than above.
             // Instead of relying on terminal color, using this will bring more consistency in the ui
-            color_primary: [100, 100, 200],
-            color_secondary: [100, 100, 200],
+            color_primary: (100, 250, 20),
+            color_secondary: (250, 230, 70),
         }
     }
 }

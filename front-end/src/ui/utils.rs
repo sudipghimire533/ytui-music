@@ -11,6 +11,19 @@ pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
     "Favourates",
     "Search",
 ];
+use crate::CONFIG;
+
+// A helper macro to decode the tuple with three memebers to tui::style::Color::Rgb value
+// enum Example {
+//  First(i32, i32, i32) => accepts 3 individual value
+//  Second((i32, i32, i32)) => accepts single tuple with 3 memebers
+// }
+// Rgb in tui is defined in fasion of First in above example
+macro_rules! rgb {
+    ($tuple: expr) => {
+        Color::Rgb($tuple.0, $tuple.1, $tuple.2)
+    };
+}
 
 impl<'parent> ui::TopLayout {
     pub fn new(parent: Rect) -> Self {
@@ -29,14 +42,14 @@ impl<'parent> ui::TopLayout {
             state.status,
             Style::default()
                 .add_modifier(Modifier::BOLD | Modifier::ITALIC)
-                .fg(Color::Yellow),
+                .fg(rgb!(CONFIG.theme.color_secondary)),
         ))
         .block(Block::new("status".to_owned()))
         .block(Block::new("status".to_owned()))
     }
 
     pub fn get_searchbox(state: &'parent ui::State) -> Paragraph<'parent> {
-        let mut cursor_style = Style::default().fg(Color::White);
+        let mut cursor_style = Style::default().fg(rgb!(CONFIG.theme.color_secondary));
 
         let block = match state.active {
             ui::Window::Searchbar => {
@@ -52,7 +65,7 @@ impl<'parent> ui::TopLayout {
             Span::styled(
                 state.search.0.as_str(),
                 Style::default()
-                    .fg(Color::LightYellow)
+                    .fg(rgb!(CONFIG.theme.color_primary))
                     .add_modifier(Modifier::ITALIC),
             ),
             Span::styled("/", cursor_style),
@@ -109,10 +122,7 @@ impl<'parent> ui::MiddleLayout {
             })
             .collect();
         let table = Table::new(items)
-            .header(
-                Row::new(vec!["Title", "Artist", "Length"])
-                    .style(Style::default().fg(Color::LightYellow)),
-            )
+            .header(Row::new(vec!["Title", "Artist", "Length"]).style(Style::list_title()))
             .widths(
                 [
                     Constraint::Percentage(55),
@@ -162,10 +172,7 @@ impl<'parent> ui::MiddleBottom {
             })
             .collect();
         let table = Table::new(items)
-            .header(
-                Row::new(vec!["#", "Name", "Creator"])
-                    .style(Style::default().fg(Color::LightYellow)),
-            )
+            .header(Row::new(vec!["#", "Name", "Creator"]).style(Style::list_title()))
             .widths(
                 [
                     Constraint::Percentage(10),
@@ -197,7 +204,7 @@ impl<'parent> ui::MiddleBottom {
             .map(|artist| Row::new(vec![artist.video_count.as_str(), artist.name.as_str()]))
             .collect();
         let table = Table::new(items)
-            .header(Row::new(vec!["#", "Name"]).style(Style::default().fg(Color::LightYellow)))
+            .header(Row::new(vec!["#", "Name"]).style(Style::list_title()))
             .widths([Constraint::Percentage(10), Constraint::Percentage(90)].as_ref())
             .column_spacing(1)
             .style(Style::list_idle())
@@ -225,7 +232,12 @@ impl<'parent> ui::SideBar {
         List::new(
             SIDEBAR_LIST_ITEMS
                 .iter()
-                .map(|v| ListItem::new(Span::styled(*v, Style::list_idle().fg(Color::LightGreen))))
+                .map(|v| {
+                    ListItem::new(Span::styled(
+                        *v,
+                        Style::list_idle().fg(rgb!(CONFIG.theme.color_primary)),
+                    ))
+                })
                 .collect::<Vec<ListItem>>(),
         )
         .highlight_style(Style::list_highlight())
@@ -283,10 +295,10 @@ impl<'parent> ui::BottomLayout {
 
         Gauge::default()
             .ratio(ratio)
-            .gauge_style(Style::default().fg(Color::DarkGray))
+            .gauge_style(Style::default().fg(rgb!(CONFIG.theme.gauge_fill)))
             .label(Span::styled(
                 &content[0..std::cmp::min(content.len(), CURRENT_TITLE_LEN)],
-                Style::default().fg(Color::White),
+                Style::default().fg(rgb!(CONFIG.theme.color_primary)),
             ))
             .block(block)
     }
@@ -329,23 +341,34 @@ pub trait ExtendStyle {
     fn list_highlight() -> Style;
     fn block_title() -> Style;
     fn list_idle() -> Style;
+    fn list_title() -> Style;
 }
 
 impl ExtendStyle for Style {
+    #[inline(always)]
     fn list_highlight() -> Style {
-        Style::default().fg(Color::White)
+        Style::default().fg(rgb!(CONFIG.theme.list_hilight))
     }
+
+    #[inline(always)]
+    fn list_title() -> Style {
+        Style::default().fg(rgb!(CONFIG.theme.color_secondary))
+    }
+
+    #[inline(always)]
     fn block_title() -> Style {
         Style {
-            fg: Some(Color::LightMagenta),
+            fg: Some(rgb!(CONFIG.theme.block_title)),
             bg: None,
             add_modifier: Modifier::BOLD | Modifier::ITALIC,
             sub_modifier: Modifier::empty(),
         }
     }
+
+    #[inline(always)]
     fn list_idle() -> Style {
         Style {
-            fg: Some(Color::Yellow),
+            fg: Some(rgb!(CONFIG.theme.list_idle)),
             bg: None,
             add_modifier: Modifier::BOLD,
             sub_modifier: Modifier::empty(),
@@ -358,14 +381,17 @@ impl<'a> ExtendBlock<'a> for Block<'_> {
         Block::default()
             .title(Span::styled(title, Style::block_title()))
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::White))
+            .border_style(Style::default().fg(rgb!(CONFIG.theme.border_idle)))
             .borders(Borders::ALL)
     }
     fn active(title: String) -> Self {
         Block::default()
-            .title(Span::styled(title, Style::block_title().fg(Color::Cyan)))
+            .title(Span::styled(
+                title,
+                Style::block_title().fg(rgb!(CONFIG.theme.border_highlight)),
+            ))
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::Cyan))
+            .border_style(Style::default().fg(rgb!(CONFIG.theme.border_highlight)))
             .borders(Borders::ALL)
     }
 }
