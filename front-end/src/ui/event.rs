@@ -1,6 +1,7 @@
 use crate::ui::{self, utils::ExtendMpv};
 use crate::CONFIG;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+use std::cell::RefCell;
 use std::{
     convert::TryFrom,
     sync::{Arc, Condvar, Mutex},
@@ -89,6 +90,8 @@ pub async fn event_sender(
         video_count: "NaN".to_string(),
     }];
 
+    let download_counter: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+
     // There is several option in sidebar like trending/ favourates,
     // this handler will change the selected option from sidebar depending on the direction user
     // move (Up or DOwn).
@@ -155,10 +158,19 @@ pub async fn event_sender(
     // this closure will simply set the active_window (`active`) to None so that functions in other
     // thread can also respond to the event (which is usally again breking the running loop in
     // thread)
-    let quit = || {
+    let quit = || -> bool {
+        let mut state = state_original.lock().unwrap();
+
+        // TODO: Ask for confermation
+        if *download_counter.lock().unwrap() > 0 {
+            state.help = "Download in progress..";
+            return false;
+        }
+
         // setting active window to None is to quit
-        state_original.lock().unwrap().active = ui::Window::None;
+        state.active = ui::Window::None;
         notifier.notify_all();
+        true
     };
 
     // This handler will fire up when user request to move between sections like musicbar, sidebar
@@ -410,7 +422,7 @@ pub async fn event_sender(
 
     let handle_download = || async {
         let mut state = state_original.lock().unwrap();
-
+        // TODO: Ask for conformation before downloading
         let mut command = tokio::process::Command::new("youtube-dl");
         if let Some(focused_index) = state.musicbar.1.selected() {
             let music_id = &state.musicbar.0[focused_index].id;
@@ -431,11 +443,15 @@ pub async fn event_sender(
             .args(&["--extract-audio", "--audio-format", &CONFIG.download.format])
             .current_dir(&CONFIG.download.path)
             .kill_on_drop(false);
+        state.help = "Download started..";
+        std::mem::drop(state);
 
-        state.help = "Downloading...";
+        *download_counter.lock().unwrap() += 1;
+        let counter_clone = Arc::clone(&download_counter);
         tokio::task::spawn(async move {
             tokio::time::sleep(Duration::from_secs(1)).await;
             command.status().await.unwrap();
+            *counter_clone.lock().unwrap() -= 1;
         });
     };
 
@@ -560,8 +576,9 @@ pub async fn event_sender(
                                 }
                             } else if ch == CONFIG.shortcut_keys.quit {
                                 if is_with_control {
-                                    quit();
-                                    break 'listener_loop;
+                                    if quit() {
+                                        break 'listener_loop;
+                                    }
                                 }
                             }
                         }
