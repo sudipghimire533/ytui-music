@@ -51,12 +51,11 @@ use shared_import::*;
 
 // TopLayout is off full width in the top. This again contains two components which are splitted
 // horizontally. These area are for searchbar (which covers more than half of layout) and
-// helpbar (confusignly named as this shows the "Press ?" like message and also show the working
-// status of app like "error occured", "no more result", "requesting data" and so on)
-// They are splitted in such a ratio that searchbar covers much of area but helpbar should also get
+// statusbar (show the working status of app like "error occured", "no more result" and so on)
+// They are splitted in such a ratio that searchbar covers much of area but statusbar should also get
 // sufficient enouh so that any printed status is not hidden for now 85%:15% ratio
 // ---------------------------------------
-// |        Search Bar          | HelpBar |
+// |        Search Bar          | StatusBar |
 // ---------------------------------------
 pub struct TopLayout {
     layout: [Rect; 2],
@@ -121,7 +120,7 @@ pub struct BottomLayout {
 
 // This is what final ui looks like
 // ----------------------------------------------------------
-// |    Searchbar                           |  Helpbar      |
+// |    Searchbar                           |  Statusbar      |
 // |--------------------------------------------------------|
 // |         |                                              |
 // |         |                                              |
@@ -144,7 +143,7 @@ pub struct BottomLayout {
 #[derive(Default)]
 pub struct Position {
     pub search: Rect,
-    pub help: Rect,
+    pub status: Rect,
     pub shortcut: Rect,
     pub music: Rect,
     pub playlist: Rect,
@@ -186,15 +185,6 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
             .draw(|screen| {
                 let mut state_unlocked = state.lock().unwrap();
 
-                // If help window is active then we can cover the whole screen with just that.
-                if state_unlocked.active == Window::Helpbar {
-                    let help_window = TopLayout::get_helpwindow();
-                    screen.render_widget(help_window, screen.size());
-                    // If below widgets are drawn then it will override the help window.
-                    // So just return
-                    return;
-                }
-
                 // As screen size doesn't change that often (is chaged when terminal window is
                 // resized) so it is unnecessary to calcuate position for components in every draw
                 // loop. Calculate once and recalculate when window size change
@@ -204,7 +194,7 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                     previous_dimension = current_dimension;
                 }
 
-                screen.render_widget(TopLayout::get_helpbox(&state_unlocked), position.help);
+                screen.render_widget(TopLayout::get_statusbox(&state_unlocked), position.status);
                 screen.render_widget(TopLayout::get_searchbox(&state_unlocked), position.search);
                 screen.render_stateful_widget(
                     SideBar::get_shortcuts(&state_unlocked),
@@ -286,13 +276,11 @@ pub enum SidebarOption {
     RecentlyPlayed = 2,
     Favourates = 3,
     Search = 4,
-    None = 5,
 }
 
 #[derive(PartialEq, Clone)]
 pub enum Window {
     Searchbar,
-    Helpbar,
     Sidebar,
     Musicbar,
     Playlistbar,
@@ -346,7 +334,7 @@ pub struct PlaybackBehaviour {
 }
 
 pub struct State<'p> {
-    pub help: &'p str,
+    pub status: &'p str,
     // First is state of the sidebar list itself
     // And second is the state that is actually active.
     // which remains same even selected() of ListState is changed.

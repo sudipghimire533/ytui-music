@@ -12,16 +12,16 @@ macro_rules! handle_response {
         let mut need_retry = false;
         match $response {
             Ok(data) => {
-                state.help = "Press ?";
+                state.status = "Sucess..";
                 state.$target.0 = data;
             }
             Err(e) => {
                 match e {
                     fetcher::ReturnAction::Failed => {
-                        state.help = "Fetch error..";
+                        state.status = "Fetch error..";
                     }
                     fetcher::ReturnAction::EOR => {
-                        state.help = "Result end..";
+                        state.status = "Result end..";
                         // TODO: Setting this to None means that the next page will always be 0.
                         // That being said when user tries to navigate to previous page after seeing
                         // EOR then still the fetched page will be 0. i.e again started from beginning.
@@ -44,7 +44,7 @@ macro_rules! handle_response {
                     fetcher::ReturnAction::Retry => {
                         // the respective function from which the data is exptracted
                         // specify the no of times to retry. Simple rerun the loop if retry is feasible
-                        state.help = "Retrying..";
+                        state.status = "Retrying..";
                         need_retry = true;
                     }
                 }

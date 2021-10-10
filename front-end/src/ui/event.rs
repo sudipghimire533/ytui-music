@@ -1,7 +1,6 @@
 use crate::ui::{self, utils::ExtendMpv};
 use crate::CONFIG;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
-use std::cell::RefCell;
 use std::{
     convert::TryFrom,
     sync::{Arc, Condvar, Mutex},
@@ -164,7 +163,7 @@ pub async fn event_sender(
         // If it is urgent required to quit the application user should also press SHIFT  key along
         // with CTRL and QUIT key
         if !force_quit && *download_counter.lock().unwrap() > 0 {
-            state.help = "[Progress] Downloading..";
+            state.status = "[Progress] Downloading..";
             return false;
         }
 
@@ -199,7 +198,7 @@ pub async fn event_sender(
                 state.search.0.clear();
                 drop_and_call!(state, moveto_next_window);
             }
-            ui::Window::Helpbar | ui::Window::BottomControl => {
+            ui::Window::BottomControl => {
                 drop_and_call!(state, moveto_next_window);
             }
             ui::Window::Sidebar
@@ -246,14 +245,6 @@ pub async fn event_sender(
         notifier.notify_all();
     };
 
-    // This handler will be fired when use press HELP_SH_KEY
-    // this will simply asks user to rerun application with --help argument
-    // Ya boring
-    let show_help = || {
-        state_original.lock().unwrap().active = ui::Window::Helpbar;
-        notifier.notify_all();
-    };
-
     // This handler will be fired when user hits UP_ARROW or DOWN_ARROW key
     // UP_ARROW will set the direction to PREV and DOWN_ARROW to NEXT
     // for now, these key will only handle the moving of list
@@ -281,7 +272,7 @@ pub async fn event_sender(
         state.filled_source.0 = ui::MusicbarSource::Search(state.search.1.clone());
         state.filled_source.1 = ui::PlaylistbarSource::Search(state.search.1.clone());
         state.filled_source.2 = ui::ArtistbarSource::Search(state.search.1.clone());
-        state.help = "Searching..";
+        state.status = "Searching..";
         notifier.notify_all();
     };
 
@@ -290,7 +281,7 @@ pub async fn event_sender(
         state.fetched_page[MIDDLE_MUSIC_INDEX] =
             Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
         state.filled_source.0 = ui::MusicbarSource::Trending;
-        state.help = "Fetching..";
+        state.status = "Fetching..";
         notifier.notify_all();
     };
 
@@ -311,7 +302,7 @@ pub async fn event_sender(
             state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id.to_string());
             state.fetched_page[MIDDLE_MUSIC_INDEX] =
                 Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
-            state.help = "Fetching playlist..";
+            state.status = "Fetching playlist..";
             notifier.notify_all();
         }
     };
@@ -322,7 +313,7 @@ pub async fn event_sender(
             state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.to_string());
             state.fetched_page[MIDDLE_MUSIC_INDEX] =
                 Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
-            state.help = "Fetching channel..";
+            state.status = "Fetching channel..";
             notifier.notify_all();
         }
     };
@@ -335,7 +326,7 @@ pub async fn event_sender(
                 &state.fetched_page[MIDDLE_PLAYLIST_INDEX],
                 direction,
             ));
-            state.help = "Fetching channel..";
+            state.status = "Fetching channel..";
             notifier.notify_all();
         }
     };
@@ -361,8 +352,8 @@ pub async fn event_sender(
                 // It implied to change the track
                 return drop_and_call!(state, change_track, direction);
             }
-            ui::Window::Searchbar | ui::Window::Sidebar | ui::Window::Helpbar => {
-                // If none os above windows are active then nothing to navigate.
+            ui::Window::Searchbar | ui::Window::Sidebar => {
+                // If none of above windows are active then nothing to navigate.
                 // Early return instead of initilizing `target_index`
                 return;
             }
@@ -444,7 +435,7 @@ pub async fn event_sender(
             .args(&["--extract-audio", "--audio-format", &CONFIG.download.format])
             .current_dir(&CONFIG.download.path)
             .kill_on_drop(false);
-        state.help = "Download started..";
+        state.status = "Download started..";
         std::mem::drop(state);
 
         *download_counter.lock().unwrap() += 1;
@@ -478,7 +469,6 @@ pub async fn event_sender(
                         drop_and_call!(state, fill_recents_music, HeadTo::Initial);
                     }
                     ui::SidebarOption::Search => drop_and_call!(state, activate_search),
-                    ui::SidebarOption::None => {}
                 }
             }
             ui::Window::Searchbar => {
@@ -509,7 +499,7 @@ pub async fn event_sender(
                     fill_playlist_from_artist(HeadTo::Initial);
                 }
             }
-            ui::Window::None | ui::Window::Helpbar | ui::Window::BottomControl => {}
+            ui::Window::None | ui::Window::BottomControl => {}
         }
     };
 
@@ -549,8 +539,6 @@ pub async fn event_sender(
                             // is defined in shortcuts
                             else if ch == CONFIG.shortcut_keys.start_search {
                                 activate_search();
-                            } else if ch == CONFIG.shortcut_keys.help {
-                                show_help();
                             } else if ch == CONFIG.shortcut_keys.toggle_play {
                                 toggle_play();
                             } else if ch == CONFIG.shortcut_keys.repeat {

@@ -25,15 +25,15 @@ impl<'parent> ui::TopLayout {
         }
     }
 
-    pub fn get_helpbox(state: &'parent ui::State) -> Paragraph<'parent> {
+    pub fn get_statusbox(state: &'parent ui::State) -> Paragraph<'parent> {
         Paragraph::new(Span::styled(
-            state.help,
+            state.status,
             Style::default()
                 .add_modifier(Modifier::BOLD | Modifier::ITALIC)
                 .fg(Color::Yellow),
         ))
-        .block(Block::new("Help".to_owned()))
-        .block(Block::new("Help".to_owned()))
+        .block(Block::new("status".to_owned()))
+        .block(Block::new("status".to_owned()))
     }
 
     pub fn get_searchbox(state: &'parent ui::State) -> Paragraph<'parent> {
@@ -59,24 +59,6 @@ impl<'parent> ui::TopLayout {
             Span::styled("/", cursor_style),
         ]);
         Paragraph::new(text).block(block)
-    }
-
-    // Showing help window on top of everything is not that bad idea which is what I was thinking
-    // from the beginning. But then we have to handle events like up/down arrow differently meaning
-    // more branching. Let's just leave it and aks user to run with --help.
-    // Help bar cannot be removed as it would require more refractor. Ahh
-    pub fn get_helpwindow() -> Paragraph<'parent> {
-        let block = Block::active(String::from(" Help "));
-        let content = vec![
-            Spans::from(vec![Span::from("")]),
-            Spans::from(vec![Span::from(
-                "Help manual have been removed from here. Please rerun with --help argument. ",
-            )]),
-        ];
-
-        Paragraph::new(content)
-            .alignment(Alignment::Center)
-            .block(block)
     }
 }
 
@@ -416,7 +398,7 @@ impl ui::Position {
 
         ui::Position {
             search: top_section.layout[0],
-            help: top_section.layout[1],
+            status: top_section.layout[1],
             shortcut: sidebar.layout,
             music: middle_section.layout,
             playlist: middle_bottom.layout[0],
@@ -438,7 +420,7 @@ impl Default for ui::State<'_> {
         let mut sidebar_list_state = ListState::default();
         sidebar_list_state.select(Some(0));
         ui::State {
-            help: "Press ?",
+            status: "Press ?",
             sidebar: sidebar_list_state,
             musicbar: (Vec::new(), TableState::default()),
             playlistbar: (Vec::new(), TableState::default()),
@@ -544,12 +526,12 @@ impl ui::State<'_> {
                 self.bottom.music_duration = Duration::from_secs(0);
                 self.bottom.music_elapse = Duration::from_secs(0);
 
-                self.help = "Press ?";
+                self.status = "Press ?";
                 // set currently playing (unpaused) to ture. no need to set real title as it will
                 // be done by refresh_mpv_status() later on
                 self.bottom.playing = Some((String::new(), true))
             }
-            Err(_) => self.help = "Playback error..",
+            Err(_) => self.status = "Playback error..",
         }
         // Now as the selection is being played. Add remaining item from musicbar to the play
         // queue.
@@ -589,12 +571,12 @@ impl ui::State<'_> {
                     self.bottom.music_duration = Duration::from_secs(0);
                     self.bottom.music_elapse = Duration::from_secs(0);
 
-                    self.help = "Press ?";
+                    self.status = "Press ?";
                     // set currently playing (unpaused) to ture. no need to set real title as it will
                     // be done by refresh_mpv_status() later on
                     self.bottom.playing = Some((String::new(), true));
                 }
-                Err(_) => self.help = "Playback error..",
+                Err(_) => self.status = "Playback error..",
             }
         }
     }
@@ -659,10 +641,9 @@ impl ui::Window {
             ui::Window::Sidebar => ui::Window::Musicbar,
             ui::Window::Musicbar => ui::Window::Playlistbar,
             ui::Window::Playlistbar => ui::Window::Artistbar,
-            ui::Window::Searchbar
-            | ui::Window::Artistbar
-            | ui::Window::BottomControl
-            | ui::Window::Helpbar => ui::Window::Sidebar,
+            ui::Window::Searchbar | ui::Window::Artistbar | ui::Window::BottomControl => {
+                ui::Window::Sidebar
+            }
             ui::Window::None => unreachable!(),
         }
     }
@@ -672,10 +653,9 @@ impl ui::Window {
             ui::Window::Artistbar => ui::Window::Playlistbar,
             ui::Window::Playlistbar => ui::Window::Musicbar,
             ui::Window::Musicbar => ui::Window::Sidebar,
-            ui::Window::Searchbar
-            | ui::Window::Sidebar
-            | ui::Window::BottomControl
-            | ui::Window::Helpbar => ui::Window::Artistbar,
+            ui::Window::Searchbar | ui::Window::Sidebar | ui::Window::BottomControl => {
+                ui::Window::Artistbar
+            }
             ui::Window::None => unreachable!(),
         }
     }

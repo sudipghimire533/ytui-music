@@ -64,7 +64,6 @@ pub struct ShortcutsKeys {
     pub prev: char,
     pub start_search: char,
     pub download: char,
-    pub help: char,
     pub quit: char,
     pub forward: char,
     pub backward: char,
@@ -96,9 +95,6 @@ impl Default for ShortcutsKeys {
             // if an item from playlistbat is focused, download all content from that playlist
             // otherwise do nothing
             download: 'd',
-
-            // This will show the help manual
-            help: '?',
 
             // When this key is pressed with CTRL, it will quit the application after checking
             // weather if there are any ongoing downloads
