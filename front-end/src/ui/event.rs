@@ -158,12 +158,13 @@ pub async fn event_sender(
     // this closure will simply set the active_window (`active`) to None so that functions in other
     // thread can also respond to the event (which is usally again breking the running loop in
     // thread)
-    let quit = || -> bool {
+    let quit = |force_quit: bool| -> bool {
         let mut state = state_original.lock().unwrap();
-
-        // TODO: Ask for confermation
-        if *download_counter.lock().unwrap() > 0 {
-            state.help = "Download in progress..";
+        // Do not quit when some download is in progress as it may leave partial file on the disk.
+        // If it is urgent required to quit the application user should also press SHIFT  key along
+        // with CTRL and QUIT key
+        if !force_quit && *download_counter.lock().unwrap() > 0 {
+            state.help = "[Progress] Downloading..";
             return false;
         }
 
@@ -576,7 +577,14 @@ pub async fn event_sender(
                                 }
                             } else if ch == CONFIG.shortcut_keys.quit {
                                 if is_with_control {
-                                    if quit() {
+                                    let can_be_quit;
+                                    // SHIFT key is needed to force quit
+                                    if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                        can_be_quit = quit(true);
+                                    } else {
+                                        can_be_quit = quit(false);
+                                    };
+                                    if can_be_quit {
                                         break 'listener_loop;
                                     }
                                 }

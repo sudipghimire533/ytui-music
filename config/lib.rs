@@ -100,7 +100,10 @@ impl Default for ShortcutsKeys {
             // This will show the help manual
             help: '?',
 
-            // When this key is pressed with CTRL, it will quit the application
+            // When this key is pressed with CTRL, it will quit the application after checking
+            // weather if there are any ongoing downloads
+            // When pressed with CTRL and SHIFT it will force quit the app without ongoing downloads
+            // check
             quit: 'c',
 
             // Seek the playback forward by time specified in config
