@@ -24,6 +24,28 @@ using unmaintained librray feels weird.
 * Other libraries
 See Cargo.toml file in each workspace-folder
 
+# Building
+1. Install rust. Refer to https://www.rust-lang.org/tools/install
+2. Install mpv/libmpv. Refer to https://mpv.io/installation/
+3. Install youtube-dl. Refer to https://ytdl-org.github.io/youtube-dl/download.html
+4. For linux-like system. xdg-user-dirs is required. Almost all distro comes with this tool but for some reason if this is not foind refer to https://www.freedesktop.org/wiki/Software/xdg-user-dirs/
+5. Install git. Refer to https://git-scm.com/downloads
+7. Clone the repo
+```
+git clone https://github.com/sudipghimire533/ytui-music && cd ytui-music
+```
+8. build with cargo. For first run this may take some time
+```
+cargo build
+```
+9. Build the binary and run
+```
+cd front-end && cargo run
+```
+10. Start hacking
+11. Did you notice I skipped the step 6.
+
+
 ### How are things splitted?
 The project is cargo workspace with three members. Depending on what you want to improve or fix things:
 

@@ -23,14 +23,17 @@ You would also love
 
 
 ## Installing
-1) Download the binary from [here](https://github.com/sudipghimire533/ytui-music/releases). Don't forget to select correct architecture and platform.
+1. Download the binary from [here](https://github.com/sudipghimire533/ytui-music/releases). Don't forget to select correct architecture and platform.
 
-2) Install the dependencies. This program depends on youtube-dl and libmpv. Refer to official website of mpv and youtube-dl on how to install them.
+2. Install the dependencies. This program depends on youtube-dl and libmpv. Refer to official website of mpv and youtube-dl on how to install them.
 
 * mpv: https://mpv.io/installation/
 * youtbe-dl: https://ytdl-org.github.io/youtube-dl/download.html
 
+## Building from source
+refer to [build](CONTRIBUTING.md#building)
+
 ## Contributing
 I would be pleased to know that you have intrest to cometibute something. This could be anything from suggestion, bug report, issue or the improvement. If you have any suggestion, facing problem or anything feel super duper free to open an issue.
 
-Also if you would like to contibute code, you may start with CONTRIBUTING.md
+Also if you would like to contibute code, you may start with [CONTRIBUTING.md](CONTRIBUTING.md)
