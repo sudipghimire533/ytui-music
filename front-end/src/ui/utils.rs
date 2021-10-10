@@ -123,7 +123,7 @@ impl<'parent> ui::MiddleLayout {
             )
             .column_spacing(2)
             .style(Style::list_idle())
-            .highlight_style(Style::list_hilight())
+            .highlight_style(Style::list_highlight())
             .block(block);
 
         table
@@ -176,7 +176,7 @@ impl<'parent> ui::MiddleBottom {
             )
             .column_spacing(1)
             .style(Style::list_idle())
-            .highlight_style(Style::list_hilight())
+            .highlight_style(Style::list_highlight())
             .block(block);
 
         table
@@ -201,7 +201,7 @@ impl<'parent> ui::MiddleBottom {
             .widths([Constraint::Percentage(10), Constraint::Percentage(90)].as_ref())
             .column_spacing(1)
             .style(Style::list_idle())
-            .highlight_style(Style::list_hilight())
+            .highlight_style(Style::list_highlight())
             .block(block);
 
         table
@@ -228,7 +228,7 @@ impl<'parent> ui::SideBar {
                 .map(|v| ListItem::new(Span::styled(*v, Style::list_idle().fg(Color::LightGreen))))
                 .collect::<Vec<ListItem>>(),
         )
-        .highlight_style(Style::list_hilight())
+        .highlight_style(Style::list_highlight())
         .block(block)
     }
 }
@@ -297,21 +297,21 @@ impl<'parent> ui::BottomLayout {
 
         if let Some((_, false)) = state.bottom.playing {
             // is paused
-            paused_status = Span::from(" _ ");
+            paused_status = Span::styled(" _ ", Style::list_idle());
         } else {
-            paused_status = Span::from(" P ");
+            paused_status = Span::styled(" P ", Style::list_highlight());
         }
 
         if state.playback_behaviour.repeat {
-            repeat = Span::from(" R ");
+            repeat = Span::styled(" R ", Style::list_highlight());
         } else {
-            repeat = Span::from(" 1 ");
+            repeat = Span::styled(" 1 ", Style::list_idle());
         }
 
         if state.playback_behaviour.shuffle {
-            suffle = Span::from(" S ");
+            suffle = Span::styled(" S ", Style::list_highlight());
         } else {
-            suffle = Span::from(" _ ");
+            suffle = Span::styled(" _ ", Style::list_idle());
         }
 
         let paragraph = Paragraph::new(Spans::from(vec![paused_status, suffle, repeat]))
@@ -326,13 +326,13 @@ pub trait ExtendBlock<'a> {
     fn active(title: String) -> Self;
 }
 pub trait ExtendStyle {
-    fn list_hilight() -> Style;
+    fn list_highlight() -> Style;
     fn block_title() -> Style;
     fn list_idle() -> Style;
 }
 
 impl ExtendStyle for Style {
-    fn list_hilight() -> Style {
+    fn list_highlight() -> Style {
         Style::default().fg(Color::White)
     }
     fn block_title() -> Style {
