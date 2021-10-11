@@ -257,17 +257,17 @@ impl Default for MpvOptions {
 
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct Config {
-    #[serde(default, alias = "ShortcutKeys")]
+    #[serde(default, rename = "ShortcutKeys")]
     pub shortcut_keys: ShortcutsKeys,
-    #[serde(default, alias = "Colors")]
+    #[serde(default, rename = "Colors")]
     pub theme: Theme,
-    #[serde(default, alias = "Servers")]
+    #[serde(default, rename = "Servers")]
     pub servers: Servers,
-    #[serde(default, alias = "Constants")]
+    #[serde(default, rename = "Constants")]
     pub constants: Constants,
-    #[serde(default, alias = "MpvOptions")]
+    #[serde(default, rename = "MpvOptions")]
     pub mpv: MpvOptions,
-    #[serde(default, alias = "Downloads")]
+    #[serde(default, rename = "Downloads")]
     pub download: Downloads,
 }
 
