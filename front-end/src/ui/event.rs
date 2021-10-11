@@ -160,7 +160,7 @@ pub async fn event_sender(
     let quit = |force_quit: bool| -> bool {
         let mut state = state_original.lock().unwrap();
         // Do not quit when some download is in progress as it may leave partial file on the disk.
-        // If it is urgent required to quit the application user should also press SHIFT  key along
+        // If it is urgent required to quit the application user should also press ALT key along
         // with CTRL and QUIT key
         if !force_quit && *download_counter.lock().unwrap() > 0 {
             state.status = "[Progress] Downloading..";
@@ -456,7 +456,6 @@ pub async fn event_sender(
             }
             state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id);
             drop_and_call!(state, fill_music_from_playlist, HeadTo::Initial);
-            notifier.notify_all();
         }
     };
 
@@ -496,7 +495,7 @@ pub async fn event_sender(
 
             // When pressed with control only show the content of the playlist in musicbar
             // when only pressed enter, then play the playlist as well
-            ui::Window::Playlistbar => select_playlist(!with_control),
+            ui::Window::Playlistbar => drop_and_call!(state, select_playlist, !with_control),
 
             ui::Window::Artistbar => {
                 if let Some(selected_index) = state.artistbar.1.selected() {
@@ -544,7 +543,7 @@ pub async fn event_sender(
                             if state_original.lock().unwrap().active == ui::Window::Searchbar {
                                 handle_search_input(ch);
                             }
-                            // No as this is not the input, call the shortcuts action if this key
+                            // Now as this is not the input, call the shortcuts action if this key
                             // is defined in shortcuts
                             else if ch == CONFIG.shortcut_keys.start_search {
                                 activate_search();
@@ -573,14 +572,8 @@ pub async fn event_sender(
                                     handle_nav(HeadTo::Next);
                                 }
                             } else if ch == CONFIG.shortcut_keys.quit && is_with_control {
-                                let can_be_quit;
-                                // SHIFT key is needed to force quit
-                                if key.modifiers.contains(KeyModifiers::SHIFT) {
-                                    can_be_quit = quit(true);
-                                } else {
-                                    can_be_quit = quit(false);
-                                };
-                                if can_be_quit {
+                                let force_quit = key.modifiers.contains(KeyModifiers::ALT);
+                                if quit(force_quit) {
                                     break 'listener_loop;
                                 }
                             }
