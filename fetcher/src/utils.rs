@@ -16,7 +16,7 @@ impl crate::ExtendDuration for Duration {
     fn to_string(self) -> String {
         let seconds: u64 = self.as_secs();
         let mut res = format!(
-            "{minutes}:{seconds}",
+            "{minutes}:{seconds:02}",
             minutes = seconds / 60,
             seconds = seconds % 60
         );
