@@ -141,6 +141,7 @@ pub struct Fetcher {
     // This may bring little delay when user explore for first time in a session but after that everything
     // will be in memory making it smooth.
     trending_now: Option<Vec<MusicUnit>>,
+
     //playlist_content stores collection of music contained in a playlist
     // first field: (String) holds the unique if of playlist that is being read.
     // All the content in given playlist id is fetched at once and stored meaning
@@ -157,6 +158,7 @@ pub struct Fetcher {
     // playlist don't have to get interrupted for fetching more data once played tha last item of
     // last fetched data. Playback stops only when playlist ends.
     playlist_content: PlaylistRes,
+
     /*
     artist_content stores collection of music and also the collection of playlists
     from the channel
@@ -164,6 +166,7 @@ pub struct Fetcher {
     For more info see documentation on playlist_content above
     */
     artist_content: ArtistRes,
+
     // List of available servers powered by invidious youtube data fetcher. All the servers should
     // provide same endpoints to make request to and same pattern of return data. Which actually means
     // all the servers must be powered by the same mahor version of invidious backend.
@@ -172,11 +175,14 @@ pub struct Fetcher {
     // To distribute the load between multiple servers it would be better if this list is kept growing
     // See the utils.rs file to see the format of server url.
     servers: &'static [String],
+
     // Container to store the result of search result.
     // First field: (String) is the query being searched for.
     search_res: SearchRes,
+
     // The reqwest client itself. This is only initilized once per session.
     client: reqwest::Client,
+
     // index that reference the servers[] field.
     // When server need to be changes as described in documentation of servers[] field
     // this index is updated (usually rotated clockwise)
@@ -184,6 +190,7 @@ pub struct Fetcher {
     // It may be more efficient to directly reference the elemnt from searvers[] rather than
     // storing the index and hence preventing accidintal out-of-index access
     active_server_index: usize,
+
     // This is the no of request sent from currently active server. The main purpose of this is to
     // mind how much request to send to single server. Most of the hosted invidious server deserve to
     // be stay balanced an I don't want to bombard it with too manu requests. So it is much better to
@@ -192,4 +199,7 @@ pub struct Fetcher {
     // request to same serevr. Response from all servers are in same format as long as we use same
     // api version so no problem is expected (till now)
     request_sent: u8,
+
+    // ISO 3166 country code to be passed in invidious region paramater
+    region: &'static str,
 }

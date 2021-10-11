@@ -180,6 +180,7 @@ pub struct Constants {
     pub refresh_rate: u64,
     pub seek_forward_secs: u32,
     pub seek_backward_secs: u32,
+    pub region: String,
 }
 
 impl Default for Constants {
@@ -190,6 +191,7 @@ impl Default for Constants {
             refresh_rate: 900,
             seek_forward_secs: 10,
             seek_backward_secs: 10,
+            region: String::from("NP"),
         }
     }
 }

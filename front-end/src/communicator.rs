@@ -1,6 +1,9 @@
-use crate::ui::{
-    self,
-    event::{MIDDLE_ARTIST_INDEX, MIDDLE_MUSIC_INDEX, MIDDLE_PLAYLIST_INDEX},
+use crate::{
+    ui::{
+        self,
+        event::{MIDDLE_ARTIST_INDEX, MIDDLE_MUSIC_INDEX, MIDDLE_PLAYLIST_INDEX},
+    },
+    CONFIG,
 };
 use std::sync::{Arc, Condvar, Mutex};
 
@@ -58,7 +61,7 @@ pub async fn communicator<'st, 'nt>(
     state_original: &'st mut Arc<Mutex<ui::State<'_>>>,
     notifier: &'nt mut Arc<Condvar>,
 ) {
-    let mut fetcher = fetcher::Fetcher::new(&crate::CONFIG.servers.list);
+    let mut fetcher = fetcher::Fetcher::new(&CONFIG.servers.list, &CONFIG.constants.region);
 
     // variables with prev_ suffex are to be compared with respective current variables from state.
     // This is to check weather anything have changed from previous data request from user so that

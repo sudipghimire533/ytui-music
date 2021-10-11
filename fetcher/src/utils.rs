@@ -9,7 +9,6 @@ const FIELDS: [&str; 3] = [
     "fields=author,authorId,videoCount",
 ];
 pub const ITEM_PER_PAGE: usize = 10;
-const REGION: &str = "region=NP";
 const FILTER_TYPE: [&str; 3] = ["music", "playlist", "channel"];
 const REQUEST_PER_SERVER: u8 = 10;
 
@@ -35,7 +34,7 @@ impl crate::ExtendDuration for Duration {
 }
 
 impl Fetcher {
-    pub fn new(server_list: &'static [String]) -> Self {
+    pub fn new(server_list: &'static [String], user_region: &'static str) -> Self {
         super::Fetcher {
             trending_now: None,
             playlist_content: super::PlaylistRes::default(),
@@ -49,6 +48,7 @@ impl Fetcher {
                 .unwrap(),
             active_server_index: 0,
             request_sent: 0,
+            region: user_region,
         }
     }
     pub fn change_server(&mut self) {
@@ -96,7 +96,7 @@ macro_rules! search {
             "/search?q={query}&type={s_type}&{region}&page={page}&{fields}",
             query = $query,
             s_type = FILTER_TYPE[$filter_index],
-            region = REGION,
+            region = $fetcher.region,
             fields = FIELDS[$filter_index],
             page = $page
         );
@@ -178,7 +178,7 @@ impl Fetcher {
         if self.trending_now.is_none() {
             let suffix = format!(
                 "/trending?type=Music&{region}&{music_field}",
-                region = REGION,
+                region = self.region,
                 music_field = FIELDS[0]
             );
 
@@ -350,10 +350,11 @@ mod tests {
 
     lazy_static! {
         static ref FETCHER: Vec<String> = vec![String::from("https://ytprivate.com/api/v1/")];
+        static ref REGION: &'static str = "NP";
     }
     fn get_fetcher_for_test() -> Fetcher {
         // FIXME: how can I get a static variable for test
-        Fetcher::new(&FETCHER)
+        Fetcher::new(&FETCHER, &REGION)
     }
 
     #[tokio::test]
