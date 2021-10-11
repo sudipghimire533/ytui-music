@@ -445,7 +445,7 @@ impl Default for ui::State<'_> {
         let mut sidebar_list_state = ListState::default();
         sidebar_list_state.select(Some(0));
         ui::State {
-            status: "Press ?",
+            status: "@sudipghimire533",
             sidebar: sidebar_list_state,
             musicbar: (Vec::new(), TableState::default()),
             playlistbar: (Vec::new(), TableState::default()),
@@ -551,7 +551,7 @@ impl ui::State<'_> {
                 self.bottom.music_duration = Duration::from_secs(0);
                 self.bottom.music_elapse = Duration::from_secs(0);
 
-                self.status = "Press ?";
+                self.status = "Playing...";
                 // set currently playing (unpaused) to ture. no need to set real title as it will
                 // be done by refresh_mpv_status() later on
                 self.bottom.playing = Some((String::new(), true))
@@ -581,28 +581,24 @@ impl ui::State<'_> {
 
     // This function is called when user press enter in non-empty list of playlistbar
     pub fn activate_playlist(&mut self, playlist_id: &str) {
-        // Play this playlist when one of following is true
-        // i) Nothing was being played previously
-        // ii) Something was selected to play but is currently paused
-        if let Some((_, false)) | None = self.bottom.playing {
-            self.player.unpause().ok();
-            match self.player.command(
-                "loadfile",
-                [format!("https://www.youtube.com/playlist?list={}", playlist_id).as_str()]
-                    .as_ref(),
-            ) {
-                Ok(_) => {
-                    // clear any previous thing from bottombar
-                    self.bottom.music_duration = Duration::from_secs(0);
-                    self.bottom.music_elapse = Duration::from_secs(0);
+        match self.player.command(
+            "loadfile",
+            [format!("https://www.youtube.com/playlist?list={}", playlist_id).as_str()].as_ref(),
+        ) {
+            Ok(_) => {
+                // send unpause signal
+                self.player.unpause().ok();
 
-                    self.status = "Press ?";
-                    // set currently playing (unpaused) to ture. no need to set real title as it will
-                    // be done by refresh_mpv_status() later on
-                    self.bottom.playing = Some((String::new(), true));
-                }
-                Err(_) => self.status = "Playback error..",
+                // clear any previous thing from bottombar
+                self.bottom.music_duration = Duration::from_secs(0);
+                self.bottom.music_elapse = Duration::from_secs(0);
+
+                self.status = "Playing..";
+                // set currently playing (unpaused) to ture. no need to set real title as it will
+                // be done by refresh_mpv_status() later on
+                self.bottom.playing = Some((String::new(), true));
             }
+            Err(_) => self.status = "Playback error..",
         }
     }
 

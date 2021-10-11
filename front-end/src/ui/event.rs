@@ -447,7 +447,20 @@ pub async fn event_sender(
         });
     };
 
-    let handle_enter = || {
+    let select_playlist = |play: bool| {
+        let mut state = state_original.lock().unwrap();
+        if let Some(selected_index) = state.playlistbar.1.selected() {
+            let playlist_id = state.playlistbar.0[selected_index].id.clone();
+            if play {
+                state.activate_playlist(&playlist_id);
+            }
+            state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id);
+            drop_and_call!(state, fill_music_from_playlist, HeadTo::Initial);
+            notifier.notify_all();
+        }
+    };
+
+    let handle_enter = |with_control: bool| {
         let mut state = state_original.lock().unwrap();
         let active_window = state.active.clone();
         match active_window {
@@ -480,15 +493,11 @@ pub async fn event_sender(
                     state.play_music(&music_id);
                 }
             }
-            ui::Window::Playlistbar => {
-                if let Some(selected_index) = state.playlistbar.1.selected() {
-                    let playlist_id = state.playlistbar.0[selected_index].id.clone();
-                    state.activate_playlist(&playlist_id);
-                    state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id);
-                    drop_and_call!(state, fill_music_from_playlist, HeadTo::Initial);
-                    notifier.notify_all();
-                }
-            }
+
+            // When pressed with control only show the content of the playlist in musicbar
+            // when only pressed enter, then play the playlist as well
+            ui::Window::Playlistbar => select_playlist(!with_control),
+
             ui::Window::Artistbar => {
                 if let Some(selected_index) = state.artistbar.1.selected() {
                     let artist_id = state.artistbar.0[selected_index].id.clone();
@@ -525,7 +534,7 @@ pub async fn event_sender(
                             handle_esc();
                         }
                         KeyCode::Enter => {
-                            handle_enter();
+                            handle_enter(is_with_control);
                         }
                         KeyCode::Backspace | KeyCode::Delete => {
                             handle_backspace();
