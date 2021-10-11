@@ -644,13 +644,15 @@ impl ui::State<'_> {
     }
 
     pub fn toggle_pause(&mut self) {
-        if let Some((music_title, is_playing)) = &self.bottom.playing {
+        if let Some((_, ref mut is_playing)) = self.bottom.playing {
             if *is_playing {
+                self.status = "Paused..";
                 self.player.pause().unwrap();
             } else {
+                self.status = "Playing..";
                 self.player.unpause().unwrap();
             }
-            self.bottom.playing = Some((music_title.to_string(), !is_playing));
+            *is_playing = !*is_playing;
         }
     }
 }
