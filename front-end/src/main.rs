@@ -7,8 +7,26 @@ mod ui;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref CONFIG: config::Config =
-        config::ConfigContainer::give_me_config().unwrap().config;
+    pub static ref CONFIG: config::Config = {
+        match config::ConfigContainer::give_me_config() {
+            Some(config_container) => config_container.config,
+
+            None => {
+                let mut response = String::new();
+                eprintln!("Cannot get config file. Use default config? [yes/no]");
+                std::io::stdin().read_line(&mut response).unwrap();
+
+                match response.trim().to_ascii_lowercase().as_str() {
+                    "yes" | "y" | "yeah" | "yep" => config::Config::default(),
+
+                    _ => {
+                        eprintln!("A valid config is required for startup. Exiting..");
+                        std::process::exit(1);
+                    }
+                }
+            }
+        }
+    };
 }
 
 /*
@@ -42,6 +60,8 @@ lazy_static! {
 * can notify other thread when it bring some change in state
 */
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    lazy_static::initialize(&CONFIG);
+
     let state = Arc::new(Mutex::new(ui::State::default()));
     let cvar = Arc::new(Condvar::new());
 
