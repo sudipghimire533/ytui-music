@@ -515,27 +515,27 @@ impl ExtendMpv for libmpv::Mpv {
 
     #[inline(always)]
     fn repeat_playlist(&self) {
-        self.set_property("loop-playlist", "inf").unwrap();
+        self.set_property("loop-playlist", "inf").ok();
     }
 
     fn repeat_nothing(&self) {
-        self.set_property("loop-playlist", "no").unwrap();
-        self.set_property("loop-file", "no").unwrap();
+        self.set_property("loop-playlist", "no").ok();
+        self.set_property("loop-file", "no").ok();
     }
 
     #[inline(always)]
     fn repeat_one(&self) {
-        self.set_property("loop-file", "inf").unwrap();
+        self.set_property("loop-file", "inf").ok();
     }
 
     #[inline(always)]
     fn play_next(&self) {
-        self.playlist_next_weak().unwrap();
+        self.playlist_next_weak().ok();
     }
 
     #[inline(always)]
     fn play_prev(&self) {
-        self.playlist_previous_weak().unwrap();
+        self.playlist_previous_weak().ok();
     }
 }
 
