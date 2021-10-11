@@ -447,6 +447,8 @@ pub async fn event_sender(
         });
     };
 
+    // If play is true it means also play the playlist
+    // if is false then only expand the playlist but do not play it
     let select_playlist = |play: bool| {
         let mut state = state_original.lock().unwrap();
         if let Some(selected_index) = state.playlistbar.1.selected() {
@@ -459,7 +461,7 @@ pub async fn event_sender(
         }
     };
 
-    let handle_enter = |with_control: bool| {
+    let handle_enter = || {
         let mut state = state_original.lock().unwrap();
         let active_window = state.active.clone();
         match active_window {
@@ -495,7 +497,7 @@ pub async fn event_sender(
 
             // When pressed with control only show the content of the playlist in musicbar
             // when only pressed enter, then play the playlist as well
-            ui::Window::Playlistbar => drop_and_call!(state, select_playlist, !with_control),
+            ui::Window::Playlistbar => drop_and_call!(state, select_playlist, true),
 
             ui::Window::Artistbar => {
                 if let Some(selected_index) = state.artistbar.1.selected() {
@@ -516,6 +518,7 @@ pub async fn event_sender(
             match event::read().unwrap() {
                 Event::Key(key) => {
                     let is_with_control = key.modifiers.contains(KeyModifiers::CONTROL);
+
                     match key.code {
                         KeyCode::Down | KeyCode::PageDown => {
                             handle_up_down(HeadTo::Next);
@@ -533,7 +536,7 @@ pub async fn event_sender(
                             handle_esc();
                         }
                         KeyCode::Enter => {
-                            handle_enter(is_with_control);
+                            handle_enter();
                         }
                         KeyCode::Backspace | KeyCode::Delete => {
                             handle_backspace();
@@ -559,6 +562,8 @@ pub async fn event_sender(
                                 seek_backward();
                             } else if ch == CONFIG.shortcut_keys.download {
                                 handle_download().await;
+                            } else if ch == CONFIG.shortcut_keys.view_playlist {
+                                select_playlist(false);
                             } else if ch == CONFIG.shortcut_keys.prev {
                                 if is_with_control {
                                     change_track(HeadTo::Prev);

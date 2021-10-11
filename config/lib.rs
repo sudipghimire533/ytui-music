@@ -67,6 +67,7 @@ pub struct ShortcutsKeys {
     pub backward: char,
     pub suffle: char,
     pub repeat: char,
+    pub view_playlist: char,
 }
 
 impl Default for ShortcutsKeys {
@@ -115,6 +116,9 @@ impl Default for ShortcutsKeys {
             // Repeat on: Play all the items from playlist. If last item ends play first
             // Repeat off: If currenlt playing item ends play same item again. i.e repeat one
             repeat: 'r',
+
+            // This key will expand the content of playlist but do not play it
+            view_playlist: 'v',
         }
     }
 }
