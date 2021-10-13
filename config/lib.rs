@@ -1,3 +1,4 @@
+use rusqlite;
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 use std::fs::File;
@@ -9,6 +10,7 @@ pub mod initilize;
 pub const CONF_DIR_NAME: &str = "ytui_music";
 pub const CONFIG_FILE_NAME: &str = "config.json";
 pub const MPV_OPTION_FILE_NAME: &str = "mpv.conf";
+pub const SQLITE_DB_NAME: &str = "storage.db3";
 
 // A stupid as fu#k shit logic to get either true or false.
 // Create instant clock.
@@ -69,6 +71,8 @@ pub struct ShortcutsKeys {
     pub suffle: char,
     pub repeat: char,
     pub view_playlist: char,
+    pub favourates_add: char,
+    pub favourates_remove: char,
 }
 
 impl Default for ShortcutsKeys {
@@ -120,6 +124,16 @@ impl Default for ShortcutsKeys {
 
             // This key will expand the content of playlist but do not play it
             view_playlist: 'v',
+
+            // Add the current selection to the favourates list
+            favourates_add: 'f',
+
+            // Remove the current selection from the favourates lits. Adding and removing from
+            // favourates list are not done by same key because toggeling means first the exsistance of
+            // given selection should be checked in database and then again query another INSERT/REMOVE
+            // statement. However, if sepearte keys are used, only single INSERT/REMOVE query is to be
+            // executed.
+            favourates_remove: 'd',
         }
     }
 }
@@ -394,6 +408,75 @@ impl ConfigContainer {
                 None
             }
         }
+    }
+
+    fn get_db_path() -> Option<path::PathBuf> {
+        let config_dir = Self::get_config_dir()?;
+        let db_path = config_dir.join(SQLITE_DB_NAME);
+
+        Some(db_path)
+    }
+
+    pub fn give_me_storage() -> Option<rusqlite::Connection> {
+        let db_path = Self::get_db_path()?;
+
+        // Version 0.26.0 of rusqlite was compiled with 3.36.0 but the installed runtime in client
+        // may vary. So it is necessary to bypass the version check. However there may be some
+        // differences in between version so it is recommended to install at least version 3.0 or
+        // above for proper execution. This is not yet tested anyway but should be mentioned in
+        // installation instruction.
+        unsafe {
+            rusqlite::bypass_sqlite_version_check();
+        }
+        let connection = match rusqlite::Connection::open(&db_path) {
+            Ok(conn) => conn,
+            Err(err) => {
+                eprintln!(
+                    "Cannot create connection to storage db. Error: {err}",
+                    err = err
+                );
+                return None;
+            }
+        };
+
+        let create_favourates_table = format!(
+            "
+                CREATE TABLE IF NOT EXISTS {tb_music} (
+                    id          TEXT    NOT NULL    PRIMARY KEY,
+                    title       TEXT    NOT NULL,
+                    author      TEXT    NOT NULL,
+                    duration    INT     NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS {tb_playlist} (
+                    id      TEXT    NOT NULL    PRIMARY KEY,
+                    name    TEXT    NOT NULL,
+                    author  TEXT    NOT NULL,
+                    count   INT     NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS {tb_artist} (
+                    id      TEXT    NOT NULL    PRIMARY KEY,
+                    name    TEXT    NOT NULL,
+                    count   INT     NOT NULL
+                );
+           ",
+            tb_music = initilize::TB_FAVOURATES_MUSIC,
+            tb_playlist = initilize::TB_FAVOURATES_PLAYLIST,
+            tb_artist = initilize::TB_FAVOURATES_ARTIST
+        );
+
+        let res = connection.execute_batch(&create_favourates_table);
+
+        if let Err(err) = res {
+            eprintln!(
+                "Cannot initlize required table in newly created database. Error: {err}",
+                err = err
+            );
+            return None;
+        }
+
+        Some(connection)
     }
 
     fn get_config_path() -> Option<path::PathBuf> {

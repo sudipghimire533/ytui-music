@@ -1,5 +1,11 @@
-use lazy_static::lazy_static;
 use super::{Config, ConfigContainer};
+use lazy_static::lazy_static;
+use rusqlite::{self, Connection};
+use std::sync::Mutex;
+
+pub const TB_FAVOURATES_MUSIC: &str = "favourates_music";
+pub const TB_FAVOURATES_PLAYLIST: &str = "favourates_playlist";
+pub const TB_FAVOURATES_ARTIST: &str = "favourates_artist";
 
 lazy_static! {
     pub static ref CONFIG: Config = {
@@ -19,6 +25,15 @@ lazy_static! {
                         std::process::exit(1);
                     }
                 }
+            }
+        }
+    };
+    pub static ref STORAGE: Mutex<Connection> = {
+        match ConfigContainer::give_me_storage() {
+            Some(conn) => Mutex::new(conn),
+            None => {
+                eprintln!("A valid storage is required for startup. Exiting..");
+                std::process::exit(1);
             }
         }
     };

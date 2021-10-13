@@ -4,5 +4,4 @@ members = [
     "front-end",
     "fetcher",
     "config",
-    "storage",
 ]

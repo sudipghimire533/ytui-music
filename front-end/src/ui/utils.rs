@@ -11,7 +11,7 @@ pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
     "Favourates",
     "Search",
 ];
-use crate::CONFIG;
+use config::initilize::{CONFIG, STORAGE, TB_FAVOURATES_MUSIC};
 
 // A helper macro to decode the tuple with three memebers to tui::style::Color::Rgb value
 // enum Example {
@@ -653,6 +653,41 @@ impl ui::State<'_> {
                 self.player.unpause().unwrap();
             }
             *is_playing = !*is_playing;
+        }
+    }
+
+    pub fn add_music_to_favourates(&mut self, music: &fetcher::MusicUnit) {
+        let query = format!(
+            "
+                INSERT INTO 
+                {tb_name} 
+                (id, title, author, duration) 
+                VALUES
+                (:id, :title, :author, :duration)
+            ",
+            tb_name = TB_FAVOURATES_MUSIC
+        );
+
+        let args = [
+            (":id", &music.id),
+            (":title", &music.name),
+            (":author", &music.artist),
+            (
+                ":duration",
+                &Duration::from_string(&music.duration).as_secs().to_string(),
+            ),
+        ];
+
+        let res = STORAGE.lock().unwrap().execute(&query, &args);
+
+        match res {
+            Ok(_) => self.status = "Favourate add..",
+            Err(err) => {
+                eprintln!(
+                    "Error executing add_fav_music query. Error: {err}",
+                    err = err
+                );
+            }
         }
     }
 }

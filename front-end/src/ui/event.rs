@@ -1,5 +1,5 @@
 use crate::ui::{self, utils::ExtendMpv};
-use crate::CONFIG;
+use config::initilize::{CONFIG, STORAGE};
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use std::{
     convert::TryFrom,
@@ -169,6 +169,11 @@ pub async fn event_sender(
 
         // setting active window to None is to quit
         state.active = ui::Window::None;
+        // Also make sure databse is flushed.
+        if let Err(err) = STORAGE.lock().unwrap().cache_flush() {
+            eprintln!("Cannot flush the storage db. Error: {err}", err = err);
+        }
+
         notifier.notify_all();
         true
     };
@@ -513,6 +518,32 @@ pub async fn event_sender(
         }
     };
 
+    let handle_favourates = |add: bool| {
+        let mut state = state_original.lock().unwrap();
+
+        state.status = "Processing..";
+
+        match state.active {
+            ui::Window::Musicbar => {
+                if let Some(selected_index) = state.musicbar.1.selected() {
+                    // Why clone? Used unsafe to bypass borrow as immutable and mutable at same time error.
+                    // yeah. I am sure this is fine (up until now).
+                    let selected_music =
+                        &state.musicbar.0[selected_index] as *const fetcher::MusicUnit;
+                    if add {
+                        state.add_music_to_favourates(unsafe { &*selected_music });
+                    }
+                } else {
+                    state.status = "Nothing selected..";
+                    return;
+                }
+            }
+            _ => {}
+        }
+
+        notifier.notify_all();
+    };
+
     'listener_loop: loop {
         if event::poll(Duration::from_millis(CONFIG.constants.refresh_rate)).unwrap() {
             match event::read().unwrap() {
@@ -564,6 +595,10 @@ pub async fn event_sender(
                                 handle_download().await;
                             } else if ch == CONFIG.shortcut_keys.view_playlist {
                                 select_playlist(false);
+                            } else if ch == CONFIG.shortcut_keys.favourates_add {
+                                handle_favourates(true);
+                            } else if ch == CONFIG.shortcut_keys.favourates_remove {
+                                handle_favourates(false);
                             } else if ch == CONFIG.shortcut_keys.prev {
                                 if is_with_control {
                                     change_track(HeadTo::Prev);
