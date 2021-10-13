@@ -532,10 +532,39 @@ pub async fn event_sender(
                         &state.musicbar.0[selected_index] as *const fetcher::MusicUnit;
                     if add {
                         state.add_music_to_favourates(unsafe { &*selected_music });
+                    } else {
+                        state.remove_music_from_favourates(unsafe { &*selected_music });
                     }
                 } else {
                     state.status = "Nothing selected..";
-                    return;
+                }
+            }
+
+            ui::Window::Playlistbar => {
+                if let Some(selected_index) = state.playlistbar.1.selected() {
+                    let selected_playlist =
+                        &state.playlistbar.0[selected_index] as *const fetcher::PlaylistUnit;
+                    if add {
+                        state.add_playlist_to_favourates(unsafe { &*selected_playlist });
+                    } else {
+                        state.remove_playlist_from_favourates(unsafe { &*selected_playlist });
+                    }
+                } else {
+                    state.status = "Nothing selected..";
+                }
+            }
+
+            ui::Window::Artistbar => {
+                if let Some(selected_index) = state.artistbar.1.selected() {
+                    let selected_artist =
+                        &state.artistbar.0[selected_index] as *const fetcher::ArtistUnit;
+                    if add {
+                        state.add_artist_to_favourates(unsafe { &*selected_artist });
+                    } else {
+                        state.remove_artist_from_favourates(unsafe { &*selected_artist });
+                    }
+                } else {
+                    state.status = "Nothing selected..";
                 }
             }
             _ => {}
@@ -577,6 +606,7 @@ pub async fn event_sender(
                             if state_original.lock().unwrap().active == ui::Window::Searchbar {
                                 handle_search_input(ch);
                             }
+                        
                             // Now as this is not the input, call the shortcuts action if this key
                             // is defined in shortcuts
                             else if ch == CONFIG.shortcut_keys.start_search {

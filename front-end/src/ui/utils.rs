@@ -11,7 +11,9 @@ pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
     "Favourates",
     "Search",
 ];
-use config::initilize::{CONFIG, STORAGE, TB_FAVOURATES_MUSIC};
+use config::initilize::{
+    CONFIG, STORAGE, TB_FAVOURATES_ARTIST, TB_FAVOURATES_MUSIC, TB_FAVOURATES_PLAYLIST,
+};
 
 // A helper macro to decode the tuple with three memebers to tui::style::Color::Rgb value
 // enum Example {
@@ -655,11 +657,124 @@ impl ui::State<'_> {
             *is_playing = !*is_playing;
         }
     }
+}
+
+impl ui::State<'_> {
+    pub fn remove_music_from_favourates(&mut self, music: &fetcher::MusicUnit) {
+        let query = format!(
+            "
+            DELETE FROM
+            {tb_name} as fav_music
+            WHERE
+            fav_music.id = :id
+        ",
+            tb_name = TB_FAVOURATES_MUSIC
+        );
+        let args = [(":id", &music.id)];
+
+        let res = STORAGE.lock().unwrap().execute(&query, &args);
+        match res {
+            Ok(_) => self.status = "Removed..",
+            Err(err) => {
+                eprintln!(
+                    "Cannot remove music {id} from favourates list. Error: {err}",
+                    id = &music.id,
+                    err = err
+                );
+                self.status = "Error..";
+            }
+        }
+    }
+
+    pub fn remove_playlist_from_favourates(&mut self, playlist: &fetcher::PlaylistUnit) {
+        let query = format!(
+            "
+            DELETE FROM
+            {tb_name} as fav_playlist
+            WHERE fav_playlist.id = :id
+        ",
+            tb_name = TB_FAVOURATES_PLAYLIST
+        );
+        let args = [(":id", &playlist.id)];
+
+        let res = STORAGE.lock().unwrap().execute(&query, &args);
+
+        match res {
+            Ok(_) => self.status = "Removed..",
+            Err(err) => {
+                eprintln!(
+                    "Cannot remove playlist {id} from favourates. Error: {err}",
+                    id = &playlist.id,
+                    err = err
+                );
+                self.status = "Error..";
+            }
+        }
+    }
+
+    pub fn remove_artist_from_favourates(&mut self, artist: &fetcher::ArtistUnit) {
+        let query = format!(
+            "
+            DELETE FROM
+            {tb_name} as fav_artist
+            WHERE fav_artist.id = :id
+        ",
+            tb_name = TB_FAVOURATES_ARTIST
+        );
+
+        let args = [(":id", &artist.id)];
+
+        let res = STORAGE.lock().unwrap().execute(&query, &args);
+        match res {
+            Ok(_) => self.status = "Removed..",
+            Err(err) => {
+                eprintln!(
+                    "Cannot remove artist {id} from favourates list. Error {err}",
+                    id = &artist.id,
+                    err = err
+                );
+                self.status = "Error..";
+            }
+        }
+    }
+
+    pub fn add_artist_to_favourates(&mut self, artist: &fetcher::ArtistUnit) {
+        let query = format!(
+            "
+            INSERT OR REPLACE INTO
+            {tb_name}
+            (id, name, count)
+            VALUES
+            (:id, :name, :count)
+        ",
+            tb_name = TB_FAVOURATES_ARTIST
+        );
+
+        let args = [
+            (":id", &artist.id),
+            (":name", &artist.name),
+            (":count", &artist.video_count),
+        ];
+
+        let res = STORAGE.lock().unwrap().execute(&query, &args);
+
+        match res {
+            Ok(_) => self.status = "Added..",
+            Err(err) => {
+                eprintln!(
+                    "Cannot add artist {id} to favourates list. Error: {err}",
+                    id = &artist.id,
+                    err = err
+                );
+                self.status = "Error..";
+            }
+        }
+    }
 
     pub fn add_music_to_favourates(&mut self, music: &fetcher::MusicUnit) {
         let query = format!(
             "
-                INSERT INTO 
+                INSERT OR REPLACE INTO 
                 {tb_name} 
                 (id, title, author, duration) 
                 VALUES
@@ -681,12 +796,46 @@ impl ui::State<'_> {
         let res = STORAGE.lock().unwrap().execute(&query, &args);
 
         match res {
-            Ok(_) => self.status = "Favourate add..",
+            Ok(_) => self.status = "Added..",
             Err(err) => {
                 eprintln!(
-                    "Error executing add_fav_music query. Error: {err}",
+                    "Cannot add music {id} to favourates list. Error: {err}",
+                    id = &music.id,
                     err = err
                 );
+                self.status = "Error..";
+            }
+        }
+    }
+
+    pub fn add_playlist_to_favourates(&mut self, playlist: &fetcher::PlaylistUnit) {
+        let query = format!(
+            "
+            INSERT OR REPLACE INTO {tb_name}
+            (id, name, author, count)
+            VALUES (:id, :name, :author, :count);
+        ",
+            tb_name = TB_FAVOURATES_PLAYLIST
+        );
+
+        let args = [
+            (":id", &playlist.id),
+            (":name", &playlist.name),
+            (":author", &playlist.author),
+            (":count", &playlist.video_count),
+        ];
+
+        let res = STORAGE.lock().unwrap().execute(&query, &args);
+
+        match res {
+            Ok(_) => self.status = "Added..",
+            Err(err) => {
+                eprintln!(
+                    "Cannot added playlist {id} to favourates lits. Error: {err}",
+                    id = &playlist.id,
+                    err = err
+                );
+                self.status = "Error..";
             }
         }
     }

@@ -133,7 +133,7 @@ impl Default for ShortcutsKeys {
             // given selection should be checked in database and then again query another INSERT/REMOVE
             // statement. However, if sepearte keys are used, only single INSERT/REMOVE query is to be
             // executed.
-            favourates_remove: 'd',
+            favourates_remove: 'u',
         }
     }
 }
