@@ -4,7 +4,7 @@ use std::sync::Mutex;
 use std::thread;
 mod communicator;
 mod ui;
-use config::initilize::{CONFIG, STORAGE};
+use config::initilize::INIT;
 
 /*
 * The role of main function is just to spwan two different loop in each thread and again pass
@@ -37,8 +37,7 @@ use config::initilize::{CONFIG, STORAGE};
 * can notify other thread when it bring some change in state
 */
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    lazy_static::initialize(&CONFIG);
-    lazy_static::initialize(&STORAGE);
+    lazy_static::initialize(&INIT);
 
     let state = Arc::new(Mutex::new(ui::State::default()));
     let cvar = Arc::new(Condvar::new());

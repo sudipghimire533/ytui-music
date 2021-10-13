@@ -1,5 +1,6 @@
 use super::{Config, ConfigContainer};
-use lazy_static::lazy_static;
+use lazy_static;
+use lazy_static::lazy_static as compute_static;
 use rusqlite::{self, Connection};
 use std::sync::Mutex;
 
@@ -7,7 +8,7 @@ pub const TB_FAVOURATES_MUSIC: &str = "favourates_music";
 pub const TB_FAVOURATES_PLAYLIST: &str = "favourates_playlist";
 pub const TB_FAVOURATES_ARTIST: &str = "favourates_artist";
 
-lazy_static! {
+compute_static! {
     pub static ref CONFIG: Config = {
         match ConfigContainer::give_me_config() {
             Some(config_container) => config_container.config,
@@ -28,6 +29,7 @@ lazy_static! {
             }
         }
     };
+    
     pub static ref STORAGE: Mutex<Connection> = {
         match ConfigContainer::give_me_storage() {
             Some(conn) => Mutex::new(conn),
@@ -36,5 +38,12 @@ lazy_static! {
                 std::process::exit(1);
             }
         }
+    };
+
+    pub static ref INIT: () = {
+        lazy_static::initialize(&CONFIG);
+        lazy_static::initialize(&STORAGE);
+
+        ();
     };
 }
