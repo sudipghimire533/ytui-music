@@ -1,4 +1,5 @@
 use crate::{Fetcher, ReturnAction};
+use config::initilize::CONFIG;
 use reqwest;
 use std::time::Duration;
 
@@ -8,7 +9,6 @@ const FIELDS: [&str; 3] = [
     "fields=title,playlistId,author,videoCount",
     "fields=author,authorId,videoCount",
 ];
-pub const ITEM_PER_PAGE: usize = 10;
 const FILTER_TYPE: [&str; 3] = ["music", "playlist", "channel"];
 const REQUEST_PER_SERVER: u8 = 10;
 
@@ -34,13 +34,13 @@ impl crate::ExtendDuration for Duration {
 }
 
 impl Fetcher {
-    pub fn new(server_list: &'static [String], user_region: &'static str) -> Self {
+    pub fn new() -> Self {
         super::Fetcher {
             trending_now: None,
             playlist_content: super::PlaylistRes::default(),
             artist_content: super::ArtistRes::default(),
             search_res: super::SearchRes::default(),
-            servers: server_list,
+            servers: &CONFIG.servers.list,
             client: reqwest::ClientBuilder::default()
                 .user_agent(USER_AGENT)
                 .gzip(true)
@@ -48,9 +48,11 @@ impl Fetcher {
                 .unwrap(),
             active_server_index: 0,
             request_sent: 0,
-            region: user_region,
+            region: &CONFIG.constants.region,
+            item_per_page: CONFIG.constants.item_per_list,
         }
     }
+
     pub fn change_server(&mut self) {
         self.active_server_index = (self.active_server_index + 1) % self.servers.len();
     }
@@ -100,12 +102,14 @@ macro_rules! search {
             fields = FIELDS[$filter_index],
             page = $page
         );
-        let lower_limit = $page * ITEM_PER_PAGE;
-        let mut upper_limit = std::cmp::min($store_target.len(), lower_limit + ITEM_PER_PAGE);
+        let lower_limit = $page * $fetcher.item_per_page;
+        let mut upper_limit =
+            std::cmp::min($store_target.len(), lower_limit + $fetcher.item_per_page);
 
         let is_new_query = *$query != $fetcher.search_res.query;
         let is_new_type = $fetcher.search_res.last_fetched != $filter_index;
-        let insufficient_data = upper_limit.checked_sub(lower_limit).unwrap_or(0) < ITEM_PER_PAGE;
+        let insufficient_data =
+            upper_limit.checked_sub(lower_limit).unwrap_or(0) < $fetcher.item_per_page;
 
         $fetcher.search_res.last_fetched = $filter_index;
         if is_new_query || insufficient_data || is_new_type {
@@ -117,7 +121,8 @@ macro_rules! search {
                 Ok(data) => {
                     $fetcher.search_res.query = $query.to_string();
                     $store_target.extend_from_slice(data.as_slice());
-                    upper_limit = std::cmp::min($store_target.len(), lower_limit + ITEM_PER_PAGE);
+                    upper_limit =
+                        std::cmp::min($store_target.len(), lower_limit + $fetcher.item_per_page);
                 }
                 Err(e) => return Err(e),
             }
@@ -173,7 +178,7 @@ impl Fetcher {
         &mut self,
         page: usize,
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
-        let lower_limit = ITEM_PER_PAGE * page;
+        let lower_limit = self.item_per_page * page;
 
         if self.trending_now.is_none() {
             let suffix = format!(
@@ -193,7 +198,7 @@ impl Fetcher {
         }
 
         let trending_now = self.trending_now.as_ref().unwrap();
-        let upper_limit = std::cmp::min(trending_now.len(), lower_limit + ITEM_PER_PAGE);
+        let upper_limit = std::cmp::min(trending_now.len(), lower_limit + self.item_per_page);
 
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
@@ -207,7 +212,7 @@ impl Fetcher {
         playlist_id: &str,
         page: usize,
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
-        let lower_limit = page * ITEM_PER_PAGE;
+        let lower_limit = page * self.item_per_page;
 
         let is_new_id = *playlist_id != self.playlist_content.id;
         if is_new_id {
@@ -231,7 +236,7 @@ impl Fetcher {
 
         let upper_limit = std::cmp::min(
             self.playlist_content.music.len(),
-            lower_limit + ITEM_PER_PAGE,
+            lower_limit + self.item_per_page,
         );
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
@@ -247,7 +252,7 @@ impl Fetcher {
         channel_id: &str,
         page: usize,
     ) -> Result<Vec<super::PlaylistUnit>, ReturnAction> {
-        let lower_limit = page * ITEM_PER_PAGE;
+        let lower_limit = page * self.item_per_page;
 
         let is_new_id = *channel_id != self.artist_content.playlist.0;
         if is_new_id || self.artist_content.playlist.1.is_empty() {
@@ -271,7 +276,7 @@ impl Fetcher {
 
         let upper_limit = std::cmp::min(
             self.artist_content.playlist.1.len(),
-            lower_limit + ITEM_PER_PAGE,
+            lower_limit + self.item_per_page,
         );
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
@@ -287,7 +292,7 @@ impl Fetcher {
         channel_id: &str,
         page: usize,
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
-        let lower_limit = page * ITEM_PER_PAGE;
+        let lower_limit = page * self.item_per_page;
 
         let is_new_id = *channel_id != self.artist_content.music.0;
         if is_new_id || self.artist_content.music.1.is_empty() {
@@ -306,7 +311,7 @@ impl Fetcher {
 
         let upper_limit = std::cmp::min(
             self.artist_content.music.1.len(),
-            lower_limit + ITEM_PER_PAGE,
+            lower_limit + self.item_per_page,
         );
         if lower_limit >= upper_limit {
             Err(ReturnAction::EOR)
@@ -346,15 +351,9 @@ impl Fetcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lazy_static::lazy_static;
 
-    lazy_static! {
-        static ref FETCHER: Vec<String> = vec![String::from("https://ytprivate.com/api/v1/")];
-        static ref REGION: &'static str = "NP";
-    }
     fn get_fetcher_for_test() -> Fetcher {
-        // FIXME: how can I get a static variable for test
-        Fetcher::new(&FETCHER, &REGION)
+        Fetcher::new()
     }
 
     #[tokio::test]

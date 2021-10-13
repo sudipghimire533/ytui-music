@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path;
 use std::time::Duration;
+pub mod initilize;
 
 pub const CONF_DIR_NAME: &str = "ytui_music";
 pub const CONFIG_FILE_NAME: &str = "config.json";
@@ -175,7 +176,7 @@ impl Default for Theme {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Constants {
-    pub item_per_list: u8,
+    pub item_per_list: usize,
     pub server_time_out: u32,
     pub refresh_rate: u64,
     pub seek_forward_secs: u32,

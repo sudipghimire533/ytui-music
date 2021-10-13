@@ -200,6 +200,8 @@ pub struct Fetcher {
     // api version so no problem is expected (till now)
     request_sent: u8,
 
-    // ISO 3166 country code to be passed in invidious region paramater
+    // Just a copy of constants.item_per_list in config file
+    item_per_page: usize,
+    // reference to constants.region in config file
     region: &'static str,
 }
