@@ -134,7 +134,10 @@ pub async fn communicator<'st, 'nt>(
                 ui::PlaylistbarSource::Artist(ref artist_id) => {
                     playlist_content = fetcher.get_playlist_of_channel(artist_id, page).await;
                 }
-                ui::PlaylistbarSource::Favourates | ui::PlaylistbarSource::RecentlyPlayed => {
+                ui::PlaylistbarSource::Favourates => {
+                    playlist_content = fetcher.get_favourates_playlist(page).await;
+                }
+                ui::PlaylistbarSource::RecentlyPlayed => {
                     // TODO
                     playlist_content = Ok(Vec::new());
                 }
@@ -180,7 +183,10 @@ pub async fn communicator<'st, 'nt>(
                 ui::ArtistbarSource::Search(ref term) => {
                     artist_content = fetcher.search_artist(term, page).await;
                 }
-                ui::ArtistbarSource::RecentlyPlayed | ui::ArtistbarSource::Favourates => {
+                ui::ArtistbarSource::Favourates => {
+                    artist_content = fetcher.get_favourates_artist(page).await;
+                }
+                ui::ArtistbarSource::RecentlyPlayed => {
                     // TODO:
                     artist_content = Ok(Vec::new());
                 }
@@ -226,7 +232,10 @@ pub async fn communicator<'st, 'nt>(
                 ui::MusicbarSource::Artist(ref artist_id) => {
                     music_content = fetcher.get_videos_of_channel(artist_id, page).await;
                 }
-                ui::MusicbarSource::Favourates | ui::MusicbarSource::RecentlyPlayed => {
+                ui::MusicbarSource::Favourates => {
+                    music_content = fetcher.get_favourates_music(page).await;
+                }
+                ui::MusicbarSource::RecentlyPlayed => {
                     // TODO: handle each variant with accurate function
                     music_content = Ok(Vec::new());
                 }

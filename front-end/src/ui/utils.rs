@@ -787,10 +787,7 @@ impl ui::State<'_> {
             (":id", &music.id),
             (":title", &music.name),
             (":author", &music.artist),
-            (
-                ":duration",
-                &Duration::from_string(&music.duration).as_secs().to_string(),
-            ),
+            (":duration", &music.duration),
         ];
 
         let res = STORAGE.lock().unwrap().execute(&query, &args);

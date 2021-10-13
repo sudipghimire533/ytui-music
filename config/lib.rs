@@ -439,26 +439,30 @@ impl ConfigContainer {
             }
         };
 
+        // All the types are are decleared as text.
+        // The destination types fetcher::{MusicUnit, Playlistunit, ArtistUnit}
+        // fiels are all decleared in string format. So on retriving with SELECT query
+        // it makes easy to fetch columns without any conversion method
         let create_favourates_table = format!(
             "
                 CREATE TABLE IF NOT EXISTS {tb_music} (
                     id          TEXT    NOT NULL    PRIMARY KEY,
                     title       TEXT    NOT NULL,
                     author      TEXT    NOT NULL,
-                    duration    INT     NOT NULL
+                    duration    TEXT     NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS {tb_playlist} (
                     id      TEXT    NOT NULL    PRIMARY KEY,
                     name    TEXT    NOT NULL,
                     author  TEXT    NOT NULL,
-                    count   INT     NOT NULL
+                    count   TEXT     NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS {tb_artist} (
                     id      TEXT    NOT NULL    PRIMARY KEY,
                     name    TEXT    NOT NULL,
-                    count   INT     NOT NULL
+                    count   TEXT    NOT NULL
                 );
            ",
             tb_music = initilize::TB_FAVOURATES_MUSIC,

@@ -1,5 +1,7 @@
 use crate::{Fetcher, ReturnAction};
-use config::initilize::CONFIG;
+use config::initilize::{
+    CONFIG, STORAGE, TB_FAVOURATES_ARTIST, TB_FAVOURATES_MUSIC, TB_FAVOURATES_PLAYLIST,
+};
 use reqwest;
 use std::time::Duration;
 
@@ -320,6 +322,198 @@ impl Fetcher {
             res.shrink_to_fit();
             Ok(res)
         }
+    }
+
+    pub async fn get_favourates_music(
+        &mut self,
+        page: usize,
+    ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
+        let lower_limit = page * self.item_per_page;
+        let conn = STORAGE.lock().unwrap();
+
+        let query = format!(
+            "
+            SELECT
+            id, title, author, duration
+            FROM {tb_name}
+            LIMIT {from}, {count}
+        ",
+            tb_name = TB_FAVOURATES_MUSIC,
+            from = lower_limit,
+            count = self.item_per_page,
+        );
+
+        let mut stmt = match conn.prepare(&query) {
+            Ok(val) => val,
+            Err(err) => {
+                eprintln!(
+                    "Error preparing select statement for favourates music. Error: {err}",
+                    err = err
+                );
+                return Err(ReturnAction::Failed);
+            }
+        };
+
+        let results = stmt.query_map([], |row| {
+            Ok(super::MusicUnit {
+                id: row.get(0).unwrap_or_default(),
+                name: row.get(1).unwrap_or("SQL_ERROR".into()),
+                artist: row.get(2).unwrap_or("SQL_ERROR".into()),
+                duration: row.get(3).unwrap_or("3:0".into()),
+            })
+        });
+
+        let res = match results {
+            Err(err) => {
+                eprintln!(
+                    "Cannot get results of favourates music. Error: {err}",
+                    err = err
+                );
+                return Err(ReturnAction::Failed);
+            }
+            Ok(results) => {
+                let mut return_res: Vec<super::MusicUnit> = Vec::with_capacity(self.item_per_page);
+                for music in results {
+                    return_res.push(music.unwrap());
+                }
+
+                return_res
+            }
+        };
+
+        if res.is_empty() {
+            return Err(ReturnAction::EOR);
+        }
+
+        Ok(res)
+    }
+
+    pub async fn get_favourates_playlist(
+        &mut self,
+        page: usize,
+    ) -> Result<Vec<super::PlaylistUnit>, ReturnAction> {
+        let lower_limit = page * self.item_per_page;
+        let conn = STORAGE.lock().unwrap();
+
+        let query = format!(
+            "
+            SELECT
+            id, name, author, count
+            FROM {tb_name}
+            LIMIT {from}, {count}
+        ",
+            tb_name = TB_FAVOURATES_PLAYLIST,
+            from = lower_limit,
+            count = self.item_per_page,
+        );
+
+        let mut stmt = match conn.prepare(&query) {
+            Ok(val) => val,
+            Err(err) => {
+                eprintln!(
+                    "Error preparing select statement for favourates playlist. Error: {err}",
+                    err = err
+                );
+                return Err(ReturnAction::Failed);
+            }
+        };
+
+        let results = stmt.query_map([], |row| {
+            Ok(super::PlaylistUnit {
+                id: row.get(0).unwrap_or_default(),
+                name: row.get(1).unwrap_or("SQL_ERROR".into()),
+                author: row.get(2).unwrap_or("SQL_ERROR".into()),
+                video_count: row.get(3).unwrap_or("NaN".into()),
+            })
+        });
+
+        let res = match results {
+            Err(err) => {
+                eprintln!(
+                    "Cannot get results of favourates music. Error: {err}",
+                    err = err
+                );
+                return Err(ReturnAction::Failed);
+            }
+            Ok(results) => {
+                let mut return_res: Vec<super::PlaylistUnit> =
+                    Vec::with_capacity(self.item_per_page);
+                for playlist in results {
+                    return_res.push(playlist.unwrap());
+                }
+
+                return_res
+            }
+        };
+
+        if res.is_empty() {
+            return Err(ReturnAction::EOR);
+        }
+
+        Ok(res)
+    }
+
+    pub async fn get_favourates_artist(
+        &mut self,
+        page: usize,
+    ) -> Result<Vec<super::ArtistUnit>, ReturnAction> {
+        let lower_limit = page * self.item_per_page;
+        let conn = STORAGE.lock().unwrap();
+
+        let query = format!(
+            "
+            SELECT
+            id, name, count
+            FROM {tb_name}
+            LIMIT {from}, {count}
+        ",
+            tb_name = TB_FAVOURATES_ARTIST,
+            from = lower_limit,
+            count = self.item_per_page,
+        );
+
+        let mut stmt = match conn.prepare(&query) {
+            Ok(val) => val,
+            Err(err) => {
+                eprintln!(
+                    "Error preparing select statement for favourates artist. Error: {err}",
+                    err = err
+                );
+                return Err(ReturnAction::Failed);
+            }
+        };
+
+        let results = stmt.query_map([], |row| {
+            Ok(super::ArtistUnit {
+                id: row.get(0).unwrap_or_default(),
+                name: row.get(1).unwrap_or("SQL_ERROR".into()),
+                video_count: row.get(2).unwrap_or("NaN".into()),
+            })
+        });
+
+        let res = match results {
+            Err(err) => {
+                eprintln!(
+                    "Cannot get results of favourates artist. Error: {err}",
+                    err = err
+                );
+                return Err(ReturnAction::Failed);
+            }
+            Ok(results) => {
+                let mut return_res: Vec<super::ArtistUnit> = Vec::with_capacity(self.item_per_page);
+                for artist in results {
+                    return_res.push(artist.unwrap());
+                }
+
+                return_res
+            }
+        };
+
+        if res.is_empty() {
+            return Err(ReturnAction::EOR);
+        }
+
+        Ok(res)
     }
 
     pub async fn search_music(

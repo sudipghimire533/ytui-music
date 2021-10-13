@@ -299,7 +299,28 @@ pub async fn event_sender(
 
     let fill_recents_music = |_direction: HeadTo| {};
 
-    let fill_favourates_music = |_direction: HeadTo| {};
+    let fill_favourates = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+
+        state.filled_source.0 = ui::MusicbarSource::Favourates;
+        state.filled_source.1 = ui::PlaylistbarSource::Favourates;
+        state.filled_source.2 = ui::ArtistbarSource::Favourates;
+        let mut page;
+
+        page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction.clone());
+        state.fetched_page[MIDDLE_MUSIC_INDEX] = Some(page);
+        
+        page = get_page(
+            &state.fetched_page[MIDDLE_PLAYLIST_INDEX],
+            direction.clone(),
+        );
+        state.fetched_page[MIDDLE_PLAYLIST_INDEX] = Some(page);
+        
+        page = get_page(&state.fetched_page[MIDDLE_ARTIST_INDEX], direction);
+        state.fetched_page[MIDDLE_ARTIST_INDEX] = Some(page);
+
+        notifier.notify_all();
+    };
 
     let fill_music_from_playlist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
@@ -482,7 +503,7 @@ pub async fn event_sender(
                         drop_and_call!(state, fill_community_source);
                     }
                     ui::SidebarOption::Favourates => {
-                        drop_and_call!(state, fill_favourates_music, HeadTo::Initial);
+                        drop_and_call!(state, fill_favourates, HeadTo::Initial);
                     }
                     ui::SidebarOption::RecentlyPlayed => {
                         drop_and_call!(state, fill_recents_music, HeadTo::Initial);
@@ -606,7 +627,6 @@ pub async fn event_sender(
                             if state_original.lock().unwrap().active == ui::Window::Searchbar {
                                 handle_search_input(ch);
                             }
-                        
                             // Now as this is not the input, call the shortcuts action if this key
                             // is defined in shortcuts
                             else if ch == CONFIG.shortcut_keys.start_search {
