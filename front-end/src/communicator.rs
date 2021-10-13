@@ -10,8 +10,9 @@ macro_rules! handle_response {
         // return the boolean which is only truw when response is RETRY
         let mut need_retry = false;
         match $response {
-            Ok(data) => {
+            Ok(mut data) => {
                 state.status = "Sucess..";
+                data.shrink_to_fit();
                 state.$target.0 = data;
             }
             Err(e) => {
