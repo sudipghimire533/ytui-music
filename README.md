@@ -1,7 +1,7 @@
 # Ytui-music
 Listen to youtube from terminal with a decent tui
 
-## Why youtube-dl
+## Why ytui-music
 Youtbe have been go-to platform for many users to stream music. But it is well known that youtube tracks your listening activity for feeding ads.
 
 Addition to that one don't always want to open whole browser window just to listen to music because browser takes huge portion of RAM and CPU. Or it is not possible to open a browser window at all like when you are only using cli from ssh or have no GUI at all.
