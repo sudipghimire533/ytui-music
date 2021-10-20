@@ -277,7 +277,6 @@ pub async fn event_sender(
         state.filled_source.0 = ui::MusicbarSource::Search(state.search.1.clone());
         state.filled_source.1 = ui::PlaylistbarSource::Search(state.search.1.clone());
         state.filled_source.2 = ui::ArtistbarSource::Search(state.search.1.clone());
-        state.status = "Searching..";
         notifier.notify_all();
     };
 
@@ -286,7 +285,6 @@ pub async fn event_sender(
         state.fetched_page[MIDDLE_MUSIC_INDEX] =
             Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
         state.filled_source.0 = ui::MusicbarSource::Trending;
-        state.status = "Fetching..";
         notifier.notify_all();
     };
 
@@ -297,28 +295,27 @@ pub async fn event_sender(
         notifier.notify_all();
     };
 
-    let fill_recents_music = |_direction: HeadTo| {};
-
-    let fill_favourates = |direction: HeadTo| {
+    let fill_fav_music = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-
         state.filled_source.0 = ui::MusicbarSource::Favourates;
-        state.filled_source.1 = ui::PlaylistbarSource::Favourates;
-        state.filled_source.2 = ui::ArtistbarSource::Favourates;
-        let mut page;
-
-        page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction.clone());
+        let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
         state.fetched_page[MIDDLE_MUSIC_INDEX] = Some(page);
-        
-        page = get_page(
-            &state.fetched_page[MIDDLE_PLAYLIST_INDEX],
-            direction.clone(),
-        );
-        state.fetched_page[MIDDLE_PLAYLIST_INDEX] = Some(page);
-        
-        page = get_page(&state.fetched_page[MIDDLE_ARTIST_INDEX], direction);
-        state.fetched_page[MIDDLE_ARTIST_INDEX] = Some(page);
+        notifier.notify_all();
+    };
 
+    let fill_fav_playlist = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        state.filled_source.1 = ui::PlaylistbarSource::Favourates;
+        let page = get_page(&state.fetched_page[MIDDLE_PLAYLIST_INDEX], direction);
+        state.fetched_page[MIDDLE_PLAYLIST_INDEX] = Some(page);
+        notifier.notify_all();
+    };
+
+    let fill_fav_artist = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+        state.filled_source.2 = ui::ArtistbarSource::Favourates;
+        let page = get_page(&state.fetched_page[MIDDLE_ARTIST_INDEX], direction);
+        state.fetched_page[MIDDLE_ARTIST_INDEX] = Some(page);
         notifier.notify_all();
     };
 
@@ -328,7 +325,6 @@ pub async fn event_sender(
             state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id.to_string());
             state.fetched_page[MIDDLE_MUSIC_INDEX] =
                 Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
-            state.status = "Fetching playlist..";
             notifier.notify_all();
         }
     };
@@ -339,7 +335,6 @@ pub async fn event_sender(
             state.filled_source.0 = ui::MusicbarSource::Artist(artist_id.to_string());
             state.fetched_page[MIDDLE_MUSIC_INDEX] =
                 Some(get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction));
-            state.status = "Fetching channel..";
             notifier.notify_all();
         }
     };
@@ -352,7 +347,6 @@ pub async fn event_sender(
                 &state.fetched_page[MIDDLE_PLAYLIST_INDEX],
                 direction,
             ));
-            state.status = "Fetching channel..";
             notifier.notify_all();
         }
     };
@@ -502,11 +496,14 @@ pub async fn event_sender(
                     ui::SidebarOption::YoutubeCommunity => {
                         drop_and_call!(state, fill_community_source);
                     }
-                    ui::SidebarOption::Favourates => {
-                        drop_and_call!(state, fill_favourates, HeadTo::Initial);
+                    ui::SidebarOption::Liked => {
+                        drop_and_call!(state, fill_fav_music, HeadTo::Initial);
                     }
-                    ui::SidebarOption::RecentlyPlayed => {
-                        drop_and_call!(state, fill_recents_music, HeadTo::Initial);
+                    ui::SidebarOption::Saved => {
+                        drop_and_call!(state, fill_fav_playlist, HeadTo::Initial);
+                    }
+                    ui::SidebarOption::Following => {
+                        drop_and_call!(state, fill_fav_artist, HeadTo::Initial);
                     }
                     ui::SidebarOption::Search => drop_and_call!(state, activate_search),
                 }

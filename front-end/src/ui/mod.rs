@@ -273,9 +273,10 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
 pub enum SidebarOption {
     Trending = 0,
     YoutubeCommunity = 1,
-    RecentlyPlayed = 2,
-    Favourates = 3,
-    Search = 4,
+    Liked = 2,
+    Saved = 3,
+    Following = 4,
+    Search = 5,
 }
 
 #[derive(PartialEq, Clone)]

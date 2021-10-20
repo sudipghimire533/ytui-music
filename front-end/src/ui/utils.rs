@@ -3,17 +3,17 @@ use fetcher::ExtendDuration;
 use ui::shared_import::*;
 
 const CURRENT_TITLE_LEN: usize = 70;
-pub const SIDEBAR_LIST_COUNT: usize = 5;
+pub const SIDEBAR_LIST_COUNT: usize = 6;
 pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
     "Trending",
     "Youtube Communinty",
-    "Recently Played",
-    "Favourates",
+    "Liked songs",
+    "My playlist",
+    "Following",
     "Search",
 ];
 use config::initilize::{
     CONFIG, STORAGE, TB_FAVOURATES_ARTIST, TB_FAVOURATES_MUSIC, TB_FAVOURATES_PLAYLIST,
-    TB_RECENTS_ARTIST, TB_RECENTS_MUSIC, TB_RECENTS_PLAYLIST,
 };
 
 // A helper macro to decode the tuple with three memebers to tui::style::Color::Rgb value
@@ -832,9 +832,10 @@ impl std::convert::TryFrom<usize> for ui::SidebarOption {
         match value {
             0 => Ok(ui::SidebarOption::Trending),
             1 => Ok(ui::SidebarOption::YoutubeCommunity),
-            2 => Ok(ui::SidebarOption::RecentlyPlayed),
-            3 => Ok(ui::SidebarOption::Favourates),
-            4 => Ok(ui::SidebarOption::Search),
+            2 => Ok(ui::SidebarOption::Liked),
+            3 => Ok(ui::SidebarOption::Saved),
+            4 => Ok(ui::SidebarOption::Following),
+            5 => Ok(ui::SidebarOption::Search),
             _ => Err("No sidebar option found corresponding to this usize"),
         }
     }

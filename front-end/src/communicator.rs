@@ -109,6 +109,9 @@ pub async fn communicator<'st, 'nt>(
             // clear the target so that noone gets confused if it the response from previous or
             // current request
             state.playlistbar.0.clear();
+            state.status = "Fetch playlist..";
+
+            notifier.notify_one();
 
             // condition of if made sure that fetched_page[MIDDLE_PLAYLIST_INDEX] is Some vlaue so
             // unwrapping it is safe.
@@ -153,7 +156,7 @@ pub async fn communicator<'st, 'nt>(
             );
             need_retry[MIDDLE_PLAYLIST_INDEX] = retry;
             state_original.lock().unwrap().active = ui::Window::Playlistbar;
-            notifier.notify_all();
+            notifier.notify_one();
         } else {
             // State is always unlocked in above block and dropped in if block. But when if block
             // condition is not met then the state will never be unlocked so always drop the state.
@@ -174,6 +177,9 @@ pub async fn communicator<'st, 'nt>(
                 && state.fetched_page[MIDDLE_ARTIST_INDEX].is_some())
         {
             state.artistbar.0.clear();
+            state.status = "Fetch artists..";
+            notifier.notify_one();
+
             let page = state.fetched_page[MIDDLE_ARTIST_INDEX].unwrap();
             prev_artistbar_source = state.filled_source.2.clone();
             prev_artist_page = Some(page);
@@ -201,7 +207,7 @@ pub async fn communicator<'st, 'nt>(
             );
             need_retry[MIDDLE_ARTIST_INDEX] = retry;
             state_original.lock().unwrap().active = ui::Window::Artistbar;
-            notifier.notify_all();
+            notifier.notify_one();
         } else {
             std::mem::drop(state);
         }
@@ -214,6 +220,9 @@ pub async fn communicator<'st, 'nt>(
                 && state.fetched_page[MIDDLE_MUSIC_INDEX].is_some())
         {
             state.musicbar.0.clear();
+            state.status = "Fetch music..";
+            notifier.notify_one();
+
             let page = state.fetched_page[MIDDLE_MUSIC_INDEX].unwrap();
             prev_musicbar_source = state.filled_source.0.clone();
             prev_music_page = Some(page);
@@ -246,7 +255,7 @@ pub async fn communicator<'st, 'nt>(
                 handle_response!(music_content, state_original, MIDDLE_MUSIC_INDEX, musicbar);
             need_retry[MIDDLE_MUSIC_INDEX] = retry;
             state_original.lock().unwrap().active = ui::Window::Musicbar;
-            notifier.notify_all();
+            notifier.notify_one();
         } else {
             // If above if block is not executed state lock should however be released
             // so that state can be lock again for following if block
