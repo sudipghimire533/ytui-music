@@ -13,6 +13,7 @@ pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
 ];
 use config::initilize::{
     CONFIG, STORAGE, TB_FAVOURATES_ARTIST, TB_FAVOURATES_MUSIC, TB_FAVOURATES_PLAYLIST,
+    TB_RECENTS_ARTIST, TB_RECENTS_MUSIC, TB_RECENTS_PLAYLIST,
 };
 
 // A helper macro to decode the tuple with three memebers to tui::style::Color::Rgb value
@@ -673,16 +674,10 @@ impl ui::State<'_> {
         let args = [(":id", &music.id)];
 
         let res = STORAGE.lock().unwrap().execute(&query, &args);
-        match res {
-            Ok(_) => self.status = "Removed..",
-            Err(err) => {
-                eprintln!(
-                    "Cannot remove music {id} from favourates list. Error: {err}",
-                    id = &music.id,
-                    err = err
-                );
-                self.status = "Error..";
-            }
+        if res.is_ok() {
+            self.status = "Removed..";
+        } else {
+            self.status = "Err removing..";
         }
     }
 
@@ -698,17 +693,10 @@ impl ui::State<'_> {
         let args = [(":id", &playlist.id)];
 
         let res = STORAGE.lock().unwrap().execute(&query, &args);
-
-        match res {
-            Ok(_) => self.status = "Removed..",
-            Err(err) => {
-                eprintln!(
-                    "Cannot remove playlist {id} from favourates. Error: {err}",
-                    id = &playlist.id,
-                    err = err
-                );
-                self.status = "Error..";
-            }
+        if res.is_ok() {
+            self.status = "Removed..";
+        } else {
+            self.status = "Err removing..";
         }
     }
 
@@ -725,16 +713,10 @@ impl ui::State<'_> {
         let args = [(":id", &artist.id)];
 
         let res = STORAGE.lock().unwrap().execute(&query, &args);
-        match res {
-            Ok(_) => self.status = "Removed..",
-            Err(err) => {
-                eprintln!(
-                    "Cannot remove artist {id} from favourates list. Error {err}",
-                    id = &artist.id,
-                    err = err
-                );
-                self.status = "Error..";
-            }
+        if res.is_ok() {
+            self.status = "Removed..."
+        } else {
+            self.status = "Err removing..";
         }
     }
 
@@ -757,17 +739,10 @@ impl ui::State<'_> {
         ];
 
         let res = STORAGE.lock().unwrap().execute(&query, &args);
-
-        match res {
-            Ok(_) => self.status = "Added..",
-            Err(err) => {
-                eprintln!(
-                    "Cannot add artist {id} to favourates list. Error: {err}",
-                    id = &artist.id,
-                    err = err
-                );
-                self.status = "Error..";
-            }
+        if res.is_ok() {
+            self.status = "Added..";
+        } else {
+            self.status = "Err adding..";
         }
     }
 
@@ -791,17 +766,10 @@ impl ui::State<'_> {
         ];
 
         let res = STORAGE.lock().unwrap().execute(&query, &args);
-
-        match res {
-            Ok(_) => self.status = "Added..",
-            Err(err) => {
-                eprintln!(
-                    "Cannot add music {id} to favourates list. Error: {err}",
-                    id = &music.id,
-                    err = err
-                );
-                self.status = "Error..";
-            }
+        if res.is_ok() {
+            self.status = "Added...";
+        } else {
+            self.status = "Err adding..";
         }
     }
 
@@ -823,17 +791,10 @@ impl ui::State<'_> {
         ];
 
         let res = STORAGE.lock().unwrap().execute(&query, &args);
-
-        match res {
-            Ok(_) => self.status = "Added..",
-            Err(err) => {
-                eprintln!(
-                    "Cannot added playlist {id} to favourates lits. Error: {err}",
-                    id = &playlist.id,
-                    err = err
-                );
-                self.status = "Error..";
-            }
+        if res.is_ok() {
+            self.status = "Added...";
+        } else {
+            self.status = "Err adding..";
         }
     }
 }
