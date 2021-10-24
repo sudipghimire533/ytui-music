@@ -29,7 +29,7 @@ compute_static! {
             }
         }
     };
-    
+
     pub static ref STORAGE: Mutex<Connection> = {
         match ConfigContainer::give_me_storage() {
             Some(conn) => Mutex::new(conn),
@@ -43,7 +43,5 @@ compute_static! {
     pub static ref INIT: () = {
         lazy_static::initialize(&CONFIG);
         lazy_static::initialize(&STORAGE);
-
-        ();
     };
 }

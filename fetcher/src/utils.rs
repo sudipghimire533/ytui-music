@@ -34,8 +34,8 @@ impl crate::ExtendDuration for Duration {
     }
 }
 
-impl Fetcher {
-    pub fn new() -> Self {
+impl Default for Fetcher {
+    fn default() -> Self {
         super::Fetcher {
             trending_now: None,
             playlist_content: super::PlaylistRes::default(),
@@ -48,14 +48,9 @@ impl Fetcher {
                 .build()
                 .unwrap(),
             active_server_index: 0,
-            request_sent: 0,
             region: &CONFIG.constants.region,
             item_per_page: CONFIG.constants.item_per_list,
         }
-    }
-
-    pub fn change_server(&mut self) {
-        self.active_server_index = (self.active_server_index + 1) % self.servers.len();
     }
 }
 
@@ -138,6 +133,10 @@ macro_rules! search {
 }
 
 impl Fetcher {
+    pub fn change_server(&mut self) {
+        self.active_server_index = (self.active_server_index + 1) % self.servers.len();
+    }
+
     // All the request should be send from this function
     async fn send_request<'de, Res>(
         &mut self,
@@ -545,7 +544,7 @@ mod tests {
     use super::*;
 
     fn get_fetcher_for_test() -> Fetcher {
-        Fetcher::new()
+        Fetcher::default()
     }
 
     #[tokio::test]

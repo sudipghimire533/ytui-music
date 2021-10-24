@@ -59,7 +59,7 @@ pub async fn communicator<'st, 'nt>(
     state_original: &'st mut Arc<Mutex<ui::State<'_>>>,
     notifier: &'nt mut Arc<Condvar>,
 ) {
-    let mut fetcher = fetcher::Fetcher::new();
+    let mut fetcher = fetcher::Fetcher::default();
 
     // variables with prev_ suffex are to be compared with respective current variables from state.
     // This is to check weather anything have changed from previous data request from user so that

@@ -191,16 +191,7 @@ pub struct Fetcher {
     // storing the index and hence preventing accidintal out-of-index access
     active_server_index: usize,
 
-    // This is the no of request sent from currently active server. The main purpose of this is to
-    // mind how much request to send to single server. Most of the hosted invidious server deserve to
-    // be stay balanced an I don't want to bombard it with too manu requests. So it is much better to
-    // have much more servers that's why servers field is configurable from config. And then distribute
-    // load between servers. It may be better to use another server after sending about 20-25 web
-    // request to same serevr. Response from all servers are in same format as long as we use same
-    // api version so no problem is expected (till now)
-    request_sent: u8,
-
-    // Just a copy of constants.item_per_list in config file
+    // copy of constants.item_per_list
     item_per_page: usize,
     // reference to constants.region in config file
     region: &'static str,
