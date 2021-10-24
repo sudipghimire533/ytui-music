@@ -7,12 +7,11 @@ use std::time::Duration;
 
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36";
 const FIELDS: [&str; 3] = [
-    "fields=videoId,title,author,lengthSeconds",
-    "fields=title,playlistId,author,videoCount",
-    "fields=author,authorId,videoCount",
+    "videoId,title,author,lengthSeconds",
+    "title,playlistId,author,videoCount",
+    "author,authorId,videoCount",
 ];
 const FILTER_TYPE: [&str; 3] = ["music", "playlist", "channel"];
-const REQUEST_PER_SERVER: u8 = 10;
 
 impl crate::ExtendDuration for Duration {
     fn to_string(self) -> String {
@@ -97,7 +96,7 @@ macro_rules! search {
 
     ("@internal-core", $fetcher: expr, $query: expr, $page: expr, $store_target: expr, $filter_index: expr, $unit_type: ty) => {{
         let suffix = format!(
-            "/search?q={query}&type={s_type}&{region}&page={page}&{fields}",
+            "/search?q={query}&type={s_type}&{region}&page={page}&fields={fields}",
             query = $query,
             s_type = FILTER_TYPE[$filter_index],
             region = $fetcher.region,
@@ -148,17 +147,10 @@ impl Fetcher {
     where
         Res: serde::de::DeserializeOwned,
     {
-        let res = self
-            .client
-            .get(self.servers[self.active_server_index].to_string() + path)
-            .send()
-            .await;
+        self.change_server();
 
-        // Change server time to time.
-        if self.request_sent > REQUEST_PER_SERVER {
-            self.change_server();
-        }
-        self.request_sent += 1;
+        let url = self.servers[self.active_server_index].to_string() + path;
+        let res = self.client.get(url).send().await;
 
         match res {
             Ok(response) => {
@@ -184,7 +176,7 @@ impl Fetcher {
 
         if self.trending_now.is_none() {
             let suffix = format!(
-                "/trending?type=Music&{region}&{music_field}",
+                "/trending?type=Music&region={region}&fields={music_field}",
                 region = self.region,
                 music_field = FIELDS[0]
             );
@@ -220,8 +212,9 @@ impl Fetcher {
         if is_new_id {
             self.playlist_content.id = playlist_id.to_string();
             let suffix = format!(
-                "/playlists/{playlist_id}?fields=videos",
-                playlist_id = playlist_id
+                "/playlists/{playlist_id}?fields=videos({music_field})",
+                playlist_id = playlist_id,
+                music_field = FIELDS[0]
             );
 
             let obj = self
@@ -260,8 +253,9 @@ impl Fetcher {
         if is_new_id || self.artist_content.playlist.1.is_empty() {
             self.artist_content.playlist.0 = channel_id.to_string();
             let suffix = format!(
-                "/channels/{channel_id}/playlists?fields=playlists",
-                channel_id = channel_id
+                "/channels/{channel_id}/playlists?fields=playlists({channel_fields})",
+                channel_id = channel_id,
+                channel_fields = FIELDS[1],
             );
 
             let obj = self
@@ -299,7 +293,11 @@ impl Fetcher {
         let is_new_id = *channel_id != self.artist_content.music.0;
         if is_new_id || self.artist_content.music.1.is_empty() {
             self.artist_content.music.0 = channel_id.to_string();
-            let suffix = format!("/channels/{channel_id}/videos", channel_id = channel_id);
+            let suffix = format!(
+                "/channels/{channel_id}/videos&fields={music_field}",
+                channel_id = channel_id,
+                music_field = FIELDS[0]
+            );
 
             let obj = self.send_request::<Vec<super::MusicUnit>>(&suffix, 1).await;
             match obj {
