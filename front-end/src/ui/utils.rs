@@ -2,7 +2,6 @@ use crate::ui;
 use fetcher::ExtendDuration;
 use ui::shared_import::*;
 
-const CURRENT_TITLE_LEN: usize = 70;
 pub const SIDEBAR_LIST_COUNT: usize = 6;
 pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
     "Trending",
@@ -300,7 +299,7 @@ impl<'parent> ui::BottomLayout {
             .ratio(ratio)
             .gauge_style(Style::default().fg(rgb!(CONFIG.theme.gauge_fill)))
             .label(Span::styled(
-                &content[0..std::cmp::min(content.len(), CURRENT_TITLE_LEN)],
+                content.as_str(),
                 Style::default().fg(rgb!(CONFIG.theme.color_primary)),
             ))
             .block(block)
