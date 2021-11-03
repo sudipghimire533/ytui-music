@@ -299,7 +299,7 @@ impl<'parent> ui::BottomLayout {
             .ratio(ratio)
             .gauge_style(Style::default().fg(rgb!(CONFIG.theme.gauge_fill)))
             .label(Span::styled(
-                content.as_str(),
+                content,
                 Style::default().fg(rgb!(CONFIG.theme.color_primary)),
             ))
             .block(block)
