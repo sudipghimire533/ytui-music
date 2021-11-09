@@ -487,6 +487,8 @@ pub async fn event_sender(
 
         *download_counter.lock().unwrap() += 1;
         let counter_clone = Arc::clone(&download_counter);
+
+        // What the fuck i just did here?
         tokio::task::spawn(async move {
             tokio::time::sleep(Duration::from_secs(1)).await;
             command.status().await.unwrap();
@@ -665,8 +667,6 @@ pub async fn event_sender(
                                 seek_forward();
                             } else if ch == CONFIG.shortcut_keys.backward {
                                 seek_backward();
-                            } else if ch == CONFIG.shortcut_keys.download {
-                                handle_download().await;
                             } else if ch == CONFIG.shortcut_keys.view_playlist {
                                 select_playlist(false);
                             } else if ch == CONFIG.shortcut_keys.favourates_add {
@@ -690,6 +690,8 @@ pub async fn event_sender(
                                 if quit(force_quit) {
                                     break 'listener_loop;
                                 }
+                            } else if ch == CONFIG.shortcut_keys.download && is_with_control {
+                                handle_download().await;
                             }
                         }
                         _ => {}

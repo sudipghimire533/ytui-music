@@ -94,7 +94,7 @@ impl Default for ShortcutsKeys {
             // This will move the cursor to the search box
             start_search: '/',
 
-            // This will downlaod the item currently focused from playlistbar/musicbar.
+            // This key + CTRL will downlaod the item currently focused from playlistbar/musicbar.
             // if an item from musicbar is focused, download that music
             // if an item from playlistbat is focused, download all content from that playlist
             // otherwise do nothing
