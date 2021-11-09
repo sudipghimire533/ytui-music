@@ -488,9 +488,13 @@ pub async fn event_sender(
         *download_counter.lock().unwrap() += 1;
         let counter_clone = Arc::clone(&download_counter);
 
-        // What the fuck i just did here?
+        // Wait for 5 second just to make sure that command has finished executing.
+        // It usually donot take all those 5 seconds
+        // Anyway, download won't finish before 5 seconds
+        // Then just wait for command to finish by waiting for exit status
+        // decrease the download queue count
         tokio::task::spawn(async move {
-            tokio::time::sleep(Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(5)).await;
             command.status().await.unwrap();
             *counter_clone.lock().unwrap() -= 1;
         });
