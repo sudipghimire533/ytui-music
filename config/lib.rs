@@ -196,6 +196,13 @@ pub struct Constants {
     pub seek_forward_secs: u32,
     pub seek_backward_secs: u32,
     pub region: String,
+
+    // When any search query is prefixed by these strings in search query,
+    // it will only show the result music/playlist/artist
+    // prefixed by [0] => only music search and so on
+    // If it is intended to not use this feature then just set these string to some random characters
+    // that you would probably never type in search query.
+    pub search_by_type: [String; 3],
 }
 
 impl Default for Constants {
@@ -207,6 +214,11 @@ impl Default for Constants {
             seek_forward_secs: 10,
             seek_backward_secs: 10,
             region: String::from("NP"),
+            search_by_type: [
+                String::from("music:"),
+                String::from("playlist:"),
+                String::from("artist:"),
+            ],
         }
     }
 }

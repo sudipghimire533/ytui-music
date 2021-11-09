@@ -11,10 +11,6 @@ pub const MIDDLE_MUSIC_INDEX: usize = 0;
 pub const MIDDLE_PLAYLIST_INDEX: usize = 1;
 pub const MIDDLE_ARTIST_INDEX: usize = 2;
 
-const FILTER_MUSIC: &str = "music:";
-const FILTER_PLAYLIST: &str = "playlist:";
-const FILTER_ARTIST: &str = "artist:";
-
 #[derive(Clone)]
 enum HeadTo {
     Initial,
@@ -277,22 +273,31 @@ pub async fn event_sender(
     let start_search = || {
         let mut state = state_original.lock().unwrap();
         let search_term = state.search.0.trim();
-        
+
+        // return instantly if query is empty
         if search_term.is_empty() {
             return;
-        } else if let Some(0) = search_term.find(FILTER_MUSIC) {
-            let search_term = search_term[FILTER_MUSIC.len() - 1..].to_string();
+        }
+        // When prefiexed by the string as defined in config only show the specific result type
+        // respectively
+        else if let Some(0) = search_term.find(&CONFIG.constants.search_by_type[0]) {
+            let search_term =
+                search_term[CONFIG.constants.search_by_type[0].len() - 1..].to_string();
             state.fetched_page[0] = Some(0);
             state.filled_source.0 = ui::MusicbarSource::Search(search_term);
-        } else if let Some(0) = search_term.find(FILTER_PLAYLIST) {
-            let search_term = search_term[FILTER_PLAYLIST.len() - 1..].to_string();
+        } else if let Some(0) = search_term.find(&CONFIG.constants.search_by_type[1]) {
+            let search_term =
+                search_term[CONFIG.constants.search_by_type[1].len() - 1..].to_string();
             state.fetched_page[1] = Some(0);
             state.filled_source.1 = ui::PlaylistbarSource::Search(search_term);
-        } else if let Some(0) = search_term.find(FILTER_ARTIST) {
-            let search_term = search_term[FILTER_ARTIST.len() - 1..].to_string();
+        } else if let Some(0) = search_term.find(&CONFIG.constants.search_by_type[2]) {
+            let search_term =
+                search_term[&CONFIG.constants.search_by_type[2].len() - 1..].to_string();
             state.fetched_page[2] = Some(0);
             state.filled_source.2 = ui::ArtistbarSource::Search(search_term);
-        } else {
+        }
+        // If nothing of the prefix is defined then search for all type
+        else {
             let search_term = search_term.to_string();
             state.fetched_page = [Some(0); 3];
             state.filled_source.0 = ui::MusicbarSource::Search(search_term.clone());
