@@ -524,7 +524,7 @@ pub async fn event_sender(
                 state.activate_playlist(&playlist_id);
             } else {
                 let message = format!(
-                    "Playlist url: https://youtu.be.com/playlist?list={}",
+                    "Playlist url: https://youtu.be/playlist?list={}",
                     playlist_id
                 );
                 state.active = ui::Window::Popup("Info!", message);

@@ -442,7 +442,7 @@ impl ui::Position {
         let center_x = screen_rect.width / 2;
         let center_y = screen_rect.height / 2;
         let height = screen_rect.height / 3;
-        let width = screen_rect.width / 3;
+        let width = screen_rect.width / 2;
         let popup_pos = Rect {
             x: center_x - (width / 2),
             y: center_y - (height / 2),
