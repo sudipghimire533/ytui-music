@@ -150,6 +150,7 @@ pub struct Position {
     pub artist: Rect,
     pub music_info: Rect,
     pub bottom_icons: Rect,
+    pub popup: Rect,
 }
 
 // This function will:
@@ -240,6 +241,14 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                     BottomLayout::get_icons_set(&state_unlocked),
                     position.bottom_icons,
                 );
+
+                // Sho this popup at last after everything else is drawn.
+                // This makes sure that background is not empty and user can
+                // see some things like progress of music player
+                if let Window::Popup(title, ref content) = state_unlocked.active {
+                    utils::show_pupop_text(screen, [title, &content], &position.popup);
+                    return;
+                }
             })
             .unwrap();
     };
@@ -287,6 +296,7 @@ pub enum Window {
     Playlistbar,
     Artistbar,
     BottomControl,
+    Popup(&'static str, String),
     None,
 }
 

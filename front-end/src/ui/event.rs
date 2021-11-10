@@ -163,7 +163,11 @@ pub async fn event_sender(
         // If it is urgent required to quit the application user should also press ALT key along
         // with CTRL and QUIT key
         if !force_quit && *download_counter.lock().unwrap() > 0 {
-            state.status = "[Progress] Downloading..";
+            state.active = ui::Window::Popup(
+                "Error",
+                "Some download are in progress. Press this shortcut with ALT key to force quit"
+                    .to_string(),
+            );
             return false;
         }
 
@@ -199,7 +203,7 @@ pub async fn event_sender(
     let handle_esc = || {
         let mut state = state_original.lock().unwrap();
         match state.active {
-            ui::Window::Searchbar => {
+            ui::Window::Searchbar | ui::Window::Popup(..) => {
                 state.search.0.clear();
                 drop_and_call!(state, moveto_next_window);
             }
@@ -399,7 +403,7 @@ pub async fn event_sender(
                 // It implied to change the track
                 return drop_and_call!(state, change_track, direction);
             }
-            ui::Window::Searchbar | ui::Window::Sidebar => {
+            ui::Window::Searchbar | ui::Window::Sidebar | ui::Window::Popup(..) => {
                 // If none of above windows are active then nothing to navigate.
                 // Early return instead of initilizing `target_index`
                 return;
@@ -461,19 +465,29 @@ pub async fn event_sender(
 
     let handle_download = || async {
         let mut state = state_original.lock().unwrap();
+
         // TODO: Ask for conformation before downloading
         let mut command = tokio::process::Command::new("youtube-dl");
+        let download_url;
         if let Some(focused_index) = state.musicbar.1.selected() {
             let music_id = &state.musicbar.0[focused_index].id;
-            let music_url = format!("https://www.youtube.com/watch?v={}", music_id);
-            command.arg(music_url);
+            download_url = format!("https://www.youtube.com/watch?v={}", music_id);
         } else if let Some(focused_index) = state.playlistbar.1.selected() {
             let playlist_id = &state.playlistbar.0[focused_index].id;
-            let playlist_url = format!("https://www.youtube.com/playlist?list={}", playlist_id);
-            command.arg(playlist_url);
+            download_url = format!("https://www.youtube.com/playlist?list={}", playlist_id);
         } else {
             return;
         }
+
+        state.status = "Download started..";
+        state.active = ui::Window::Popup(
+            "Downloading...",
+            format!(
+                "Download of {} have an eye on your Music folder",
+                download_url
+            ),
+        );
+        command.arg(download_url);
 
         command
             .stdin(std::process::Stdio::null())
@@ -482,7 +496,7 @@ pub async fn event_sender(
             .args(&["--extract-audio", "--audio-format", &CONFIG.download.format])
             .current_dir(&CONFIG.download.path)
             .kill_on_drop(false);
-        state.status = "Download started..";
+
         std::mem::drop(state);
 
         *download_counter.lock().unwrap() += 1;
@@ -501,16 +515,51 @@ pub async fn event_sender(
     };
 
     // If play is true it means also play the playlist
-    // if is false then only expand the playlist but do not play it
+    // if is false then only expand the playlist and show url but do not play it
     let select_playlist = |play: bool| {
         let mut state = state_original.lock().unwrap();
         if let Some(selected_index) = state.playlistbar.1.selected() {
             let playlist_id = state.playlistbar.0[selected_index].id.clone();
             if play {
                 state.activate_playlist(&playlist_id);
+            } else {
+                let message = format!(
+                    "Playlist url: https://youtu.be.com/playlist?list={}",
+                    playlist_id
+                );
+                state.active = ui::Window::Popup("Info!", message);
             }
             state.filled_source.0 = ui::MusicbarSource::Playlist(playlist_id);
             drop_and_call!(state, fill_music_from_playlist, HeadTo::Initial);
+        }
+    };
+
+    let select_music = |play: bool| {
+        let mut state = state_original.lock().unwrap();
+        if let Some(selected_index) = state.musicbar.1.selected() {
+            let music_id = &state.musicbar.0[selected_index].id;
+            if play {
+                let music_id = music_id.clone();
+                state.play_music(&music_id);
+            } else {
+                let message = format!("Music url: https://youtu.be/{}", music_id);
+                state.active = ui::Window::Popup("Info!", message);
+                notifier.notify_all();
+            }
+        }
+    };
+
+    let handle_view = || {
+        let state = state_original.lock().unwrap();
+        match state.active {
+            ui::Window::Playlistbar => {
+                drop_and_call!(state, select_playlist, false);
+            }
+            ui::Window::Musicbar => {
+                drop_and_call!(state, select_music, false);
+            }
+            ui::Window::Artistbar => {}
+            _ => {}
         }
     };
 
@@ -544,15 +593,11 @@ pub async fn event_sender(
             ui::Window::Searchbar => {
                 drop_and_call!(state, start_search);
             }
-            ui::Window::Musicbar => {
-                if let Some(selected_index) = state.musicbar.1.selected() {
-                    let music_id = state.musicbar.0[selected_index].id.clone();
-                    state.play_music(&music_id);
-                }
-            }
 
-            // When pressed with control only show the content of the playlist in musicbar
-            // when only pressed enter, then play the playlist as well
+            // On enter play the music
+            ui::Window::Musicbar => drop_and_call!(state, select_music, true),
+
+            // On enter selection view the playlist content as well as play it
             ui::Window::Playlistbar => drop_and_call!(state, select_playlist, true),
 
             ui::Window::Artistbar => {
@@ -565,7 +610,7 @@ pub async fn event_sender(
                     fill_playlist_from_artist(HeadTo::Initial);
                 }
             }
-            ui::Window::None | ui::Window::BottomControl => {}
+            ui::Window::None | ui::Window::BottomControl | ui::Window::Popup(..) => {}
         }
     };
 
@@ -671,8 +716,8 @@ pub async fn event_sender(
                                 seek_forward();
                             } else if ch == CONFIG.shortcut_keys.backward {
                                 seek_backward();
-                            } else if ch == CONFIG.shortcut_keys.view_playlist {
-                                select_playlist(false);
+                            } else if ch == CONFIG.shortcut_keys.view {
+                                handle_view();
                             } else if ch == CONFIG.shortcut_keys.favourates_add {
                                 handle_favourates(true);
                             } else if ch == CONFIG.shortcut_keys.favourates_remove {
@@ -689,13 +734,13 @@ pub async fn event_sender(
                                 } else {
                                     handle_nav(HeadTo::Next);
                                 }
+                            } else if ch == CONFIG.shortcut_keys.download && is_with_control {
+                                handle_download().await;
                             } else if ch == CONFIG.shortcut_keys.quit && is_with_control {
                                 let force_quit = key.modifiers.contains(KeyModifiers::ALT);
                                 if quit(force_quit) {
                                     break 'listener_loop;
                                 }
-                            } else if ch == CONFIG.shortcut_keys.download && is_with_control {
-                                handle_download().await;
                             }
                         }
                         _ => {}

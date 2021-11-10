@@ -1,5 +1,6 @@
 use crate::ui;
 use fetcher::ExtendDuration;
+use tui;
 use ui::shared_import::*;
 
 pub const SIDEBAR_LIST_COUNT: usize = 6;
@@ -14,6 +15,21 @@ pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
 use config::initilize::{
     CONFIG, STORAGE, TB_FAVOURATES_ARTIST, TB_FAVOURATES_MUSIC, TB_FAVOURATES_PLAYLIST,
 };
+
+pub fn show_pupop_text<'a, B>(frame: &mut tui::terminal::Frame<B>, text: [&'a str; 2], area: &Rect)
+where
+    B: Backend,
+{
+    let block = Block::active(text[0].to_string());
+    let text = Span::raw(text[1]);
+    let paragraph = Paragraph::new(text)
+        .alignment(Alignment::Center)
+        .wrap(widgets::Wrap { trim: true })
+        .block(block);
+
+    frame.render_widget(widgets::Clear, *area);
+    frame.render_widget(paragraph, *area);
+}
 
 // A helper macro to decode the tuple with three memebers to tui::style::Color::Rgb value
 // enum Example {
@@ -423,6 +439,17 @@ impl ui::Position {
         let middle_section = main_section.middle_section;
         let middle_bottom = middle_section.bottom;
 
+        let center_x = screen_rect.width / 2;
+        let center_y = screen_rect.height / 2;
+        let height = screen_rect.height / 3;
+        let width = screen_rect.width / 3;
+        let popup_pos = Rect {
+            x: center_x - (width / 2),
+            y: center_y - (height / 2),
+            height,
+            width,
+        };
+
         ui::Position {
             search: top_section.layout[0],
             status: top_section.layout[1],
@@ -432,6 +459,7 @@ impl ui::Position {
             artist: middle_bottom.layout[1],
             music_info: bottom_section.layout[0],
             bottom_icons: bottom_section.layout[1],
+            popup: popup_pos,
         }
     }
 }
@@ -805,9 +833,10 @@ impl ui::Window {
             ui::Window::Sidebar => ui::Window::Musicbar,
             ui::Window::Musicbar => ui::Window::Playlistbar,
             ui::Window::Playlistbar => ui::Window::Artistbar,
-            ui::Window::Searchbar | ui::Window::Artistbar | ui::Window::BottomControl => {
-                ui::Window::Sidebar
-            }
+            ui::Window::Searchbar
+            | ui::Window::Artistbar
+            | ui::Window::BottomControl
+            | ui::Window::Popup(..) => ui::Window::Sidebar,
             ui::Window::None => unreachable!(),
         }
     }
@@ -817,9 +846,10 @@ impl ui::Window {
             ui::Window::Artistbar => ui::Window::Playlistbar,
             ui::Window::Playlistbar => ui::Window::Musicbar,
             ui::Window::Musicbar => ui::Window::Sidebar,
-            ui::Window::Searchbar | ui::Window::Sidebar | ui::Window::BottomControl => {
-                ui::Window::Artistbar
-            }
+            ui::Window::Searchbar
+            | ui::Window::Sidebar
+            | ui::Window::BottomControl
+            | ui::Window::Popup(..) => ui::Window::Artistbar,
             ui::Window::None => unreachable!(),
         }
     }

@@ -70,7 +70,7 @@ pub struct ShortcutsKeys {
     pub backward: char,
     pub suffle: char,
     pub repeat: char,
-    pub view_playlist: char,
+    pub view: char,
     pub favourates_add: char,
     pub favourates_remove: char,
 }
@@ -123,7 +123,8 @@ impl Default for ShortcutsKeys {
             repeat: 'r',
 
             // This key will expand the content of playlist but do not play it
-            view_playlist: 'v',
+            // Also will show the selection url
+            view: 'v',
 
             // Add the current selection to the favourates list
             favourates_add: 'f',
