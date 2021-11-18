@@ -2,9 +2,9 @@ use std::sync::Arc;
 use std::sync::Condvar;
 use std::sync::Mutex;
 use std::thread;
+mod cli;
 mod communicator;
 mod ui;
-use config::initilize::INIT;
 
 /*
 * The role of main function is just to spwan two different loop in each thread and again pass
@@ -36,8 +36,26 @@ use config::initilize::INIT;
 * well as presented data. Given state variable is shared via wrapping in condavr so that one thread
 * can notify other thread when it bring some change in state
 */
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    lazy_static::initialize(&INIT);
+    {
+        let opts = cli::Options::create_from_args(std::env::args());
+        match opts {
+            Err(err) => {
+                eprintln!(
+                    "There was an error while prasing cli options.\nError: {err}",
+                    err = err
+                );
+                std::process::exit(1)
+            }
+            Ok(opts) => {
+                let should_continue = opts.evaluate();
+                if !should_continue {
+                    std::process::exit(0)
+                }
+            }
+        }
+    }
 
     let state = Arc::new(Mutex::new(ui::State::default()));
     let cvar = Arc::new(Condvar::new());

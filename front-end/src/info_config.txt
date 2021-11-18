@@ -1,0 +1,66 @@
+Configuration Dir:  - Location: {config_dir}
+Storage db:         - Location {config_dir}/storage.db3
+Config file:        - See below for json file description
+                    - Location: {config_dir}/config.json
+Ytui mpv config:    - Mpv configuration to be applied to ytui local mpv
+                    - Refer to https://mpv.io/manual/master for more information
+                    - Location: {config_dir}/mpv.conf
+
+Config file structure:
+
+---- START JSON FILE ----
+{{
+  "ShortcutKeys": {{ }}, -- For field description see info keys
+  
+  "Colors": {{
+     -- These will be converted to RGB format. Eg; [0,0,0] is black and [0,255,0] is green.
+        All colors are written in same format
+    "border_idle": [
+      255, -- Red color value. Can be range from 0-255.
+      255, -- Green color value
+      255  -- Blue color value
+    ],                      -- Color that is applied in borders of inactive section of ui
+    "border_highlight": [], -- Applies to border of active section
+    "list_idle": [],        -- Applies to list item that is not currenlty focused
+    "list_hilight": [],     -- Applies to list item currently focused
+    "sidebar_list": [],     -- Color for list item in sidebar
+    "block_title": [],      -- Applies to title of section tile appearing in top-left side between border
+    "gauge_fill": [],       -- Applies to the background of status bar indicating duration of music played
+    "color_primary": [],    ---|
+                               |-- Applies to other things where coloes are needed in addition to as defined here
+    "color_secondary": [],  ---|
+    "status_text": []       -- Applied to info text in top-right corner of screen
+  }},
+
+  "Servers": {{
+    "list": []              -- Array of invidious server instances to be used all of same version.
+                               v1 at time of writing
+  }},
+
+  "Constants": {{
+    "refresh_rate": 900,    -- Refresh ui per this many millisecond. Setting this to too low value may
+                               increase performance but also becomes more cpu insentive
+    "item_per_list": 10,    -- Number of items to be shown per page.
+    "region": "NP",         -- ISO country code to pass to use for eg while fetching trending content
+    "search_by_type": [     -- When search query is suffixed by these term. It will only search for respective type
+      "music:",             -- string to prifix to search only music
+      "playlist:",          -- string to prefic to search only playlist
+      "artist:"             -- string to prefix to search only artist
+    ],
+    "server_time_out": 30000, -- Wait until this many millisecond to connect to server
+    "seek_forward_secs": 10,  -- When pressing forward key, seek by this many seconds
+    "seek_backward_secs": 10  -- When pressing backward ket, seek by this many seconds
+  }},
+
+  "MpvOptions": {{
+    "config_path": "some-path" -- Configuration of mpv to be used
+  }},
+
+  "Downloads": {{
+    "path": "some-directory", -- Directory on which to download music/playlist
+    "format": "mp3"           -- Format on which music should be saved
+  }}
+}}
+--- END JSON FILE ---
+
+- When json format is not accurate it will result in hard error

@@ -1,0 +1,54 @@
+Keyboard shortcuts:
+Below mentioned keys are based on your current configuration.
+
+{toggle}: - Pause/Unpuse playback
+            Indicated by 'P' (playing) or '_'(paused) in bottom statusbar
+            keyName: {{toggle_play}} & Default:  <SPACE>
+
+{next}:     - On area where music/playlist/artist content are showm,
+            This key will fetch next page of required result.
+            - When on focused to bottom status this key will play next track.
+            - With <CTRL> key play next music even when not in status bar
+            keyName: {{next}} & Default: n
+
+{prev}:     - Same as {next} but fetch/play previous page/music
+            keyName: {{prev}} & Default: p
+
+{quit}:     - With <CTRL> quit the application
+            keyName: {{quit}} & Default: <CTRL>+c
+
+{download}: - With <CTRL> start the currently focused music/playlist
+            Does nothing in other area excpet music section and playlist section
+            keyName: {{download}} & Default: d
+
+{forward}:  - Seek forward the current playing music
+            keyName: {{forward}} & Default: >
+
+{backward}: - Same ad {{forward}} but seek backward
+            keyName: {{backward}} & Default: <
+
+{suffle}:   - Togge suffle/unsuffle.
+            Indicated by 'S'(suffle mode on) or '_'(suffle mode off)
+            keyName: {{suffle}} & Default: s
+
+{repeat}:   - Toggle repeat/unrepeat
+            Indicated by 'R'(repeat whole playlist) or 'r'(repeat single track)
+            keyName: {{repeat}} & Default: r
+
+{view}:     - View minimal info of currently focused music/playlist/artist
+            keyName: {{view}} & Default: v
+
+{search}:   - Move focus on search bar
+            keyName: {{start_search}} & Default: \
+
+{f_add}:    - Add current selection to favourates
+            keyName: {{favourates_add}} & Default: f
+
+{f_rm}:     - Remove current selection if exists from favourates
+            keyName: {{f_rm}} & Default: u
+
+- <ENTER> key will always select the currect focused icon if appropriate
+- All the keys can be changed in your config file in ShortcutKeys field with respective keyName field
+- All keys must be single character key
+- For special characters like '#', '>' etc <SHIFT> key should be pressed in addition.
+Same rule apply when specified uppercase key like 'P', 'Q', 'A' etc

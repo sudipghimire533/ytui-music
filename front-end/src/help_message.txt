@@ -1,0 +1,29 @@
+Usage: ytui_music sub-command <[arguments]>
+Possible sub commands:
+
+help:    : Show this help message.
+           Arguments: NONE
+
+update:  : Update the ytui-music binary to latest version.
+           This will override the current executable so it may require root/admin permission
+           depending on current installation path.
+           Arguments: NONE
+
+delete:  : Delete configuration/storage file
+           Arguments:
+           config: Delete configuation file. This is located in <config-dir>/.ytui-music/config.json.
+                Run info config-location for exact location
+                On next run you will be asked weather to generate default config.
+           db: Delete the database storage. This will delete your save data like favourates music.
+
+info:    : Get the information about passed argument.
+           Arguments:
+           - version: Show version of currently installed ytui-music binary.
+           - shortcuts: Show the current shortcut keys with their action.
+           - keys: Same as shortcuts
+           - config: Show information about configuration directory and file
+           - ytui: Show additional information about this software.
+           - about: same as ytui
+
+run:     : Run ytui-music.
+           Arguments: NONE
