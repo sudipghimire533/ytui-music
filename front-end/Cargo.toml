@@ -2,6 +2,7 @@
 name = "ytui_music"
 version = "0.1.0"
 edition = "2021"
+authors = ["Sudip Ghimire <sudipghimire533@gmail.com>"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
