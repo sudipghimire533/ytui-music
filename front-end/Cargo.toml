@@ -1,6 +1,6 @@
 [package]
 name = "ytui_music"
-version = "0.1.0"
+version = "1.0.0-beta"
 edition = "2021"
 authors = ["Sudip Ghimire <sudipghimire533@gmail.com>"]
 

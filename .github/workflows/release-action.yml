@@ -1,4 +1,4 @@
-name: Release ytui-music v1.0.0-alpha
+name: Release ytui-music v1.0.0-beta
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - 'CONTRIBUTING.md'
       - 'LICENSE.txt'
     branches:
-      - main
+      - latest
 
 jobs:
   build-linux:
@@ -26,7 +26,9 @@ jobs:
           override: true
 
       - name: Install dependencies
-        run: sudo apt update && sudo apt install libmpv-dev
+        run: |
+              sudo apt update &&
+              sudo apt install libmpv-dev
 
       - name: Build
         run: |
@@ -38,10 +40,13 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          tag_name: 'v1.0.0-beta'
           files: |
             target/release/ytui_music-linux-amd64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
 
   build-win:
     runs-on: windows-latest
@@ -64,15 +69,20 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --all --release && for /r %i in (*) do @echo %~ni
+        run: |
+              cargo build --all --release &&
+              for /r %i in (*) do @echo %~ni
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          tag_name: 'v1.0.0-alpha'
           files: target/release/ytui_music-windowns-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
 
   build-mac:
     runs-on: macos-latest
@@ -80,9 +90,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
-      - name: Do not need to run everything in testing phase
-        run: cancel now instead later
 
       - name: Install latest rust toolchain
         uses: actions-rs/toolchain@v1
@@ -93,8 +100,7 @@ jobs:
           override: true
 
       - name: Install dependencies
-        run: |
-              brew install mpv
+        run: brew install mpv
 
       - name: Build for mac
         run: |
@@ -106,6 +112,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          tag_name: 'v1.0.0-beta'
           files: |
             target/release/ytui_music-macos
         env:
