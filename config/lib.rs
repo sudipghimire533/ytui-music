@@ -274,7 +274,7 @@ pub struct MpvOptions {
 impl Default for MpvOptions {
     fn default() -> Self {
         MpvOptions {
-            config_path: ConfigContainer::get_preferences_dir()
+            config_path: ConfigContainer::get_config_dir()
                 .unwrap()
                 .as_path()
                 .to_string_lossy()
@@ -397,6 +397,13 @@ impl ConfigContainer {
     }
 
     pub fn get_config_dir() -> Option<path::PathBuf> {
+        // If $YTUI_MUSIC_CONFIG_DIR env is set. Use it
+        if let Ok(val) = std::env::var("YTUI_MUSIC_CONFIG_DIR") {
+            eprintln!("YTUI_MUSIC_CONFIG_DIR environment variable is set. Using it...");
+            let config_dir = path::PathBuf::from(val);
+            return Some(config_dir);
+        }
+
         match dirs::preference_dir() {
             Some(mut config_dir) => {
                 config_dir = config_dir.join(CONF_DIR_NAME);
