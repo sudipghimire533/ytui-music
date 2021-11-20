@@ -18,12 +18,12 @@ delete:  : Delete configuration/storage file
 
 info:    : Get the information about passed argument.
            Arguments:
-           - version: Show version of currently installed ytui-music binary.
+           - version:   Show version of currently installed ytui-music binary.
            - shortcuts: Show the current shortcut keys with their action.
-           - keys: Same as shortcuts
-           - config: Show information about configuration directory and file
-           - ytui: Show additional information about this software.
-           - about: same as ytui
+           - keys:      Same as shortcuts
+           - config:    Show information about configuration directory and file
+           - ytui:      Show additional information about this software.
+           - about:     Same as ytui
 
 run:     : Run ytui-music.
            Arguments: NONE
