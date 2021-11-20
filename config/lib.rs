@@ -274,7 +274,7 @@ pub struct MpvOptions {
 impl Default for MpvOptions {
     fn default() -> Self {
         MpvOptions {
-            config_path: ConfigContainer::get_config_dir()
+            config_path: ConfigContainer::get_preferences_dir()
                 .unwrap()
                 .as_path()
                 .to_string_lossy()
