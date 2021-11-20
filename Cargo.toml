@@ -1,7 +1,12 @@
 [workspace]
-
 members = [
     "front-end",
     "fetcher",
     "config",
 ]
+
+[profile.release]
+lto = true
+panic = 'abort'
+incremental = false
+codegen-units = 8
