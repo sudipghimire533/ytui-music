@@ -1,0 +1,112 @@
+name: Release ytui-music v1.0.0-alpha
+
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+      - 'CONTRIBUTING.md'
+      - 'LICENSE.txt'
+    branches:
+      - main
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install libmpv-dev
+
+      - name: Build
+        run: |
+              cargo build --all --release &&
+              strip target/release/ytui_music &&
+              mv target/release/ytui_music target/release/ytui_music-linux-amd64
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            target/release/ytui_music-linux-amd64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-win:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Windows build is failing due to mpv.lib not foudn wrror
+        run: fail now instead later
+
+      - name: Install depencencies
+        run: choco install mpv
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Build
+        run: cargo build --all --release && for /r %i in (*) do @echo %~ni
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: target/release/ytui_music-windowns-amd64.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Do not need to run everything in testing phase
+        run: cancel now instead later
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-apple-darwin
+          default: true
+          override: true
+
+      - name: Install dependencies
+        run: |
+              brew install mpv
+
+      - name: Build for mac
+        run: |
+              cargo build --all --release &&
+              strip target/release/ytui_music &&
+              mv target/release/ytui_music target/release/ytui_music-macos
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            target/release/ytui_music-macos
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
