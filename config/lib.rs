@@ -355,6 +355,16 @@ impl ConfigContainer {
             }
         };
 
+        // Check if download path is directory and also checks if it is readable
+        let download_dir = std::path::Path::new(&config.download.path);
+        if !download_dir.exists() || !download_dir.is_dir() {
+            eprintln!("Error in config file: Download directory must be pointing to the existing directory path..");
+            eprintln!(
+                "Note: Directory {} does not exists or cannot be accessed.",
+                download_dir.to_string_lossy()
+            );
+        }
+
         // Most of invidious server do not expect this much of api calls.
         // So be sure we dont kill a single server instead distribute the load.
         // Here, it is achived by rearrenging the server list in random order
