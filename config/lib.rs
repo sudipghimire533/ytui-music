@@ -355,14 +355,55 @@ impl ConfigContainer {
             }
         };
 
-        // Check if download path is directory and also checks if it is readable
-        let download_dir = std::path::Path::new(&config.download.path);
-        if !download_dir.exists() || !download_dir.is_dir() {
-            eprintln!("Error in config file: Download directory must be pointing to the existing directory path..");
+        // @dir: a path string
+        // @returns: An option returning None is the path does not exists or path is not dir or
+        //          A pathbuf that points to the real direcotry(after reading symbolinc link)
+        let validate_dir = |dir: &str| -> Option<path::PathBuf> {
+            let mut dir_path = path::PathBuf::from(dir);
+            if let Ok(pth) = dir_path.read_link() {
+                dir_path = pth
+            }
+
+            if !dir_path.is_dir() {
+                None
+            } else {
+                Some(dir_path.to_path_buf())
+            }
+        };
+
+        // Validate mpv config path dir
+        // Any error on unable to locate mpv dir or file should be hard error
+        if let Some(new_path) = validate_dir(&config.mpv.config_path) {
+            let mut mpv_config = new_path.join(MPV_OPTION_FILE_NAME);
+            if let Ok(pth) = mpv_config.read_link() {
+                mpv_config = pth;
+            }
+
+            if !mpv_config.is_file() {
+                eprintln!("Config Error: Mpv config path defined in `MpvOptions{{ config_path }}` should point to valid file path");
+                return None;
+            }
+            config.mpv.config_path = mpv_config.to_string_lossy().to_string();
+        } else {
             eprintln!(
-                "Note: Directory {} does not exists or cannot be accessed.",
-                download_dir.to_string_lossy()
+                "The directory directory defined in config to locate mpv option cannot be found"
             );
+            eprintln!(
+                "Note: `config_path` must be a path to directory where mpv.conf file is located"
+            );
+            return None;
+        }
+
+        // Check and update the download directory
+        // If dir is not valid, program should continue as it not hard error
+        if let Some(dow_path) = validate_dir(&config.download.path) {
+            config.download.path = dow_path.to_string_lossy().to_string();
+        } else {
+            eprintln!("Music download path as defined in `Downloads{{path}}` must point to valid directory");
+            eprintln!(
+                "On download you may not save the downloaded file or mat crash with some error."
+            );
+            eprintln!("Continue...")
         }
 
         // Most of invidious server do not expect this much of api calls.
