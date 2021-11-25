@@ -307,7 +307,7 @@ impl<'parent> ui::BottomLayout {
             state.bottom.music_elapse.as_secs_f64() / state.bottom.music_duration.as_secs_f64();
         if ratio > 1.0 {
             ratio = 1.0
-        } else if ratio.is_nan() {
+        } else if ratio.is_nan() || ratio < 0.0 {
             ratio = 0.0
         }
 
