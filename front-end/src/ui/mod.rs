@@ -120,7 +120,7 @@ pub struct BottomLayout {
 
 // This is what final ui looks like
 // ----------------------------------------------------------
-// |    Searchbar                           |  Statusbar      |
+// |    Searchbar                           |  Statusbar    |
 // |--------------------------------------------------------|
 // |         |                                              |
 // |         |                                              |
@@ -345,24 +345,46 @@ pub struct PlaybackBehaviour {
 }
 
 pub struct State<'p> {
-    pub status: &'p str,
-    // First is state of the sidebar list itself
-    // And second is the state that is actually active.
-    // which remains same even selected() of ListState is changed.
-    // second memeber of tuple is only changed when user press ENTER on given SidebarOption
     sidebar: ListState,
-    pub musicbar: (Vec<fetcher::MusicUnit>, TableState),
-    pub playlistbar: (Vec<fetcher::PlaylistUnit>, TableState),
-    pub artistbar: (Vec<fetcher::ArtistUnit>, TableState),
-    pub filled_source: (MusicbarSource, PlaylistbarSource, ArtistbarSource),
     bottom: BottomState,
+
+    // String showing the status of player. This present status with single letter.
+    // For example. `P` and `_` are used to indicate the player status of playing and paused.
+    pub status: &'p str,
+
+    // First memeber of tuple is the data being currently rendered in musicbar area and second is
+    // that state of same list which define the hilighed item index.
+    pub musicbar: (Vec<fetcher::MusicUnit>, TableState),
+
+    // Same as musicbar but keeps a list of playlist
+    pub playlistbar: (Vec<fetcher::PlaylistUnit>, TableState),
+
+    // Same as playlistbar but keeps a list of artistbar
+    pub artistbar: (Vec<fetcher::ArtistUnit>, TableState),
+
+    // Defined the source in which the music/playlist/artist area are filled.
+    // These are the values like Search(query) and is primerly needed while fecthing next/prev page of
+    // the list
+    pub filled_source: (MusicbarSource, PlaylistbarSource, ArtistbarSource),
+
     // First string is the actual string being typed on searchbar (to actually render)
     // If (musicbar or playlistbar or artistbar) is filled with search result
     // second memebr is Some(result_of_this_query) (to send to fetcher)
     // second member is the string of searchbar when use pressed ENTER last time in searchbar
     pub search: (String, String),
+
+    // Currently active window. In UI, this windows title is hilighted and keypress are evaluated
+    // depending on active window
     pub active: Window,
+
+    // Currebntly fetched page for music/playlist/artist bar respectivery in index 0,1,2
+    // Initially it is whenever `filled_source` is changed. And is inceremented/decremented by 1 on
+    // next/prev respectively
     pub fetched_page: [Option<usize>; 3],
+
+    // Main handler for mpv player. This isw backed my libmpv library
     pub player: libmpv::Mpv,
+
+    // See documentation for respective struct
     pub playback_behaviour: PlaybackBehaviour,
 }
