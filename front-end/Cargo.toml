@@ -14,3 +14,4 @@ libmpv = "2.0"
 fetcher = { path = "../fetcher" }
 lazy_static = "1.4.0"
 config = { path = "../config" }
+reqwest = { version = "0.11", features = ["json", "gzip"] }
