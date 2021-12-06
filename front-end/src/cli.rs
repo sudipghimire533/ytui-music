@@ -171,16 +171,20 @@ __   ___         _                           _
         let binary_name = format!("ytui_music-{}-{}", os, arch,);
 
         let after_download = |response: reqwest::Response| async move {
-            std::fs::write(
+            let res = std::fs::write(
                 download_path,
                 response
                     .bytes()
                     .await
                     .expect("Couldn't extract bytes from recived binary.."),
-            )
-            .unwrap();
+            );
 
-            return true;
+            if let Err(err) = res {
+                eprintln!("Could not write to destination. Error: {err}", err = err);
+                false
+            } else {
+                true
+            }
         };
 
         tokio::runtime::Builder::new_current_thread()
@@ -194,8 +198,8 @@ __   ___         _                           _
                         eprintln!("Cannot update ytui-music to latest version du to previous error.");
                         eprintln!("To report this problem, you can file this issue in https://github.com/sudipghimire533/ytui-music/issues/");
                     }
-                    Some(ren) => {
-                        let sucess = after_download(ren).await;
+                    Some(res) => {
+                        let sucess = after_download(res).await;
                         if !sucess {
                             eprintln!("Cannot write ytui-music to destination. Update failed..");
                             eprintln!("To report this problem, you can file this issue in https://github.com/sudipghimire533/ytui-music/issues/");
@@ -211,7 +215,7 @@ __   ___         _                           _
         use reqwest::header;
 
         let assest_api_url =
-            format!("https://api.github.com/repos/sudipghimire533/ytui-music/releases/latest");
+            "https://api.github.com/repos/sudipghimire533/ytui-music/releases/latest".to_string();
 
         let mut headers = header::HeaderMap::new();
         headers.insert(
