@@ -5,8 +5,8 @@ on:
     paths-ignore:
       - 'README.md'
       - '.gitignore'
-      - 'CONTRIBUTING.md'
       - 'LICENSE.txt'
+      - 'screenshots/'
     branches:
       - latest
 
