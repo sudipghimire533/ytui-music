@@ -367,7 +367,7 @@ impl ConfigContainer {
             if !dir_path.is_dir() {
                 None
             } else {
-                Some(dir_path.to_path_buf())
+                Some(dir_path)
             }
         };
 

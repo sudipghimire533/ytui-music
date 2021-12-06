@@ -24,9 +24,10 @@ struct ReleaseInfoResponse {
 
 impl Options {
     pub fn create_from_args(mut arguments: std::env::Args) -> Result<Self, &'static str> {
-        let mut result = Options::default();
-
-        result.exec_name = "ytui_music".to_string();
+        let mut result = Options {
+            exec_name: "ytui_music".to_string(),
+            ..Default::default()
+        };
         if let Some(exec_name) = arguments.next() {
             result.exec_name = exec_name;
         }
@@ -64,8 +65,8 @@ __   ___         _                           _
             "help" => self.show_help(),
 
             "delete" => match &self.arguments.first() {
-                Some(ref arg) if *arg == &String::from("config") => self.delete_config(),
-                Some(ref arg) if *arg == &String::from("db") => self.delete_db(),
+                Some(arg) if *arg == &String::from("config") => self.delete_config(),
+                Some(arg) if *arg == &String::from("db") => self.delete_db(),
                 _ => self.show_help(),
             },
 

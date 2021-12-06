@@ -246,8 +246,7 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                 // This makes sure that background is not empty and user can
                 // see some things like progress of music player
                 if let Window::Popup(title, ref content) = state_unlocked.active {
-                    utils::show_pupop_text(screen, [title, &content], &position.popup);
-                    return;
+                    utils::show_pupop_text(screen, [title, content], &position.popup);
                 }
             })
             .unwrap();
