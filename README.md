@@ -1,61 +1,155 @@
 # Ytui-music
-Listen to youtube from terminal with a decent tui
+Listen to music from youtube inside terminal with sleek tui
 
-## Why ytui-music
-Youtube have been go-to platform for many of us to stream music. But it is well known that youtube tracks your listening activity for feeding ads.
+![Ytui-music Search Result](screenshots/search.png)
 
-Addition to that one don't always want to open whole browser window just to listen to music because browser takes huge portion of RAM and CPU. Or it is not possible to open a browser window at all like when you are only using cli from ssh or have no GUI at all.
+## [See more screenshots](#screenshots)
 
-To download anything from youtube you either have to head to some downloader website or fire youtube-dl again. This may be hassale over time
+---
 
-## Benefits
-So, youtube-dl solves exactly those three problem by:
-* Being lightweight
-* Runs on terminal, no need of GUI or browser
-* Download playlist and music with only few press
+# [Installation]
+1) Download latest binary from [release page](https://github.com/sudipghimire533/ytui-music)
 
-You would also love
-* Keyboard driven workflow
-* Simple and easy configuration
-* Decent and configurable look and feel
-* Fully transparent being open source.
-* Adding feature and improvement is always welcome and encouraged by author
+If binary is not available for your platform head on to [build from source]()
 
+2) Give it executable permission and from downloaded directory, in shell:
+```
+ytui_music run
+```
+3) You may need to jump to [Usage Guide](#usage)
 
-## Installing
-1) Install mpv and youtube-dl
-    * mpv: https://mpv.io/installation
-    * youtube-dl: https://ytdl-ord.github.io/youtube-dl/download.html
+---
 
-2) Download latest binary from [Release page](https://github.com/sudipghtimire533/ytui-music/releases/latest)
+## Dependencies
+Ytui-music depends on mpv and youtube-dl. You may refer to the offical [website of mpv](https://mpv.io) and [website of youtube-dl](https://yt-dl.org).
 
-3) You should have following directory already existing in your system
-    * A config root directory where ytui-music can create own directory to store configuration
-        - Linux: `$HOME/.config` or `$XDG_CONFIG_HOME`. Eg: `/home/alice/.config`
-        - MacOs: `$HOME/Library/Application Support`. Eg: `/Users/Alice/Library/Application Support`
-        - Windows: `{FOLDERID_RoamingAppData}`. Eg: C:\Users\Alice\AppData\Roaming
-    * A music directory where to download data. This can later be changed from configuration and required only when you reset or create configuration for first time
-        - Linux: `$HOME/Music` or `$XDG_MUSIC_DIR`. Eg: `/home/alice/Music`
-        - MacOs: `$HOME/Music`. Eg: `/Users/Alice/Music`
-        - Windows: `{FOLDERID_Music}`. Eg: `C:\Users\Alice\Music`
+If you have `choco` for windows or `brew` in mac or one of popular package manager in linux you may do:
 
-4) Start ytui-music
-    - Show help message:
-        `ytui_music help`
+### - Windows (In powershell or cmd)
+```
+choco install mpv youtube-dl
+```
 
-    - Launch:
-        `ytui_music run`
+### - Mac
+```
+brew install mpv youtube-dl
+```
 
-    - Show shortcuts/ default keybindings:
-        `ytui_music info keys`
+### - Debain/ Ubuntu Deriatives
+```
+sudo apt update && sudo apt install youtube-dl libmpv1
+```
+**For other distribution install youtube-dl and mpv package the way you please**
 
-5) Show some love
-Let me know that you actually have it by giving a [star on github](https://github.com/sudipghimire533/ytui-music)
+---
 
-## Building from source
-Refer to [build](CONTRIBUTING.md#building)
+# Before running ytui-music
+Before you start with ytui-music make sure that Following directory exist and have write permission to ytui-music in order to save configuration file
+## Windows
+`C:\Users\<username>\AppData\Roaming` or anv var `{FOLDERID_RoamingAppData}`
 
-## Contributing
-I would be pleased to know that you have interest to contribute something. This could be anything from suggestion, bug report, issue or the improvement. If you have any suggestion, facing problem or anything feel super duper free to open an issue.
+## Mac
+`/Users/<username>/Library/Application Support` or  `$HOME/Library/Application Support`
 
-Also if you would like to contibute code, you may start with [CONTRIBUTING.md](CONTRIBUTING.md)
+## Linux
+`$HOME/.config/` or `/home/<username>/.config` or env var `$XDG_CONFIG_HOME`
+
+---
+
+# Building from Source
+Ytui-music is written entirely in Rust and thus making is dead simple to build from source. All you have to do is download source, install rust and build with cargo.
+
+1) Installing rust. Head to [Rust installation](https://www.rust-lang.org/tools/install). It is basically doing
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+2) Get the source code. You can [download archives]() or git clone
+```
+git clone git@github.com:sudipghimire533/ytui-music
+```
+
+3) `cd` into source root and do:
+```
+cargo build --all --release
+```
+
+4) The compiled binary is located in `target/release/` directory. Copy the `ytui_music` binary and place it somewhere where it is easy to run.
+
+5) Ytui-music is now ready to fire. [Head to usage](#usage)
+
+---
+
+# Usage
+
+ytui-music is single binary so it shouldn't be of any hassale to run. Just make sure you have [installation of dependencies](#dependencies).
+
+### - Running ytui-music
+```
+ytui_music run
+``` 
+### - Showing help message
+```
+ytui_music help
+```
+### - Showing current configured shortcuts
+```
+ytui_music info shortcuts
+```
+### - Showing version information
+```
+ytui_music infor version
+```
+
+## Searching
+1) Press `/` to go to search box
+2) Type
+    - `music:Bartika Eam Rai` to search only for music result for query "Bartika Eam Rai"
+    - `playlist:Soft pop hits` to search only for playlist for query "Soft pop hits"
+    - `artist:Bibash Jk` to search only for artist for query "Bibash Jk"
+    - `Coding music` to search all of playlist, music and artist at once for query "Coding music"
+3) Press `Enter` key
+
+## Navigating
+- Use `Left arrow` or `Backspace` for backward and `Right arrow` or `Tab` key for forward to **move between Sidebar, Musicbar, Playlistbar and Artistbar**
+- Use `Up arrow` or `Down arrow` to move up or down in the list which will **hilight the list item**
+- Press `Enter` key to **select an item**
+
+## Playback control
+- Press `Space` key **to pause/unpause the playback**
+- Press `s` key to **toggle suffle/unsuffle**
+- Press `r` key to **repeat single or all item in playlist**
+- Press `>` for forward and `<` for backward **playback seek**
+- Press `CTRL+n` for next and `CTRL+p` to **change track**
+
+## Downloading
+1) Hilight the item you want to download. Currently downloading of music and playlist is supported.
+2) Press `CTRL+d` to **download the selection**
+
+## Quitting
+- Press `CTRL+c` to **quit ytui-music**
+- If download is ongoing press `CTRL+ALT+C` to force quit
+
+## Adding to favourates
+1) Hilight the item you want to add or remove from favourates
+2) Press `f` to add or `u` to remove from favourates
+3) To see your list
+    - Favourtaes music are shown in `Liked` section in sidebar
+    - Favourates playlist are shown in `My playlist` section in sidebar
+    - Favourtaes artist are shown in `Following` section in sidebar
+
+---
+
+# Screenshots
+This is what ytui-music looks like. It may even look better on yours. ;)
+<details>
+
+<summary> Click to see screenshots</sumary>
+
+![Initial Screen](screenshots/initial-screen.png)
+![Searching Music](screenshots/music-search.png)
+![Search Results](screenshots/search.png)
+![Responsive Ui](screenshots/small-screen.png)
+![Music Info](screenshots/music-info.png)
+![Playing Music](screenshots/playing.png)
+
+</details>
