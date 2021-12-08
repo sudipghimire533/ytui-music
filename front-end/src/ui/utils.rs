@@ -265,9 +265,9 @@ impl<'parent> ui::SideBar {
 
 impl<'parent> ui::BottomLayout {
     pub fn new(parent: Rect) -> Self {
-        // 9 columns to show playback behavious (paused, suffle, repeat) 3 col each
-        // and +2 for border = 11
-        let progressbar_width = parent.width.checked_sub(11).unwrap_or_default();
+        // 13 columns to show playback behavious (paused, suffle, repeat) 3 col each
+        // and +2 for border = 15
+        let progressbar_width = parent.width.checked_sub(15).unwrap_or_default();
         let layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
@@ -323,7 +323,7 @@ impl<'parent> ui::BottomLayout {
 
     pub fn get_icons_set(state: &'parent ui::State) -> Paragraph<'parent> {
         let block = Block::new(String::new());
-        let (paused_status, suffle, repeat);
+        let (paused_status, suffle, repeat, volume);
 
         if let Some((_, false)) = state.bottom.playing {
             // is paused
@@ -344,7 +344,12 @@ impl<'parent> ui::BottomLayout {
             suffle = Span::styled(" _ ", Style::list_idle());
         }
 
-        let paragraph = Paragraph::new(Spans::from(vec![paused_status, suffle, repeat]))
+        volume = Span::styled(
+            state.playback_behaviour.volume.to_string(),
+            Style::list_highlight(),
+        );
+
+        let paragraph = Paragraph::new(Spans::from(vec![paused_status, volume, suffle, repeat]))
             .alignment(Alignment::Center)
             .block(block);
         paragraph
@@ -472,6 +477,9 @@ impl Default for ui::State<'_> {
         // By default repeat the playlist. Set playlist to repeat
         mpv.repeat_playlist();
 
+        // At first have maximum volume
+        mpv.change_volume(100);
+
         let mut sidebar_list_state = ListState::default();
         sidebar_list_state.select(Some(0));
         ui::State {
@@ -497,6 +505,7 @@ impl Default for ui::State<'_> {
             playback_behaviour: ui::PlaybackBehaviour {
                 shuffle: false,
                 repeat: true,
+                volume: 100,
             },
         }
     }
@@ -512,6 +521,8 @@ pub trait ExtendMpv {
     fn cache_for(&self, time: i64);
     fn play_next(&self);
     fn play_prev(&self);
+    fn change_volume(&self, step: i8) -> Option<u8>;
+    fn get_volume(&self) -> Option<f64>;
 }
 
 impl ExtendMpv for libmpv::Mpv {
@@ -541,6 +552,34 @@ impl ExtendMpv for libmpv::Mpv {
     #[inline(always)]
     fn cache_for(&self, time: i64) {
         self.set_property("cache-secs", time).ok();
+    }
+
+    #[inline(always)]
+    fn get_volume(&self) -> Option<f64> {
+        self.get_property("volume").ok()
+    }
+
+    #[inline(always)]
+    fn change_volume(&self, step: i8) -> Option<u8> {
+        let current_vol = self.get_volume();
+        match current_vol {
+            Some(current) => {
+                let mut new_vol: f64 = current + step as f64;
+                if new_vol < 0.00 {
+                    new_vol = 0.0;
+                } else if new_vol > 100.00 {
+                    new_vol = 100.0;
+                }
+
+                let sucess = self.set_property("volume", new_vol).is_ok();
+                if sucess {
+                    Some(new_vol as u8)
+                } else {
+                    None
+                }
+            }
+            None => None,
+        }
     }
 
     #[inline(always)]

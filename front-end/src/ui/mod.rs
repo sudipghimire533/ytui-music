@@ -113,7 +113,7 @@ pub struct MiddleBottom {
 // |        Rect (MusicConroller)       |
 // -------------------------------------
 // TODO: Split this area horzontally where small portion in right half shows the info like
-// suffle, repeat, pause/playing using icon
+// suffle, repeat, pause/playing and volume using icon
 pub struct BottomLayout {
     layout: [Rect; 2],
 }
@@ -341,6 +341,8 @@ pub struct PlaybackBehaviour {
     // play the first music again
     // flase if user wants to repeat the currently playing music over and over again
     repeat: bool,
+    // Current volume level. This is store here instead of fecthing with get_prop everytime
+    volume: u8,
 }
 
 pub struct State<'p> {

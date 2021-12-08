@@ -549,6 +549,29 @@ pub async fn event_sender(
         }
     };
 
+    let change_volume = |direction: HeadTo| {
+        let mut state = state_original.lock().unwrap();
+
+        let increase_by = match direction {
+            HeadTo::Next => CONFIG.constants.volume_step,
+            HeadTo::Prev => CONFIG.constants.volume_step * -1,
+            HeadTo::Initial => 0
+        };
+
+        let res = state.player.change_volume(increase_by);
+
+        match res {
+            Some(vol) => {
+                state.playback_behaviour.volume = vol;
+            }
+            None => {
+                state.status = "Volume error..";
+            }
+        };
+
+        notifier.notify_all();
+    };
+
     let handle_view = || {
         let state = state_original.lock().unwrap();
         match state.active {
@@ -736,6 +759,10 @@ pub async fn event_sender(
                                 }
                             } else if ch == CONFIG.shortcut_keys.download && is_with_control {
                                 handle_download().await;
+                            } else if ch == CONFIG.shortcut_keys.vol_increase {
+                                change_volume(HeadTo::Next);
+                            } else if ch == CONFIG.shortcut_keys.vol_decrease {
+                                change_volume(HeadTo::Prev);
                             } else if ch == CONFIG.shortcut_keys.quit && is_with_control {
                                 let force_quit = key.modifiers.contains(KeyModifiers::ALT);
                                 if quit(force_quit) {
