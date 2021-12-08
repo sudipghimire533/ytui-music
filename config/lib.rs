@@ -73,6 +73,8 @@ pub struct ShortcutsKeys {
     pub view: char,
     pub favourates_add: char,
     pub favourates_remove: char,
+    pub vol_increase: char,
+    pub vol_decrease: char,
 }
 
 impl Default for ShortcutsKeys {
@@ -135,6 +137,12 @@ impl Default for ShortcutsKeys {
             // statement. However, if sepearte keys are used, only single INSERT/REMOVE query is to be
             // executed.
             favourates_remove: 'u',
+
+            // Key to increase the volume of playback
+            vol_increase: '+',
+
+            // Same as vol_increase but decrease the volume
+            vol_decrease: '-',
         }
     }
 }
@@ -198,6 +206,9 @@ pub struct Constants {
     pub seek_backward_secs: u32,
     pub region: String,
 
+    // Amount to increase/decrease by
+    pub volume_step: i8,
+
     // When any search query is prefixed by these strings in search query,
     // it will only show the result music/playlist/artist
     // prefixed by [0] => only music search and so on
@@ -215,6 +226,7 @@ impl Default for Constants {
             seek_forward_secs: 10,
             seek_backward_secs: 10,
             region: String::from("NP"),
+            volume_step: 10,
             search_by_type: [
                 String::from("music:"),
                 String::from("playlist:"),
