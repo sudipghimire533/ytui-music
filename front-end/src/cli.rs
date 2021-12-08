@@ -97,16 +97,18 @@ __   ___         _                           _
             toggle = keys.toggle_play,
             next = keys.next,
             prev = keys.prev,
-            suffle = keys.suffle,
-            repeat = keys.repeat,
+            suf = keys.suffle,
+            rep = keys.repeat,
             f_add = keys.favourates_add,
             f_rm = keys.favourates_remove,
-            search = keys.start_search,
+            srch = keys.start_search,
             view = keys.view,
-            backward = keys.backward,
-            forward = keys.forward,
-            download = keys.download,
-            quit = keys.quit
+            bkwd = keys.backward,
+            frwd = keys.forward,
+            down = keys.download,
+            quit = keys.quit,
+            v_inc = keys.vol_increase,
+            v_dec = keys.vol_decrease,
         );
     }
 

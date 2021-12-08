@@ -39,9 +39,10 @@ Config file structure:
 
   "Constants": {{
     "refresh_rate": 900,    -- Refresh ui per this many millisecond. Setting this to too low value may
-                               increase performance but also becomes more cpu insentive
+                               increase performance but also becomes more cpu intensive
     "item_per_list": 10,    -- Number of items to be shown per page.
     "region": "NP",         -- ISO country code to pass to use for eg while fetching trending content
+    "volume_step": 10       -- Value between 0-100 to increase/decrease volume point in single key stroke
     "search_by_type": [     -- When search query is suffixed by these term. It will only search for respective type
       "music:",             -- string to prifix to search only music
       "playlist:",          -- string to prefic to search only playlist
@@ -53,7 +54,13 @@ Config file structure:
   }},
 
   "MpvOptions": {{
-    "config_path": "some-path" -- Configuration of mpv to be used
+    "config_path": "some-path" -- Configuration directory of mpv to be used
+                                If you want to use same config as you use in other application or in case you
+                                you want to use global mpv config. You may point this path to the directory where
+                                your mpv.conf file is stored.
+                                Tip: If you use any other tool instead of youtube-dl but provide same interface.
+                                    For instance, ytdlp.
+                                    You can specify `youtube-dl` key and point to ytdlp path
   }},
 
   "Downloads": {{
