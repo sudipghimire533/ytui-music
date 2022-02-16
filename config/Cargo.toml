@@ -14,4 +14,4 @@ rusqlite = { version = "0.26", features = ["modern_sqlite"] }
 
 [lib]
 name = "config"
-path = "lib.rs"
+path = "src/lib.rs"
