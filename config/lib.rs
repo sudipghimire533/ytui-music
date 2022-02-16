@@ -11,6 +11,8 @@ pub const CONF_DIR_NAME: &str = "ytui_music";
 pub const CONFIG_FILE_NAME: &str = "config.json";
 pub const MPV_OPTION_FILE_NAME: &str = "mpv.conf";
 pub const SQLITE_DB_NAME: &str = "storage.db3";
+pub const AUDIO_DIR_VAR_KEY: &str = "YTUI_MUSIC_DIR";
+pub const YTUI_CONFIG_DIR_VAR_KEY: &str = "YTUI_CONFIG_DIR";
 
 // A stupid as fu#k shit logic to get either true or false.
 // Create instant clock.
@@ -265,11 +267,30 @@ pub struct Downloads {
 
 impl Default for Downloads {
     fn default() -> Self {
-        let audio_folder = dirs::audio_dir()
-            .expect("Cound not find audio directory")
-            .as_path()
-            .to_string_lossy()
-            .to_string();
+        // Get Audio directory to which music will be downladed to.
+        // This will first prirotise `crate::AUDIO_DIR_VAR_KEY` and move to get from
+        // dirs crate and panic if still can't get required directory
+        let audio_folder = {
+            match std::env::var(AUDIO_DIR_VAR_KEY) {
+                Ok(audio_dir) => audio_dir,
+
+                Err(_) => match dirs::audio_dir() {
+                    Some(audio_dir) => audio_dir
+                        .to_str()
+                        .expect("While reading audio_dir. Non-utf8 character is not supported")
+                        .to_string(),
+
+                    None => {
+                        eprintln!(
+                            "Ytui was unable to find the audio directory.\
+                            You can try re-run by setting {} variable or downloading the template config file.",
+                            AUDIO_DIR_VAR_KEY
+                        );
+                        std::process::exit(1);
+                    }
+                },
+            }
+        };
 
         Downloads {
             path: audio_folder,
@@ -467,30 +488,26 @@ impl ConfigContainer {
             return Some(config_dir);
         }
 
-        match dirs::preference_dir() {
-            Some(mut config_dir) => {
-                config_dir = config_dir.join(CONF_DIR_NAME);
+        let config_dir = {
+            if let Ok(config_dir) = std::env::var(YTUI_CONFIG_DIR_VAR_KEY) {
+                path::PathBuf::from(config_dir)
+            } else {
+                if let Some(mut config_dir) = dirs::preference_dir() {
+                    config_dir = config_dir.join(CONF_DIR_NAME);
+                    config_dir
+                } else {
+                    eprintln!("Cannot get you configuration directory to where to config of Ytui will be stored.");
 
-                match std::fs::DirBuilder::new()
-                    .recursive(true)
-                    .create(&config_dir)
-                {
-                    Ok(_) => Some(config_dir),
-                    Err(err) => {
-                        eprintln!(
-                            "Cannot create app folder in your config folder as {path}. Error: {err}",
-                            path = &config_dir.as_path().to_string_lossy(),
-                            err = err
-                        );
-                        None
-                    }
+                    return None;
                 }
             }
-            None => {
-                eprintln!("Cannot get your os user config directory..");
-                None
-            }
-        }
+        };
+
+        std::fs::DirBuilder::new()
+            .recursive(true) // create parent directory as needed
+            .create(&config_dir) // Create if directory do not already exists
+            .map(|_| config_dir) // put directory value inside Ok
+            .ok() // convert to Option
     }
 
     fn get_db_path() -> Option<path::PathBuf> {
