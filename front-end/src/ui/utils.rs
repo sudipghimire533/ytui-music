@@ -235,11 +235,27 @@ impl<'parent> ui::MiddleBottom {
 
 impl<'parent> ui::SideBar {
     pub fn new(parent: Rect) -> Self {
+        // ---------------
+        // | Vol: 50
+        // | <playing | paused>
+        // | R-1
+        // | S-1
+        // ----------------
+        // Total height: 6
+        let status_height: u16 = 6;
+        let list_height = parent.height.checked_sub(status_height).unwrap_or_default();
+
         let layout = Layout::default()
-            .constraints([Constraint::Percentage(100)])
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(list_height),
+                Constraint::Length(status_height),
+            ])
             .split(parent);
 
-        ui::SideBar { layout: layout[0] }
+        ui::SideBar {
+            layout: [layout[0], layout[1]],
+        }
     }
 
     pub fn get_shortcuts(state: &ui::State) -> List<'parent> {
@@ -265,20 +281,12 @@ impl<'parent> ui::SideBar {
 
 impl<'parent> ui::BottomLayout {
     pub fn new(parent: Rect) -> Self {
-        // 13 columns to show playback behavious (paused, suffle, repeat) 3 col each
-        // and +2 for border = 15
-        let progressbar_width = parent.width.checked_sub(15).unwrap_or_default();
         let layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Length(progressbar_width),
-                Constraint::Length(11),
-            ])
+            .constraints([Constraint::Percentage(100)])
             .split(parent);
 
-        ui::BottomLayout {
-            layout: [layout[0], layout[1]],
-        }
+        ui::BottomLayout { layout: layout[0] }
     }
 
     pub fn get_status_bar(state: &'parent ui::State) -> Gauge<'parent> {
@@ -458,12 +466,12 @@ impl ui::Position {
         ui::Position {
             search: top_section.layout[0],
             status: top_section.layout[1],
-            shortcut: sidebar.layout,
+            shortcut: sidebar.layout[0],
             music: middle_section.layout,
             playlist: middle_bottom.layout[0],
             artist: middle_bottom.layout[1],
-            music_info: bottom_section.layout[0],
-            bottom_icons: bottom_section.layout[1],
+            music_info: bottom_section.layout,
+            bottom_icons: sidebar.layout[1],
             popup: popup_pos,
         }
     }

@@ -76,7 +76,7 @@ pub struct MainLayout {
 // TODO: Instead of having seperate struct to hold SideBar Rect define Rect directly in MainLayout
 // So that this struct is removed and type of `MainLayout::sidebar` is Rect
 pub struct SideBar {
-    layout: Rect,
+    layout: [Rect; 2],
 }
 
 // --------------------------------------
@@ -115,7 +115,7 @@ pub struct MiddleBottom {
 // TODO: Split this area horzontally where small portion in right half shows the info like
 // suffle, repeat, pause/playing and volume using icon
 pub struct BottomLayout {
-    layout: [Rect; 2],
+    layout: Rect,
 }
 
 // This is what final ui looks like
