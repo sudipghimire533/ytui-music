@@ -1,5 +1,6 @@
 use crate::ui;
 use fetcher::ExtendDuration;
+use std::borrow::Cow;
 use tui;
 use ui::shared_import::*;
 
@@ -329,38 +330,51 @@ impl<'parent> ui::BottomLayout {
             .block(block)
     }
 
+    // Desired layout:
+    // | Vol: <volume_level>
+    // | suffle | <strikethrough>suffle<strikethrough>
+    // | (no-)repeat
+    // | playing | paused (blinked)
     pub fn get_icons_set(state: &'parent ui::State) -> Paragraph<'parent> {
-        let block = Block::new(String::new());
-        let (paused_status, suffle, repeat, volume);
+        let block = Block::active(String::new());
 
+        let mut paused_status = Span::styled("playing", Style::list_highlight());
         if let Some((_, false)) = state.bottom.playing {
             // is paused
-            paused_status = Span::styled(" _ ", Style::list_idle());
-        } else {
-            paused_status = Span::styled(" P ", Style::list_highlight());
+            paused_status = Span::styled(
+                "paused",
+                Style::list_idle().add_modifier(Modifier::SLOW_BLINK),
+            );
         }
 
-        if state.playback_behaviour.repeat {
-            repeat = Span::styled(" R ", Style::list_highlight());
-        } else {
-            repeat = Span::styled(" 1 ", Style::list_idle());
+        let mut repeat = Span::styled("repeat-one", Style::list_highlight());
+        if !state.playback_behaviour.repeat {
+            repeat.content = Cow::Borrowed("repeat-all");
         }
 
-        if state.playback_behaviour.shuffle {
-            suffle = Span::styled(" S ", Style::list_highlight());
-        } else {
-            suffle = Span::styled(" _ ", Style::list_idle());
+        let mut suffle = Span::styled("suffle", Style::list_highlight());
+        if !state.playback_behaviour.shuffle {
+            suffle.style = suffle.style.add_modifier(Modifier::CROSSED_OUT);
         }
 
-        volume = Span::styled(
-            state.playback_behaviour.volume.to_string(),
+        let volume = Span::styled(
+            format!("Vol: {}", state.playback_behaviour.volume),
             Style::list_highlight(),
         );
 
-        let paragraph = Paragraph::new(Spans::from(vec![paused_status, volume, suffle, repeat]))
-            .alignment(Alignment::Center)
-            .block(block);
-        paragraph
+        let content = Text {
+            lines: [
+                Spans([volume].to_vec()),
+                Spans([repeat].to_vec()),
+                Spans([suffle].to_vec()),
+                Spans([paused_status].to_vec()),
+            ]
+            .to_vec(),
+        };
+
+        Paragraph::new(content)
+            .alignment(Alignment::Left)
+            .block(block)
     }
 }
 
