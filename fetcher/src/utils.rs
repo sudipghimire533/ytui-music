@@ -15,14 +15,21 @@ const FILTER_TYPE: [&str; 3] = ["music", "playlist", "channel"];
 
 impl crate::ExtendDuration for Duration {
     fn to_string(self) -> String {
-        let seconds: u64 = self.as_secs();
-        let mut res = format!(
-            "{minutes}:{seconds:02}",
-            minutes = seconds / 60,
-            seconds = seconds % 60
-        );
-        res.shrink_to_fit();
-        res
+        let (hr, min, sec) = {
+            let mut remaining_seconds = self.as_secs();
+            let hr = remaining_seconds / 3600;
+            remaining_seconds = remaining_seconds % 3600;
+            let min = remaining_seconds / 60;
+            let sec = remaining_seconds % 60;
+
+            (hr, min, sec)
+        };
+
+        if hr > 0 {
+            format!("{}:{:02}:{:02}", hr, min, sec)
+        } else {
+            format!("{:02}:{:02}", min, sec)
+        }
     }
 
     // This function assumes that the string is alwayd formatted in "min:secs"
