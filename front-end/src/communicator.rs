@@ -11,7 +11,7 @@ macro_rules! handle_response {
         let mut need_retry = false;
         match $response {
             Ok(mut data) => {
-                state.status = "Sucess..";
+                state.status = "Success..";
                 data.shrink_to_fit();
                 state.$target.0 = data;
             }
