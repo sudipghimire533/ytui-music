@@ -3,6 +3,7 @@ use config::initilize::{
     CONFIG, STORAGE, TB_FAVOURATES_ARTIST, TB_FAVOURATES_MUSIC, TB_FAVOURATES_PLAYLIST,
 };
 use reqwest;
+use std::iter::DoubleEndedIterator;
 use std::time::Duration;
 
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36";
@@ -34,9 +35,28 @@ impl crate::ExtendDuration for Duration {
 
     // This function assumes that the string is alwayd formatted in "min:secs"
     fn from_string(inp: &str) -> Duration {
-        let splitted = inp.split_once(':').unwrap();
-        let total_secs: u64 = (60 * splitted.0.trim().parse::<u64>().unwrap_or_default())
-            + splitted.1.trim().parse::<u64>().unwrap_or_default();
+        let mut time_components = inp.split(':');
+
+        let seconds = time_components
+            .next_back()
+            .unwrap_or("0")
+            .trim()
+            .parse::<u64>()
+            .unwrap();
+        let minutes = time_components
+            .next_back()
+            .unwrap_or("0")
+            .trim()
+            .parse::<u64>()
+            .unwrap();
+        let hours = time_components
+            .next_back()
+            .unwrap_or("0")
+            .trim()
+            .parse::<u64>()
+            .unwrap();
+
+        let total_secs = seconds + (minutes * 60) + (hours * 60 * 60);
         Duration::from_secs(total_secs)
     }
 }
