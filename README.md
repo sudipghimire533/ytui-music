@@ -7,10 +7,9 @@ Listen to music from youtube inside terminal with sleek tui
 
 ---
 
-# [Installation]
-1) Download latest binary from [release page](https://github.com/sudipghimire533/ytui-music)
-
-If binary is not available for your platform head on to [build from source]()
+# Installation
+1) Download latest binary from [release page](https://github.com/sudipghimire533/ytui-music/releases/latest).
+If binary is not available for your platform head on to [build from source](#building-from-source)
 
 2) Give it executable permission and from downloaded directory, in shell:
 ```
