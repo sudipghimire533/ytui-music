@@ -120,14 +120,14 @@ pub enum ReturnAction {
     // Also Failed is active when fetcher had retried and now had exceed the retry count
     Failed,
     // This variant simply indicates that the request has failed but doing the same request for
-    // another time may suceed
+    // another time may succeed
     Retry,
-    // EOR avvrebration of End Of Result indicates that there is nothing more to fetch
-    // At this point the corresponding container have all the data either fetched at once
-    // like or had fetched the maximum page in pagination fetch
+    // EOR abbreviation of End Of Result indicates that there is nothing more to fetch
+    // At this point the corresponding container has all the data either fetched at once
+    // or had fetched the maximum page in pagination fetch
     // A common example is when all the 3/4 page of trending page have been fetched
-    // and user had seen the end. or all the search result have been srved
-    // At this condition the fetch has technicallt suceed and also tells that
+    // and user had seen the end. or all the search result have been served
+    // At this condition the fetch has technically succeeded and also means that
     // another retry on same query will return EOR again and again until new fetch is to be made
     EOR,
 }
@@ -147,7 +147,7 @@ pub struct Fetcher {
     // All the content in given playlist id is fetched at once and stored meaning
     // only single web request is needed and no other even when user asks for next page.
     // On the other hand this means for a playlist with large amount of content
-    // takes more time to initilized.
+    // takes more time to initialized.
     // The needed request will return the array of music data. And currently there is no way
     // to fetch only the necessary fields inside music struct. Which means even with playlist
     // of samll size, over data is returend by the data that is just ignored from our side. Thus
@@ -180,7 +180,7 @@ pub struct Fetcher {
     // First field: (String) is the query being searched for.
     search_res: SearchRes,
 
-    // The reqwest client itself. This is only initilized once per session.
+    // The reqwest client itself. This is only initialized once per session.
     client: reqwest::Client,
 
     // index that reference the servers[] field.

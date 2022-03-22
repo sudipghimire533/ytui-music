@@ -1,6 +1,6 @@
 use crate::{Fetcher, ReturnAction};
-use config::initilize::{
-    CONFIG, STORAGE, TB_FAVOURATES_ARTIST, TB_FAVOURATES_MUSIC, TB_FAVOURATES_PLAYLIST,
+use config::initialize::{
+    CONFIG, STORAGE, TB_FAVOURITE_ARTIST, TB_FAVOURITE_MUSIC, TB_FAVOURITE_PLAYLIST,
 };
 use reqwest;
 use std::iter::DoubleEndedIterator;
@@ -348,7 +348,7 @@ impl Fetcher {
         }
     }
 
-    pub async fn get_favourates_music(
+    pub async fn get_favourites_music(
         &mut self,
         page: usize,
     ) -> Result<Vec<super::MusicUnit>, ReturnAction> {
@@ -362,7 +362,7 @@ impl Fetcher {
             FROM {tb_name}
             LIMIT {from}, {count}
         ",
-            tb_name = TB_FAVOURATES_MUSIC,
+            tb_name = TB_FAVOURITE_MUSIC,
             from = lower_limit,
             count = self.item_per_page,
         );
@@ -371,7 +371,7 @@ impl Fetcher {
             Ok(val) => val,
             Err(err) => {
                 eprintln!(
-                    "Error preparing select statement for favourates music. Error: {err}",
+                    "Error preparing select statement for favourites music. Error: {err}",
                     err = err
                 );
                 return Err(ReturnAction::Failed);
@@ -390,7 +390,7 @@ impl Fetcher {
         let res = match results {
             Err(err) => {
                 eprintln!(
-                    "Cannot get results of favourates music. Error: {err}",
+                    "Cannot get results of favourites music. Error: {err}",
                     err = err
                 );
                 return Err(ReturnAction::Failed);
@@ -412,7 +412,7 @@ impl Fetcher {
         Ok(res)
     }
 
-    pub async fn get_favourates_playlist(
+    pub async fn get_favourites_playlist(
         &mut self,
         page: usize,
     ) -> Result<Vec<super::PlaylistUnit>, ReturnAction> {
@@ -426,7 +426,7 @@ impl Fetcher {
             FROM {tb_name}
             LIMIT {from}, {count}
         ",
-            tb_name = TB_FAVOURATES_PLAYLIST,
+            tb_name = TB_FAVOURITE_PLAYLIST,
             from = lower_limit,
             count = self.item_per_page,
         );
@@ -435,7 +435,7 @@ impl Fetcher {
             Ok(val) => val,
             Err(err) => {
                 eprintln!(
-                    "Error preparing select statement for favourates playlist. Error: {err}",
+                    "Error preparing select statement for favourites playlist. Error: {err}",
                     err = err
                 );
                 return Err(ReturnAction::Failed);
@@ -454,7 +454,7 @@ impl Fetcher {
         let res = match results {
             Err(err) => {
                 eprintln!(
-                    "Cannot get results of favourates music. Error: {err}",
+                    "Cannot get results of favourites music. Error: {err}",
                     err = err
                 );
                 return Err(ReturnAction::Failed);
@@ -477,7 +477,7 @@ impl Fetcher {
         Ok(res)
     }
 
-    pub async fn get_favourates_artist(
+    pub async fn get_favourites_artist(
         &mut self,
         page: usize,
     ) -> Result<Vec<super::ArtistUnit>, ReturnAction> {
@@ -491,7 +491,7 @@ impl Fetcher {
             FROM {tb_name}
             LIMIT {from}, {count}
         ",
-            tb_name = TB_FAVOURATES_ARTIST,
+            tb_name = TB_FAVOURITE_ARTIST,
             from = lower_limit,
             count = self.item_per_page,
         );
@@ -500,7 +500,7 @@ impl Fetcher {
             Ok(val) => val,
             Err(err) => {
                 eprintln!(
-                    "Error preparing select statement for favourates artist. Error: {err}",
+                    "Error preparing select statement for favourites artist. Error: {err}",
                     err = err
                 );
                 return Err(ReturnAction::Failed);
@@ -518,7 +518,7 @@ impl Fetcher {
         let res = match results {
             Err(err) => {
                 eprintln!(
-                    "Cannot get results of favourates artist. Error: {err}",
+                    "Cannot get results of favourites artist. Error: {err}",
                     err = err
                 );
                 return Err(ReturnAction::Failed);

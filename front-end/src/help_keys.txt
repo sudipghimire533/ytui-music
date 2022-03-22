@@ -27,9 +27,9 @@ Below mentioned keys are based on your current configuration.
 `{bkwd}` : - Same as {{forward}} but seek backward
             keyName: {{backward}} & Default: <
 
-`{suf}` :   - Togge suffle/unsuffle.
-            Indicated by 'S'(suffle mode on) or '_'(suffle mode off)
-            keyName: {{suffle}} & Default: s
+`{suf}` :   - Togge shuffle/unshuffle.
+            Indicated by 'S'(shuffle mode on) or '_'(shuffle mode off)
+            keyName: {{shuffle}} & Default: s
 
 `{rep}` :   - Toggle repeat/unrepeat
             Indicated by 'R'(repeat whole playlist) or 'r'(repeat single track)
@@ -41,10 +41,10 @@ Below mentioned keys are based on your current configuration.
 `{srch}` :  - Move focus on search bar
             keyName: {{start_search}} & Default: \
 
-`{f_add}` : - Add current selection to favourates
-            keyName: {{favourates_add}} & Default: f
+`{f_add}` : - Add current selection to favourites
+            keyName: {{favourites_add}} & Default: f
 
-`{f_rm}` :  - Remove current selection if exists from favourates
+`{f_rm}` :  - Remove current selection if exists from favourites
             keyName: {{f_rm}} & Default: u
 
 `{v_inc}` : - Increase volume of playback. This will not affect the volme of system wide.

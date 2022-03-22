@@ -7,27 +7,27 @@ use std::sync::{Arc, Condvar, Mutex};
 macro_rules! handle_response {
     ($response: expr, $state_original: expr, $win_index: expr, $target: ident) => {{
         let mut state = $state_original.lock().unwrap();
-        // return the boolean which is only truw when response is RETRY
+        // return the boolean which is only true when response is RETRY
         let mut need_retry = false;
         match $response {
             Ok(mut data) => {
-                state.status = "Success..";
+                state.status = "Success.";
                 data.shrink_to_fit();
                 state.$target.0 = data;
             }
             Err(e) => {
                 match e {
                     fetcher::ReturnAction::Failed => {
-                        state.status = "Fetch error..";
+                        state.status = "Fetch error.";
                     }
                     fetcher::ReturnAction::EOR => {
-                        state.status = "Result end..";
+                        state.status = "Result end.";
                         // TODO: Setting this to None means that the next page will always be 0.
                         // That being said when user tries to navigate to previous page after seeing
                         // EOR then still the fetched page will be 0. i.e again started from beginning.
                         // This is desirable when user tries to navigate to next page but is
-                        // undesiriable when user tries to navigate to previous page. For now, I can't
-                        // think of any workaround except really messing around with fetched_page be
+                        // undesirable when user tries to navigate to previous page. For now, I can't
+                        // think of any workaround except really messing around with fetched_page by
                         // changing the data type (may be new struct storing maximum page before EOR)
                         // and manipulating accordingly. But I have no intention to do so. So this todo
                         // message will be left todo forever
@@ -35,9 +35,9 @@ macro_rules! handle_response {
                         // Setting this to None means that in next iteration condition
                         // state.fetched_page[] != prev_<>_page wil be true but as for the whole if
                         // statement to be true the page should be Some value. That means when EOR is
-                        // reched the list will be empty until next iteration. If the if condition
+                        // reached the list will be empty until next iteration. If the if condition
                         // wouldn't have .is_some() check then in next iteration then zeroth page will
-                        // be fetched which is undesirable because it confuses weather it is reallt the
+                        // be fetched which is undesirable because it confuses whether it is really the
                         // next page or zeroth page after EOR
                         state.fetched_page[$win_index] = None;
                     }
@@ -62,7 +62,7 @@ pub async fn communicator<'st, 'nt>(
     let mut fetcher = fetcher::Fetcher::default();
 
     // variables with prev_ suffex are to be compared with respective current variables from state.
-    // This is to check weather anything have changed from previous data request from user so that
+    // This is to check whether anything has changed from previous data request from user so that
     // further request are made or not
     let (mut prev_musicbar_source, mut prev_playlistbar_source, mut prev_artistbar_source) = {
         // Initilization is done inside seperate scope so that this state variable is not visible
@@ -109,7 +109,7 @@ pub async fn communicator<'st, 'nt>(
             // clear the target so that noone gets confused if it the response from previous or
             // current request
             state.playlistbar.0.clear();
-            state.status = "Fetch playlist..";
+            state.status = "Fetching playlist...";
 
             notifier.notify_one();
 
@@ -138,8 +138,8 @@ pub async fn communicator<'st, 'nt>(
                 ui::PlaylistbarSource::Artist(ref artist_id) => {
                     playlist_content = fetcher.get_playlist_of_channel(artist_id, page).await;
                 }
-                ui::PlaylistbarSource::Favourates => {
-                    playlist_content = fetcher.get_favourates_playlist(page).await;
+                ui::PlaylistbarSource::Favourites => {
+                    playlist_content = fetcher.get_favourites_playlist(page).await;
                 }
                 ui::PlaylistbarSource::RecentlyPlayed => {
                     // TODO
@@ -169,7 +169,7 @@ pub async fn communicator<'st, 'nt>(
             std::mem::drop(state);
         }
 
-        // Checks and fills the artistbar.
+        // Checks and fills the artist bar.
         let mut state = state_original.lock().unwrap();
         if state.filled_source.2 != prev_artistbar_source
             || need_retry[MIDDLE_ARTIST_INDEX]
@@ -177,7 +177,7 @@ pub async fn communicator<'st, 'nt>(
                 && state.fetched_page[MIDDLE_ARTIST_INDEX].is_some())
         {
             state.artistbar.0.clear();
-            state.status = "Fetch artists..";
+            state.status = "Fetching artists...";
             notifier.notify_one();
 
             let page = state.fetched_page[MIDDLE_ARTIST_INDEX].unwrap();
@@ -190,8 +190,8 @@ pub async fn communicator<'st, 'nt>(
                 ui::ArtistbarSource::Search(ref term) => {
                     artist_content = fetcher.search_artist(term, page).await;
                 }
-                ui::ArtistbarSource::Favourates => {
-                    artist_content = fetcher.get_favourates_artist(page).await;
+                ui::ArtistbarSource::Favourites => {
+                    artist_content = fetcher.get_favourites_artist(page).await;
                 }
                 ui::ArtistbarSource::RecentlyPlayed => {
                     // TODO:
@@ -220,7 +220,7 @@ pub async fn communicator<'st, 'nt>(
                 && state.fetched_page[MIDDLE_MUSIC_INDEX].is_some())
         {
             state.musicbar.0.clear();
-            state.status = "Fetch music..";
+            state.status = "Fetching music...";
             notifier.notify_one();
 
             let page = state.fetched_page[MIDDLE_MUSIC_INDEX].unwrap();
@@ -242,8 +242,8 @@ pub async fn communicator<'st, 'nt>(
                 ui::MusicbarSource::Artist(ref artist_id) => {
                     music_content = fetcher.get_videos_of_channel(artist_id, page).await;
                 }
-                ui::MusicbarSource::Favourates => {
-                    music_content = fetcher.get_favourates_music(page).await;
+                ui::MusicbarSource::Favourites => {
+                    music_content = fetcher.get_favourites_music(page).await;
                 }
                 ui::MusicbarSource::RecentlyPlayed => {
                     // TODO: handle each variant with accurate function

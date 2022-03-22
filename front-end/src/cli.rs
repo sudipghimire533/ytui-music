@@ -1,4 +1,4 @@
-use config::initilize::CONFIG;
+use config::initialize::CONFIG;
 use reqwest;
 use serde::{self, Deserialize};
 use tokio;
@@ -113,10 +113,10 @@ __   ___         _                           _
             toggle = keys.toggle_play,
             next = keys.next,
             prev = keys.prev,
-            suf = keys.suffle,
+            suf = keys.shuffle,
             rep = keys.repeat,
-            f_add = keys.favourates_add,
-            f_rm = keys.favourates_remove,
+            f_add = keys.favourites_add,
+            f_rm = keys.favourites_remove,
             srch = keys.start_search,
             view = keys.view,
             bkwd = keys.backward,
@@ -133,18 +133,18 @@ __   ___         _                           _
     }
 
     pub fn initialize_globals(&self) {
-        lazy_static::initialize(&config::initilize::INIT);
+        lazy_static::initialize(&config::initialize::INIT);
     }
 
     pub fn update(self) {
-        println!("Updating ytui-music to latest version....");
+        println!("Updating ytui-music to the latest version...");
 
         let mut download_path = String::new();
         while download_path.is_empty() {
-            println!("Enter path to store updated binary");
+            println!("Enter path to store the updated binary");
             std::io::stdin()
                 .read_line(&mut download_path)
-                .expect("Couldnot accept input");
+                .expect("Could not accept input");
             download_path = download_path.trim().to_string();
         }
 
@@ -155,7 +155,7 @@ __   ___         _                           _
         let download_path = download_path.as_path();
 
         println!(
-            "Latest version of ytui-music will be store in {}.",
+            "Latest version of ytui-music will be stored in {}.",
             match download_path.to_str() {
                 None => {
                     download_path.to_string_lossy().into_owned()
@@ -179,7 +179,7 @@ __   ___         _                           _
                 response
                     .bytes()
                     .await
-                    .expect("Couldn't extract bytes from recived binary.."),
+                    .expect("Couldn't extract bytes from received binary."),
             );
 
             if let Err(err) = res {
@@ -198,16 +198,16 @@ __   ___         _                           _
                 let response = self.download_binary(&binary_name).await;
                 match response {
                     None => {
-                        eprintln!("Cannot update ytui-music to latest version du to previous error.");
-                        eprintln!("To report this problem, you can file this issue in https://github.com/sudipghimire533/ytui-music/issues/");
+                        eprintln!("Cannot update ytui-music to latest version due to previous error.");
+                        eprintln!("To report this problem, you can file this issue at https://github.com/sudipghimire533/ytui-music/issues/");
                     }
                     Some(res) => {
-                        let sucess = after_download(res).await;
-                        if !sucess {
-                            eprintln!("Cannot write ytui-music to destination. Update failed..");
-                            eprintln!("To report this problem, you can file this issue in https://github.com/sudipghimire533/ytui-music/issues/");
+                        let success = after_download(res).await;
+                        if !success {
+                            eprintln!("Cannot write ytui-music to destination. Update failed.");
+                            eprintln!("To report this problem, you can file this issue at https://github.com/sudipghimire533/ytui-music/issues/");
                         } else {
-                            println!("Update sucess. Set executable permission if needed.");
+                            println!("Update successful. Set executable permission if needed.");
                         }
                     }
                 }
@@ -234,7 +234,7 @@ __   ___         _                           _
         let octets_array = match client_json.get(&assest_api_url).send().await {
             Err(err) => {
                 eprintln!(
-                    "Cannot get the release info from {url}.\n Erro: {err}",
+                    "Cannot get the release info from {url}.\n Error: {err}",
                     url = assest_api_url,
                     err = err,
                 );
@@ -260,12 +260,12 @@ __   ___         _                           _
                 break;
             }
         }
-        let asset = asset.expect("Empty asset array recived from github api");
+        let asset = asset.expect("Empty asset array received from github API");
 
         headers.insert(
             header::ACCEPT,
             header::HeaderValue::from_bytes(asset.content_type.as_bytes())
-                .expect("Invalid content type recived from github api"),
+                .expect("Invalid content type received from github api"),
         );
         let client_octet = reqwest::ClientBuilder::new()
             .default_headers(headers)
@@ -274,7 +274,7 @@ __   ___         _                           _
 
         // As of now binary is only of <= 5Mib so if binary happens to grow over time (which is not
         // expected as of now), then instead of holding binary in memory, it should written to file
-        // peridocially
+        // periodically
         let binary = match client_octet.get(&asset.url).send().await {
             Err(err) => {
                 eprintln!(
