@@ -347,9 +347,9 @@ impl<'parent> ui::BottomLayout {
             );
         }
 
-        let mut repeat = Span::styled("repeat-one", Style::list_highlight());
+        let mut repeat = Span::styled("repeat-all", Style::list_highlight());
         if !state.playback_behaviour.repeat {
-            repeat.content = Cow::Borrowed("repeat-all");
+            repeat.content = Cow::Borrowed("repeat-one");
         }
 
         let mut suffle = Span::styled("suffle", Style::list_highlight());
