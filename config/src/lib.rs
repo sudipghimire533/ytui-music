@@ -1,3 +1,4 @@
+use rand;
 use rusqlite;
 use serde::{Deserialize, Serialize};
 use std::default::Default;
@@ -13,18 +14,6 @@ pub const MPV_OPTION_FILE_NAME: &str = "mpv.conf";
 pub const SQLITE_DB_NAME: &str = "storage.db3";
 pub const AUDIO_DIR_VAR_KEY: &str = "YTUI_MUSIC_DIR";
 pub const YTUI_CONFIG_DIR_VAR_KEY: &str = "YTUI_CONFIG_DIR";
-
-// A stupid as fu#k shit logic to get either true or false.
-// Create instant clock.
-// execute some useless statements (which may even removed by compiler optimizer)
-// get the time elapsed in nano second
-// if it is even number return true else return false
-fn get_random_bool() -> bool {
-    let now = std::time::Instant::now();
-    let _ = vec![1; 3];
-    let elapsed = now.elapsed().as_nanos();
-    elapsed % 2 == 0
-}
 
 trait Random {
     #[must_use]
@@ -48,7 +37,7 @@ where
                         new_vector.push(val.clone());
                     }
                 }
-            } else if get_random_bool() {
+            } else if rand::random() {
                 new_vector.push(self[current].clone());
             }
             current = (current + 1) % length;
