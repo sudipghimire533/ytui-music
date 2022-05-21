@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path;
 use std::time::Duration;
-pub mod initilize;
+pub mod initialize;
 
 pub const CONF_DIR_NAME: &str = "ytui_music";
 pub const CONFIG_FILE_NAME: &str = "config.json";
@@ -17,20 +17,20 @@ pub const YTUI_CONFIG_DIR_VAR_KEY: &str = "YTUI_CONFIG_DIR";
 
 trait Random {
     #[must_use]
-    fn suffle(&self, timeout: Duration) -> Self;
+    fn shuffle(&self, timeout: Duration) -> Self;
 }
 impl<T> Random for Vec<T>
 where
     T: std::cmp::PartialEq + Clone,
 {
-    fn suffle(&self, timeout: Duration) -> Self {
+    fn shuffle(&self, timeout: Duration) -> Self {
         let length = self.len();
         let mut new_vector = Vec::with_capacity(length);
 
         let now = std::time::Instant::now();
         let mut current = 0;
         while new_vector.len() != length {
-            // When timwout occurs push all the reamining vector directly
+            // When timeout occurs push all the remaining vector directly
             if now.elapsed() > timeout {
                 for val in self {
                     if !new_vector.contains(val) {
@@ -59,11 +59,11 @@ pub struct ShortcutsKeys {
     pub quit: char,
     pub forward: char,
     pub backward: char,
-    pub suffle: char,
+    pub shuffle: char,
     pub repeat: char,
     pub view: char,
-    pub favourates_add: char,
-    pub favourates_remove: char,
+    pub favourites_add: char,
+    pub favourites_remove: char,
     pub vol_increase: char,
     pub vol_decrease: char,
 }
@@ -105,29 +105,29 @@ impl Default for ShortcutsKeys {
             // Same as forward but instead seek backward
             backward: '<',
 
-            // Turn suffle on if already is off and vice-versa
-            // Suffle on: play the playlist in random order
-            // Suffle off: play the playlist in as is order
-            suffle: 's',
+            // Turn shuffle on if already is off and vice-versa
+            // shuffle on: play the playlist in random order
+            // shuffle off: play the playlist in as is order
+            shuffle: 's',
 
-            // Turn repeat on if already is off and vice-versa
+            // Toggle repeat
             // Repeat on: Play all the items from playlist. If last item ends play first
             // Repeat off: If currenlt playing item ends play same item again. i.e repeat one
             repeat: 'r',
 
-            // This key will expand the content of playlist but do not play it
+            // This key will expand the content of playlist but not play it
             // Also will show the selection url
             view: 'v',
 
-            // Add the current selection to the favourates list
-            favourates_add: 'f',
+            // Add the current selection to the favourites list
+            favourites_add: 'f',
 
-            // Remove the current selection from the favourates lits. Adding and removing from
-            // favourates list are not done by same key because toggeling means first the exsistance of
+            // Remove the current selection from the favourites lits. Adding and removing from
+            // favourites list are not done by same key because toggling means first the existance of
             // given selection should be checked in database and then again query another INSERT/REMOVE
             // statement. However, if sepearte keys are used, only single INSERT/REMOVE query is to be
             // executed.
-            favourates_remove: 'u',
+            favourites_remove: 'u',
 
             // Key to increase the volume of playback
             vol_increase: '+',
@@ -180,7 +180,7 @@ impl Default for Theme {
             // Applies to the title (top-left corner of border) of the block
             block_title: (175, 125, 115),
 
-            // Color_(promary/secondary/tertiary) are for everything else other than above.
+            // Color_(primary/secondary/tertiary) are for everything else other than above.
             // Instead of relying on terminal color, using this will bring more consistency in the ui
             color_primary: (100, 250, 20),
             color_secondary: (250, 230, 70),
@@ -432,7 +432,7 @@ impl ConfigContainer {
         // So be sure we dont kill a single server instead distribute the load.
         // Here, it is achived by rearrenging the server list in random order
         // so that first server don't always have to be first to send request
-        config.servers.list = config.servers.list.suffle(Duration::from_secs(4));
+        config.servers.list = config.servers.list.shuffle(Duration::from_secs(4));
 
         Some(Self {
             config,
@@ -485,7 +485,7 @@ impl ConfigContainer {
                     config_dir = config_dir.join(CONF_DIR_NAME);
                     config_dir
                 } else {
-                    eprintln!("Cannot get you configuration directory to where to config of Ytui will be stored.");
+                    eprintln!("Cannot get the configuration directory to where to config of ytui will be stored.");
 
                     return None;
                 }
@@ -532,7 +532,7 @@ impl ConfigContainer {
         // The destination types fetcher::{MusicUnit, Playlistunit, ArtistUnit}
         // fiels are all decleared in string format. So on retriving with SELECT query
         // it makes easy to fetch columns without any conversion method
-        let create_favourates_table = format!(
+        let create_favourites_table = format!(
             "
                 CREATE TABLE IF NOT EXISTS {tb_music} (
                     id          TEXT    NOT NULL    PRIMARY KEY,
@@ -554,12 +554,12 @@ impl ConfigContainer {
                     count   TEXT    NOT NULL
                 );
            ",
-            tb_music = initilize::TB_FAVOURATES_MUSIC,
-            tb_playlist = initilize::TB_FAVOURATES_PLAYLIST,
-            tb_artist = initilize::TB_FAVOURATES_ARTIST
+            tb_music = initialize::TB_FAVOURITE_MUSIC,
+            tb_playlist = initialize::TB_FAVOURITE_PLAYLIST,
+            tb_artist = initialize::TB_FAVOURITE_ARTIST
         );
 
-        let res = connection.execute_batch(&create_favourates_table);
+        let res = connection.execute_batch(&create_favourites_table);
 
         if let Err(err) = res {
             eprintln!(

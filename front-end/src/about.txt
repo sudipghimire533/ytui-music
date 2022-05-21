@@ -7,7 +7,7 @@ Problem ytui music tries to solve:
 - Have a nice basic function like searching and exploring trending content
 - Keyboard driven navigation and control
 - Download with single key combination key press
-- Track my favourates music, playlist and artist in local database
+- Track my favourites music, playlist and artist in local database
 
 Ytui-music says:
 - Do not open a whole browser just to listen to music
@@ -20,14 +20,14 @@ Ytui-music says:
 
 What you may not find:
 - Currently, managing playback queue is the only thing I miss from a full featured music player
-- Besides favourates playlist. Maintaining own playlist is also currently not available.
-  Instead, you may create a public playlist from official youtube and add those to favourates.
-  I am not a guy who manipulates playlist that much. I just few musics to favourates playlist.
+- Besides favourites playlist. Maintaining own playlist is also currently not available.
+  Instead, you may create a public playlist from official youtube and add those to favourites.
+  I am not a guy who manipulates playlist that much. I just few musics to favourites playlist.
 
 Toos used:
 mpv: To handle playback. Mpv seems to be only option that integrate well with online streaming.
      Well, many may cheer for vlc but it's online streaming side is less active compared to mpv
-sqlite: To store the local data like favourates list. Goto choice for embedded databse for decade
+sqlite: To store the local data like favourites list. Goto choice for embedded databse for decade
 youtube-dl: Everyone knows. youtube-dl handles so well to fetch youtbe-data
 rust: Empowering everyone to write efficient software. Well I'm empowered
 

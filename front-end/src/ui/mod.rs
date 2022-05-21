@@ -113,7 +113,7 @@ pub struct MiddleBottom {
 // |        Rect (MusicConroller)       |
 // -------------------------------------
 // TODO: Split this area horzontally where small portion in right half shows the info like
-// suffle, repeat, pause/playing and volume using icon
+// shuffle, repeat, pause/playing and volume using icon
 pub struct BottomLayout {
     layout: Rect,
 }
@@ -154,7 +154,7 @@ pub struct Position {
 }
 
 // This function will:
-// 1) Initilize the terminal backend
+// 1) Initialize the terminal backend
 // 2) Get the layout of the ui
 // 3) print content in ui
 // 4) Run a loop waiting for state variable to change
@@ -246,7 +246,7 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                 // This makes sure that background is not empty and user can
                 // see some things like progress of music player
                 if let Window::Popup(title, ref content) = state_unlocked.active {
-                    utils::show_pupop_text(screen, [title, content], &position.popup);
+                    utils::show_popup_text(screen, [title, content], &position.popup);
                 }
             })
             .unwrap();
@@ -314,7 +314,7 @@ pub enum MusicbarSource {
     Search(String),
     Trending,
     RecentlyPlayed,
-    Favourates,
+    Favourites,
     Playlist(String),
     Artist(String),
 }
@@ -322,19 +322,19 @@ pub enum MusicbarSource {
 pub enum PlaylistbarSource {
     Search(String),
     RecentlyPlayed,
-    Favourates,
+    Favourites,
     Artist(String),
 }
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ArtistbarSource {
     Search(String),
     RecentlyPlayed,
-    Favourates,
+    Favourites,
 }
 
 #[derive(Debug)]
 pub struct PlaybackBehaviour {
-    // true if user wishes to suffle the playlist
+    // true if user wishes to shuffle the playlist
     // false otherwise
     shuffle: bool,
     // true if user wished to repeat all items from playlist. i.e when last music of playlist ends

@@ -1,5 +1,5 @@
 use crate::ui::{self, utils::ExtendMpv};
-use config::initilize::{CONFIG, STORAGE};
+use config::initialize::{CONFIG, STORAGE};
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use std::{
     convert::TryFrom,
@@ -44,7 +44,7 @@ macro_rules! drop_and_call {
         std::mem::drop($state);
         $callback()
     }};
-    // This will call the function recived in second argument and pass the later arguments as that
+    // This will call the function received in second argument and pass the later arguments as that
     // function paramater
     ($state: expr, $callback: expr, $($args: expr)*) => {{
         std::mem::drop($state);
@@ -70,7 +70,7 @@ fn get_page(current: &Option<usize>, direction: HeadTo) -> usize {
 
 /*
 * The event_sender function is running in it's own seperate thread.
-* -> A loop is initilized where it waits for any event to happen (keypress and resize for now)
+* -> A loop is initialized where it waits for any event to happen (keypress and resize for now)
 * and call the corresponding closure to handle event.
 * -> Inside every closure state that are dependent to this event is checked. eg: checks active
 * window shile handleing left/right direction key
@@ -91,7 +91,7 @@ pub async fn event_sender(
 
     let download_counter: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
 
-    // There is several option in sidebar like trending/ favourates,
+    // There is several option in sidebar like trending/favourites,
     // this handler will change the selected option from sidebar depending on the direction user
     // move (Up or DOwn).
     let advance_sidebar = |direction: HeadTo| {
@@ -120,7 +120,7 @@ pub async fn event_sender(
         notifier.notify_all();
     };
 
-    // simialr to advance_music_list but instead rotate data in `playlistbar` variable of state
+    // similar to advance_music_list but instead rotate data in `playlistbar` variable of state
     let advance_playlist_list = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         let next_index;
@@ -134,7 +134,7 @@ pub async fn event_sender(
         notifier.notify_all();
     };
 
-    // simialr to advance_playlist_list but instead rotate data in `artistbar` variable of state
+    // similar to advance_playlist_list but instead rotate data in `artistbar` variable of state
     let advance_artist_list = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         // if the list is empty then do nothing else.
@@ -239,7 +239,7 @@ pub async fn event_sender(
     };
 
     // This is fires when user press any character key
-    // this will simpley push the recived character in search query term and update state
+    // this will simpley push the received character in search query term and update state
     // so can the added character becomes visible
     let handle_search_input = |ch| {
         state_original.lock().unwrap().search.0.push(ch);
@@ -247,7 +247,7 @@ pub async fn event_sender(
     };
 
     // This handler is fired when use press SEARCH_SH_KEY
-    // this will move the curson to the searchbar from which user can start to type the query
+    // this will move the cursor to the searchbar from which user can start to type the query
     let activate_search = || {
         let mut state = state_original.lock().unwrap();
         state.active = ui::Window::Searchbar;
@@ -258,7 +258,7 @@ pub async fn event_sender(
     // UP_ARROW will set the direction to PREV and DOWN_ARROW to NEXT
     // for now, these key will only handle the moving of list
     // So, depending on the window which is currently active, this closure will call
-    // the respective handler which will advance the corersponding list
+    // the respective handler which will advance the corresponding list
     let handle_up_down = |direction: HeadTo| {
         let state = state_original.lock().unwrap();
         match state.active {
@@ -328,7 +328,7 @@ pub async fn event_sender(
 
     let fill_fav_music = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        state.filled_source.0 = ui::MusicbarSource::Favourates;
+        state.filled_source.0 = ui::MusicbarSource::Favourites;
         let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
         state.fetched_page[MIDDLE_MUSIC_INDEX] = Some(page);
         notifier.notify_all();
@@ -336,7 +336,7 @@ pub async fn event_sender(
 
     let fill_fav_playlist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        state.filled_source.1 = ui::PlaylistbarSource::Favourates;
+        state.filled_source.1 = ui::PlaylistbarSource::Favourites;
         let page = get_page(&state.fetched_page[MIDDLE_PLAYLIST_INDEX], direction);
         state.fetched_page[MIDDLE_PLAYLIST_INDEX] = Some(page);
         notifier.notify_all();
@@ -344,7 +344,7 @@ pub async fn event_sender(
 
     let fill_fav_artist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        state.filled_source.2 = ui::ArtistbarSource::Favourates;
+        state.filled_source.2 = ui::ArtistbarSource::Favourites;
         let page = get_page(&state.fetched_page[MIDDLE_ARTIST_INDEX], direction);
         state.fetched_page[MIDDLE_ARTIST_INDEX] = Some(page);
         notifier.notify_all();
@@ -466,7 +466,7 @@ pub async fn event_sender(
     let handle_download = || async {
         let mut state = state_original.lock().unwrap();
 
-        // TODO: Ask for conformation before downloading
+        // TODO: Ask for confirmation before downloading
         let mut command = tokio::process::Command::new("youtube-dl");
         let download_url;
         if let Some(focused_index) = state.musicbar.1.selected() {
@@ -479,11 +479,11 @@ pub async fn event_sender(
             return;
         }
 
-        state.status = "Download started..";
+        state.status = "Download started...";
         state.active = ui::Window::Popup(
             "Downloading...",
             format!(
-                "Download of {} have an eye on your Music folder",
+                "Downloading {}, keep an eye on your Music folder",
                 download_url
             ),
         );
@@ -503,7 +503,7 @@ pub async fn event_sender(
         let counter_clone = Arc::clone(&download_counter);
 
         // Wait for 5 second just to make sure that command has finished executing.
-        // It usually donot take all those 5 seconds
+        // It usually doesn't take all those 5 seconds
         // Anyway, download won't finish before 5 seconds
         // Then just wait for command to finish by waiting for exit status
         // decrease the download queue count
@@ -515,7 +515,7 @@ pub async fn event_sender(
     };
 
     // If play is true it means also play the playlist
-    // if is false then only expand the playlist and show url but do not play it
+    // if it's false then only expand the playlist and show url but do not play it
     let select_playlist = |play: bool| {
         let mut state = state_original.lock().unwrap();
         if let Some(selected_index) = state.playlistbar.1.selected() {
@@ -565,7 +565,7 @@ pub async fn event_sender(
                 state.playback_behaviour.volume = vol;
             }
             None => {
-                state.status = "Volume error..";
+                state.status = "Volume error.";
             }
         };
 
@@ -637,10 +637,10 @@ pub async fn event_sender(
         }
     };
 
-    let handle_favourates = |add: bool| {
+    let handle_favourites = |add: bool| {
         let mut state = state_original.lock().unwrap();
 
-        state.status = "Processing..";
+        state.status = "Processing...";
 
         match state.active {
             ui::Window::Musicbar => {
@@ -650,12 +650,12 @@ pub async fn event_sender(
                     let selected_music =
                         &state.musicbar.0[selected_index] as *const fetcher::MusicUnit;
                     if add {
-                        state.add_music_to_favourates(unsafe { &*selected_music });
+                        state.add_music_to_favourites(unsafe { &*selected_music });
                     } else {
-                        state.remove_music_from_favourates(unsafe { &*selected_music });
+                        state.remove_music_from_favourites(unsafe { &*selected_music });
                     }
                 } else {
-                    state.status = "Nothing selected..";
+                    state.status = "Nothing selected.";
                 }
             }
 
@@ -664,12 +664,12 @@ pub async fn event_sender(
                     let selected_playlist =
                         &state.playlistbar.0[selected_index] as *const fetcher::PlaylistUnit;
                     if add {
-                        state.add_playlist_to_favourates(unsafe { &*selected_playlist });
+                        state.add_playlist_to_favourites(unsafe { &*selected_playlist });
                     } else {
-                        state.remove_playlist_from_favourates(unsafe { &*selected_playlist });
+                        state.remove_playlist_from_favourites(unsafe { &*selected_playlist });
                     }
                 } else {
-                    state.status = "Nothing selected..";
+                    state.status = "Nothing selected.";
                 }
             }
 
@@ -678,12 +678,12 @@ pub async fn event_sender(
                     let selected_artist =
                         &state.artistbar.0[selected_index] as *const fetcher::ArtistUnit;
                     if add {
-                        state.add_artist_to_favourates(unsafe { &*selected_artist });
+                        state.add_artist_to_favourites(unsafe { &*selected_artist });
                     } else {
-                        state.remove_artist_from_favourates(unsafe { &*selected_artist });
+                        state.remove_artist_from_favourites(unsafe { &*selected_artist });
                     }
                 } else {
-                    state.status = "Nothing selected..";
+                    state.status = "Nothing selected.";
                 }
             }
             _ => {}
@@ -733,7 +733,7 @@ pub async fn event_sender(
                                 toggle_play();
                             } else if ch == CONFIG.shortcut_keys.repeat {
                                 handle_repeat();
-                            } else if ch == CONFIG.shortcut_keys.suffle {
+                            } else if ch == CONFIG.shortcut_keys.shuffle {
                                 toggle_shuffle();
                             } else if ch == CONFIG.shortcut_keys.forward {
                                 seek_forward();
@@ -741,10 +741,10 @@ pub async fn event_sender(
                                 seek_backward();
                             } else if ch == CONFIG.shortcut_keys.view {
                                 handle_view();
-                            } else if ch == CONFIG.shortcut_keys.favourates_add {
-                                handle_favourates(true);
-                            } else if ch == CONFIG.shortcut_keys.favourates_remove {
-                                handle_favourates(false);
+                            } else if ch == CONFIG.shortcut_keys.favourites_add {
+                                handle_favourites(true);
+                            } else if ch == CONFIG.shortcut_keys.favourites_remove {
+                                handle_favourites(false);
                             } else if ch == CONFIG.shortcut_keys.prev {
                                 if is_with_control {
                                     change_track(HeadTo::Prev);

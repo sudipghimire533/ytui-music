@@ -7,17 +7,17 @@ use ui::shared_import::*;
 pub const SIDEBAR_LIST_COUNT: usize = 6;
 pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
     "Trending",
-    "Youtube Communinty",
+    "Youtube Community",
     "Liked songs",
     "My playlist",
     "Following",
     "Search",
 ];
-use config::initilize::{
-    CONFIG, STORAGE, TB_FAVOURATES_ARTIST, TB_FAVOURATES_MUSIC, TB_FAVOURATES_PLAYLIST,
+use config::initialize::{
+    CONFIG, STORAGE, TB_FAVOURITE_ARTIST, TB_FAVOURITE_MUSIC, TB_FAVOURITE_PLAYLIST,
 };
 
-pub fn show_pupop_text<'a, B>(frame: &mut tui::terminal::Frame<B>, text: [&'a str; 2], area: &Rect)
+pub fn show_popup_text<'a, B>(frame: &mut tui::terminal::Frame<B>, text: [&'a str; 2], area: &Rect)
 where
     B: Backend,
 {
@@ -332,7 +332,7 @@ impl<'parent> ui::BottomLayout {
 
     // Desired layout:
     // | Vol: <volume_level>
-    // | suffle | <strikethrough>suffle<strikethrough>
+    // | shuffle | <strikethrough>shuffle<strikethrough>
     // | (no-)repeat
     // | playing | paused (blinked)
     pub fn get_icons_set(state: &'parent ui::State) -> Paragraph<'parent> {
@@ -352,9 +352,9 @@ impl<'parent> ui::BottomLayout {
             repeat.content = Cow::Borrowed("repeat-one");
         }
 
-        let mut suffle = Span::styled("suffle", Style::list_highlight());
+        let mut shuffle = Span::styled("shuffle", Style::list_highlight());
         if !state.playback_behaviour.shuffle {
-            suffle.style = suffle.style.add_modifier(Modifier::CROSSED_OUT);
+            shuffle.style = shuffle.style.add_modifier(Modifier::CROSSED_OUT);
         }
 
         let volume = Span::styled(
@@ -366,7 +366,7 @@ impl<'parent> ui::BottomLayout {
             lines: [
                 Spans([volume].to_vec()),
                 Spans([repeat].to_vec()),
-                Spans([suffle].to_vec()),
+                Spans([shuffle].to_vec()),
                 Spans([paused_status].to_vec()),
             ]
             .to_vec(),
@@ -593,8 +593,8 @@ impl ExtendMpv for libmpv::Mpv {
                     new_vol = 100.0;
                 }
 
-                let sucess = self.set_property("volume", new_vol).is_ok();
-                if sucess {
+                let success = self.set_property("volume", new_vol).is_ok();
+                if success {
                     Some(new_vol as u8)
                 } else {
                     None
@@ -749,7 +749,7 @@ impl ui::State<'_> {
 }
 
 impl ui::State<'_> {
-    pub fn remove_music_from_favourates(&mut self, music: &fetcher::MusicUnit) {
+    pub fn remove_music_from_favourites(&mut self, music: &fetcher::MusicUnit) {
         let query = format!(
             "
             DELETE FROM
@@ -757,7 +757,7 @@ impl ui::State<'_> {
             WHERE
             fav_music.id = :id
         ",
-            tb_name = TB_FAVOURATES_MUSIC
+            tb_name = TB_FAVOURITE_MUSIC
         );
         let args = [(":id", &music.id)];
 
@@ -769,14 +769,14 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn remove_playlist_from_favourates(&mut self, playlist: &fetcher::PlaylistUnit) {
+    pub fn remove_playlist_from_favourites(&mut self, playlist: &fetcher::PlaylistUnit) {
         let query = format!(
             "
             DELETE FROM
             {tb_name} as fav_playlist
             WHERE fav_playlist.id = :id
         ",
-            tb_name = TB_FAVOURATES_PLAYLIST
+            tb_name = TB_FAVOURITE_PLAYLIST
         );
         let args = [(":id", &playlist.id)];
 
@@ -788,14 +788,14 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn remove_artist_from_favourates(&mut self, artist: &fetcher::ArtistUnit) {
+    pub fn remove_artist_from_favourites(&mut self, artist: &fetcher::ArtistUnit) {
         let query = format!(
             "
             DELETE FROM
             {tb_name} as fav_artist
             WHERE fav_artist.id = :id
         ",
-            tb_name = TB_FAVOURATES_ARTIST
+            tb_name = TB_FAVOURITE_ARTIST
         );
 
         let args = [(":id", &artist.id)];
@@ -808,7 +808,7 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn add_artist_to_favourates(&mut self, artist: &fetcher::ArtistUnit) {
+    pub fn add_artist_to_favourites(&mut self, artist: &fetcher::ArtistUnit) {
         let query = format!(
             "
             INSERT OR REPLACE INTO
@@ -817,7 +817,7 @@ impl ui::State<'_> {
             VALUES
             (:id, :name, :count)
         ",
-            tb_name = TB_FAVOURATES_ARTIST
+            tb_name = TB_FAVOURITE_ARTIST
         );
 
         let args = [
@@ -834,7 +834,7 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn add_music_to_favourates(&mut self, music: &fetcher::MusicUnit) {
+    pub fn add_music_to_favourites(&mut self, music: &fetcher::MusicUnit) {
         let query = format!(
             "
                 INSERT OR REPLACE INTO 
@@ -843,7 +843,7 @@ impl ui::State<'_> {
                 VALUES
                 (:id, :title, :author, :duration)
             ",
-            tb_name = TB_FAVOURATES_MUSIC
+            tb_name = TB_FAVOURITE_MUSIC
         );
 
         let args = [
@@ -861,14 +861,14 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn add_playlist_to_favourates(&mut self, playlist: &fetcher::PlaylistUnit) {
+    pub fn add_playlist_to_favourites(&mut self, playlist: &fetcher::PlaylistUnit) {
         let query = format!(
             "
             INSERT OR REPLACE INTO {tb_name}
             (id, name, author, count)
             VALUES (:id, :name, :author, :count);
         ",
-            tb_name = TB_FAVOURATES_PLAYLIST
+            tb_name = TB_FAVOURITE_PLAYLIST
         );
 
         let args = [
