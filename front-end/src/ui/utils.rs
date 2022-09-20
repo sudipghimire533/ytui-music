@@ -13,11 +13,11 @@ pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
     "Following",
     "Search",
 ];
-use config::initilize::{
-    CONFIG, STORAGE, TB_FAVOURATES_ARTIST, TB_FAVOURATES_MUSIC, TB_FAVOURATES_PLAYLIST,
+use config::initialize::{
+    CONFIG, STORAGE, TB_FAVORITES_ARTIST, TB_FAVORITES_MUSIC, TB_FAVORITES_PLAYLIST,
 };
 
-pub fn show_pupop_text<'a, B>(frame: &mut tui::terminal::Frame<B>, text: [&'a str; 2], area: &Rect)
+pub fn show_popup_text<'a, B>(frame: &mut tui::terminal::Frame<B>, text: [&'a str; 2], area: &Rect)
 where
     B: Backend,
 {
@@ -32,12 +32,12 @@ where
     frame.render_widget(paragraph, *area);
 }
 
-// A helper macro to decode the tuple with three memebers to tui::style::Color::Rgb value
+// A helper macro to decode the tuple with three members to tui::style::Color::Rgb value
 // enum Example {
 //  First(i32, i32, i32) => accepts 3 individual value
-//  Second((i32, i32, i32)) => accepts single tuple with 3 memebers
+//  Second((i32, i32, i32)) => accepts single tuple with 3 members
 // }
-// Rgb in tui is defined in fasion of First in above example
+// Rgb in tui is defined in fashion of First in above example
 macro_rules! rgb {
     ($tuple: expr) => {
         Color::Rgb($tuple.0, $tuple.1, $tuple.2)
@@ -332,7 +332,7 @@ impl<'parent> ui::BottomLayout {
 
     // Desired layout:
     // | Vol: <volume_level>
-    // | suffle | <strikethrough>suffle<strikethrough>
+    // | shuffle | <strikethrough>shuffle<strikethrough>
     // | (no-)repeat
     // | playing | paused (blinked)
     pub fn get_icons_set(state: &'parent ui::State) -> Paragraph<'parent> {
@@ -352,9 +352,9 @@ impl<'parent> ui::BottomLayout {
             repeat.content = Cow::Borrowed("repeat-one");
         }
 
-        let mut suffle = Span::styled("suffle", Style::list_highlight());
+        let mut shuffle = Span::styled("shuffle", Style::list_highlight());
         if !state.playback_behaviour.shuffle {
-            suffle.style = suffle.style.add_modifier(Modifier::CROSSED_OUT);
+            shuffle.style = shuffle.style.add_modifier(Modifier::CROSSED_OUT);
         }
 
         let volume = Span::styled(
@@ -366,7 +366,7 @@ impl<'parent> ui::BottomLayout {
             lines: [
                 Spans([volume].to_vec()),
                 Spans([repeat].to_vec()),
-                Spans([suffle].to_vec()),
+                Spans([shuffle].to_vec()),
                 Spans([paused_status].to_vec()),
             ]
             .to_vec(),
@@ -392,7 +392,7 @@ pub trait ExtendStyle {
 impl ExtendStyle for Style {
     #[inline(always)]
     fn list_highlight() -> Style {
-        Style::default().fg(rgb!(CONFIG.theme.list_hilight))
+        Style::default().fg(rgb!(CONFIG.theme.list_highlight))
     }
 
     #[inline(always)]
@@ -442,7 +442,7 @@ impl<'a> ExtendBlock<'a> for Block<'_> {
 }
 
 impl ui::Position {
-    pub fn caclulate(screen_rect: &Rect) -> Self {
+    pub fn calculate(screen_rect: &Rect) -> Self {
         // 3 line for each bottom and top bar (1 for content and 2 for border)
         // remaining height for middlebar
         let for_middle = screen_rect.height.checked_sub(3 + 3).unwrap_or_default();
@@ -494,7 +494,7 @@ impl ui::Position {
 impl Default for ui::State<'_> {
     fn default() -> Self {
         let mpv = libmpv::Mpv::new().unwrap();
-        mpv.configure_defult();
+        mpv.configure_default();
         mpv.cache_for(10);
         // By default repeat the playlist. Set playlist to repeat
         mpv.repeat_playlist();
@@ -534,7 +534,7 @@ impl Default for ui::State<'_> {
 }
 
 pub trait ExtendMpv {
-    fn configure_defult(&self);
+    fn configure_default(&self);
     fn repeat_playlist(&self);
     fn repeat_one(&self);
     fn repeat_nothing(&self);
@@ -548,7 +548,7 @@ pub trait ExtendMpv {
 }
 
 impl ExtendMpv for libmpv::Mpv {
-    fn configure_defult(&self) {
+    fn configure_default(&self) {
         let config_dir = config::ConfigContainer::get_config_dir().unwrap();
 
         self.set_property("config-dir", config_dir.to_str().unwrap())
@@ -593,8 +593,8 @@ impl ExtendMpv for libmpv::Mpv {
                     new_vol = 100.0;
                 }
 
-                let sucess = self.set_property("volume", new_vol).is_ok();
-                if sucess {
+                let success = self.set_property("volume", new_vol).is_ok();
+                if success {
                     Some(new_vol as u8)
                 } else {
                     None
@@ -643,7 +643,7 @@ impl ui::State<'_> {
                 self.bottom.music_elapse = Duration::from_secs(0);
 
                 self.status = "Playing...";
-                // set currently playing (unpaused) to ture. no need to set real title as it will
+                // set currently playing (unpaused) to true. no need to set real title as it will
                 // be done by refresh_mpv_status() later on
                 self.bottom.playing = Some((String::new(), true))
             }
@@ -652,7 +652,7 @@ impl ui::State<'_> {
         // Now as the selection is being played. Add remaining item from musicbar to the play
         // queue.
         for music in self.musicbar.0.iter() {
-            // If this is the currently payed song donot add it to prevent having
+            // If this is the currently payed song, do not add it to prevent having
             // currently played song two time in queue
             if music.id == *music_id {
                 continue;
@@ -685,7 +685,7 @@ impl ui::State<'_> {
                 self.bottom.music_elapse = Duration::from_secs(0);
 
                 self.status = "Playing..";
-                // set currently playing (unpaused) to ture. no need to set real title as it will
+                // set currently playing (unpaused) to true. no need to set real title as it will
                 // be done by refresh_mpv_status() later on
                 self.bottom.playing = Some((String::new(), true));
             }
@@ -697,8 +697,8 @@ impl ui::State<'_> {
     // Returning true means some music is playing which may be paused or unpaused
     pub fn refresh_mpv_status(&mut self) {
         // It may be better to use wait event method from mpv
-        // but for that we need tp spawn seperate thread/task
-        // and also we are updating the ui anway so it may also be affordable to just query mpv in
+        // but for that we need tp spawn separate thread/task
+        // and also we are updating the ui anyway so it may also be affordable to just query mpv in
         // ui updating loop
         if let Some((_, true)) = self.bottom.playing {
             match self.player.get_property::<i64>("audio-pts") {
@@ -710,7 +710,7 @@ impl ui::State<'_> {
                     // at the moment)
                     // which means that the mpv has not yet loaded the file
                     // this depends on the condition of network and amount of task needed to done
-                    // by mpv (ususally depends on the length of stream)
+                    // by mpv (usually depends on the length of stream)
                     // eprintln!("Err: {}", e);
                 }
             }
@@ -749,7 +749,7 @@ impl ui::State<'_> {
 }
 
 impl ui::State<'_> {
-    pub fn remove_music_from_favourates(&mut self, music: &fetcher::MusicUnit) {
+    pub fn remove_music_from_favorites(&mut self, music: &fetcher::MusicUnit) {
         let query = format!(
             "
             DELETE FROM
@@ -757,7 +757,7 @@ impl ui::State<'_> {
             WHERE
             fav_music.id = :id
         ",
-            tb_name = TB_FAVOURATES_MUSIC
+            tb_name = TB_FAVORITES_MUSIC
         );
         let args = [(":id", &music.id)];
 
@@ -769,14 +769,14 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn remove_playlist_from_favourates(&mut self, playlist: &fetcher::PlaylistUnit) {
+    pub fn remove_playlist_from_favorites(&mut self, playlist: &fetcher::PlaylistUnit) {
         let query = format!(
             "
             DELETE FROM
             {tb_name} as fav_playlist
             WHERE fav_playlist.id = :id
         ",
-            tb_name = TB_FAVOURATES_PLAYLIST
+            tb_name = TB_FAVORITES_PLAYLIST
         );
         let args = [(":id", &playlist.id)];
 
@@ -788,14 +788,14 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn remove_artist_from_favourates(&mut self, artist: &fetcher::ArtistUnit) {
+    pub fn remove_artist_from_favorites(&mut self, artist: &fetcher::ArtistUnit) {
         let query = format!(
             "
             DELETE FROM
             {tb_name} as fav_artist
             WHERE fav_artist.id = :id
         ",
-            tb_name = TB_FAVOURATES_ARTIST
+            tb_name = TB_FAVORITES_ARTIST
         );
 
         let args = [(":id", &artist.id)];
@@ -808,7 +808,7 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn add_artist_to_favourates(&mut self, artist: &fetcher::ArtistUnit) {
+    pub fn add_artist_to_favorites(&mut self, artist: &fetcher::ArtistUnit) {
         let query = format!(
             "
             INSERT OR REPLACE INTO
@@ -817,7 +817,7 @@ impl ui::State<'_> {
             VALUES
             (:id, :name, :count)
         ",
-            tb_name = TB_FAVOURATES_ARTIST
+            tb_name = TB_FAVORITES_ARTIST
         );
 
         let args = [
@@ -834,7 +834,7 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn add_music_to_favourates(&mut self, music: &fetcher::MusicUnit) {
+    pub fn add_music_to_favorites(&mut self, music: &fetcher::MusicUnit) {
         let query = format!(
             "
                 INSERT OR REPLACE INTO 
@@ -843,7 +843,7 @@ impl ui::State<'_> {
                 VALUES
                 (:id, :title, :author, :duration)
             ",
-            tb_name = TB_FAVOURATES_MUSIC
+            tb_name = TB_FAVORITES_MUSIC
         );
 
         let args = [
@@ -861,14 +861,14 @@ impl ui::State<'_> {
         }
     }
 
-    pub fn add_playlist_to_favourates(&mut self, playlist: &fetcher::PlaylistUnit) {
+    pub fn add_playlist_to_favorites(&mut self, playlist: &fetcher::PlaylistUnit) {
         let query = format!(
             "
             INSERT OR REPLACE INTO {tb_name}
             (id, name, author, count)
             VALUES (:id, :name, :author, :count);
         ",
-            tb_name = TB_FAVOURATES_PLAYLIST
+            tb_name = TB_FAVORITES_PLAYLIST
         );
 
         let args = [

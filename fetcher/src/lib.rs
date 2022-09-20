@@ -30,7 +30,7 @@ where
     Ok(dur.to_string())
 }
 
-// While fecthing playlist videos from endpoint /playlists/:plid
+// While fetching playlist videos from endpoint /playlists/:plid
 // response is returned as "videos": [ { <Fields of MusicUnit> } ]
 // this structure is only used to convert such response to Vec<MusicUnit>
 #[derive(Deserialize, Clone, PartialEq)]
@@ -115,19 +115,19 @@ was returned from the fetcher function as stated below.
 */
 #[derive(Debug)]
 pub enum ReturnAction {
-    // This variat indicates that the fetch has failed and cannot be resolved on retrying
+    // This variant indicates that the fetch has failed and cannot be resolved on retrying
     // This may be due to several reasons including server down, network failure, parse failure
     // Also Failed is active when fetcher had retried and now had exceed the retry count
     Failed,
     // This variant simply indicates that the request has failed but doing the same request for
-    // another time may suceed
+    // another time may succeed
     Retry,
-    // EOR avvrebration of End Of Result indicates that there is nothing more to fetch
+    // EOR abbreviation of End Of Result indicates that there is nothing more to fetch
     // At this point the corresponding container have all the data either fetched at once
     // like or had fetched the maximum page in pagination fetch
     // A common example is when all the 3/4 page of trending page have been fetched
-    // and user had seen the end. or all the search result have been srved
-    // At this condition the fetch has technicallt suceed and also tells that
+    // and user had seen the end. or all the search result have been served
+    // At this condition the fetch has technically succeed and also tells that
     // another retry on same query will return EOR again and again until new fetch is to be made
     EOR,
 }
@@ -147,13 +147,13 @@ pub struct Fetcher {
     // All the content in given playlist id is fetched at once and stored meaning
     // only single web request is needed and no other even when user asks for next page.
     // On the other hand this means for a playlist with large amount of content
-    // takes more time to initilized.
+    // takes more time to initialized.
     // The needed request will return the array of music data. And currently there is no way
     // to fetch only the necessary fields inside music struct. Which means even with playlist
-    // of samll size, over data is returend by the data that is just ignored from our side. Thus
+    // of small size, over data is returned by the data that is just ignored from our side. Thus
     // increasing the network traffic.
     // On the positive side, it is not needed to send multiple request when user explore the content
-    // in pagiunation. Just the different chunks of data is returned. Also, this makes possible to
+    // in pagination. Just the different chunks of data is returned. Also, this makes possible to
     // feed the player backend with all the content of playlist which means playing from
     // playlist don't have to get interrupted for fetching more data once played tha last item of
     // last fetched data. Playback stops only when playlist ends.
@@ -169,7 +169,7 @@ pub struct Fetcher {
 
     // List of available servers powered by invidious youtube data fetcher. All the servers should
     // provide same endpoints to make request to and same pattern of return data. Which actually means
-    // all the servers must be powered by the same mahor version of invidious backend.
+    // all the servers must be powered by the same major version of invidious backend.
     // Most of the servers do not expect high amount of request to their api. So to protect this
     // it would be better to frequently change the server time to time even in single session.
     // To distribute the load between multiple servers it would be better if this list is kept growing
@@ -180,15 +180,15 @@ pub struct Fetcher {
     // First field: (String) is the query being searched for.
     search_res: SearchRes,
 
-    // The reqwest client itself. This is only initilized once per session.
+    // The reqwest client itself. This is only initialized once per session.
     client: reqwest::Client,
 
     // index that reference the servers[] field.
     // When server need to be changes as described in documentation of servers[] field
     // this index is updated (usually rotated clockwise)
     // TODO:
-    // It may be more efficient to directly reference the elemnt from searvers[] rather than
-    // storing the index and hence preventing accidintal out-of-index access
+    // It may be more efficient to directly reference the element from servers[] rather than
+    // storing the index and hence preventing accidental out-of-index access
     active_server_index: usize,
 
     // copy of constants.item_per_list

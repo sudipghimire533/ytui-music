@@ -21,13 +21,13 @@ Config file structure:
       255  -- Blue color value
     ],                      -- Color that is applied in borders of inactive section of ui
     "border_highlight": [], -- Applies to border of active section
-    "list_idle": [],        -- Applies to list item that is not currenlty focused
-    "list_hilight": [],     -- Applies to list item currently focused
+    "list_idle": [],        -- Applies to list item that is not currently focused
+    "list_highlight": [],     -- Applies to list item currently focused
     "sidebar_list": [],     -- Color for list item in sidebar
     "block_title": [],      -- Applies to title of section tile appearing in top-left side between border
     "gauge_fill": [],       -- Applies to the background of status bar indicating duration of music played
     "color_primary": [],    ---|
-                               |-- Applies to other things where coloes are needed in addition to as defined here
+                               |-- Applies to other things where colors are needed in addition to as defined here
     "color_secondary": [],  ---|
     "status_text": []       -- Applied to info text in top-right corner of screen
   }},
@@ -44,8 +44,8 @@ Config file structure:
     "region": "NP",         -- ISO country code to pass to use for eg while fetching trending content
     "volume_step": 10       -- Value between 0-100 to increase/decrease volume point in single key stroke
     "search_by_type": [     -- When search query is suffixed by these term. It will only search for respective type
-      "music:",             -- string to prifix to search only music
-      "playlist:",          -- string to prefic to search only playlist
+      "music:",             -- string to prefix to search only music
+      "playlist:",          -- string to prefix to search only playlist
       "artist:"             -- string to prefix to search only artist
     ],
     "server_time_out": 30000, -- Wait until this many millisecond to connect to server
