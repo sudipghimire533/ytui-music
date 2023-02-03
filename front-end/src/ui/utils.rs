@@ -7,7 +7,7 @@ use ui::shared_import::*;
 pub const SIDEBAR_LIST_COUNT: usize = 6;
 pub const SIDEBAR_LIST_ITEMS: [&str; SIDEBAR_LIST_COUNT] = [
     "Trending",
-    "Youtube Communinty",
+    "Youtube Community",
     "Liked songs",
     "My playlist",
     "Following",
