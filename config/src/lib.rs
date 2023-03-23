@@ -509,14 +509,6 @@ impl ConfigContainer {
     pub fn give_me_storage() -> Option<rusqlite::Connection> {
         let db_path = Self::get_db_path()?;
 
-        // Version 0.26.0 of rusqlite was compiled with 3.36.0 but the installed runtime in client
-        // may vary. So it is necessary to bypass the version check. However there may be some
-        // differences in between version so it is recommended to install at least version 3.0 or
-        // above for proper execution. This is not yet tested anyway but should be mentioned in
-        // installation instruction.
-        unsafe {
-            rusqlite::bypass_sqlite_version_check();
-        }
         let connection = match rusqlite::Connection::open(&db_path) {
             Ok(conn) => conn,
             Err(err) => {
