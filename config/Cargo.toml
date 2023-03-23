@@ -11,7 +11,7 @@ serde_json = "1.0"
 dirs = "4.0"
 lazy_static = "1.4.0"
 rand = "0.8"
-rusqlite = { version = "0.26", features = ["modern_sqlite"] }
+rusqlite = { version = "0.28", features = ["modern_sqlite"] }
 
 [lib]
 name = "config"

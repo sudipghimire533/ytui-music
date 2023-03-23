@@ -10,7 +10,7 @@ crossterm = { version = "0.20", features = ["event-stream"] }
 tui = { version = "0.16", features = ["crossterm"], default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-libmpv = "2.0"
+libmpv = { version = "2.0.1", features = ["build_libmpv"] }
 fetcher = { path = "../fetcher" }
 lazy_static = "1.4.0"
 config = { path = "../config" }
