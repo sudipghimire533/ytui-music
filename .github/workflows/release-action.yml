@@ -52,10 +52,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Windows build is failing due to mpv.lib not foudn wrror
+      - name: Windows build is failing due to mpv.lib not found error
         run: fail now instead later
 
-      - name: Install depencencies
+      - name: Install dependencies
         run: choco install mpv
 
       - name: Install latest rust toolchain
@@ -74,7 +74,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: 'v2.0.0-beta'
-          files: target/release/ytui_music-windowns-amd64.exe
+          files: target/release/ytui_music-windows-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

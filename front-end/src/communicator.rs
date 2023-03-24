@@ -7,7 +7,7 @@ use std::sync::{Arc, Condvar, Mutex};
 macro_rules! handle_response {
     ($response: expr, $state_original: expr, $win_index: expr, $target: ident) => {{
         let mut state = $state_original.lock().unwrap();
-        // return the boolean which is only truw when response is RETRY
+        // return the boolean which is only true when response is RETRY
         let mut need_retry = false;
         match $response {
             Ok(mut data) => {
@@ -26,7 +26,7 @@ macro_rules! handle_response {
                         // That being said when user tries to navigate to previous page after seeing
                         // EOR then still the fetched page will be 0. i.e again started from beginning.
                         // This is desirable when user tries to navigate to next page but is
-                        // undesiriable when user tries to navigate to previous page. For now, I can't
+                        // undesirable when user tries to navigate to previous page. For now, I can't
                         // think of any workaround except really messing around with fetched_page be
                         // changing the data type (may be new struct storing maximum page before EOR)
                         // and manipulating accordingly. But I have no intention to do so. So this todo
@@ -35,14 +35,14 @@ macro_rules! handle_response {
                         // Setting this to None means that in next iteration condition
                         // state.fetched_page[] != prev_<>_page wil be true but as for the whole if
                         // statement to be true the page should be Some value. That means when EOR is
-                        // reched the list will be empty until next iteration. If the if condition
+                        // reached the list will be empty until next iteration. If the if condition
                         // wouldn't have .is_some() check then in next iteration then zeroth page will
-                        // be fetched which is undesirable because it confuses weather it is reallt the
+                        // be fetched which is undesirable because it confuses weather it is really the
                         // next page or zeroth page after EOR
                         state.fetched_page[$win_index] = None;
                     }
                     fetcher::ReturnAction::Retry => {
-                        // the respective function from which the data is exptracted
+                        // the respective function from which the data is extracted
                         // specify the no of times to retry. Simple rerun the loop if retry is feasible
                         state.status = "Retrying..";
                         need_retry = true;
@@ -61,11 +61,11 @@ pub async fn communicator<'st, 'nt>(
 ) {
     let mut fetcher = fetcher::Fetcher::default();
 
-    // variables with prev_ suffex are to be compared with respective current variables from state.
+    // variables with prev_ suffix are to be compared with respective current variables from state.
     // This is to check weather anything have changed from previous data request from user so that
     // further request are made or not
     let (mut prev_musicbar_source, mut prev_playlistbar_source, mut prev_artistbar_source) = {
-        // Initilization is done inside seperate scope so that this state variable is not visible
+        // Initialization is done inside separate scope so that this state variable is not visible
         // anywhere after that. It helps my autocomplete in editor
         let state = state_original.lock().unwrap();
         (
@@ -77,7 +77,7 @@ pub async fn communicator<'st, 'nt>(
     let mut prev_music_page: Option<usize> = None;
     let mut prev_playlist_page: Option<usize> = None;
     let mut prev_artist_page: Option<usize> = None;
-    // set these booleans to true when request handeling failed with RETREY response. if this is
+    // set these booleans to true when request handling failed with RETRY response. if this is
     // true then other condition should not have to be true
     let mut need_retry = [false; 3];
 
@@ -91,11 +91,11 @@ pub async fn communicator<'st, 'nt>(
         // or new page is requested from the same source. Same pattern is repeated to fill musicbar
         // amd artistbar too.
         // As this statements are executed in loop in short time, creating the condition variable
-        // seperatly is worth sacrificing. Anyway It is true when one of below 3 condition are met:
+        // separately is worth sacrificing. Anyway It is true when one of below 3 condition are met:
         // 1) the source of to fill playlist is different. i.e in previous loop data was shown from
-        //    search and now is needed to fetch the result of trending or seperate search query.
+        //    search and now is needed to fetch the result of trending or separate search query.
         //    See PlaylistbarSource in ui/mod.rs
-        // 2) corresponsing retry is set to true
+        // 2) corresponding retry is set to true
         // 3) or the source is same but the different page is requested. An extra condition is
         //    added to ensure that it is requesting at least Some page not nothing. eg: when EOR is
         //    reached fetched_page is set to None and for None there is nothing to fetch. See EOR
@@ -106,14 +106,14 @@ pub async fn communicator<'st, 'nt>(
             || (state.fetched_page[MIDDLE_PLAYLIST_INDEX] != prev_playlist_page
                 && state.fetched_page[MIDDLE_PLAYLIST_INDEX].is_some())
         {
-            // clear the target so that noone gets confused if it the response from previous or
+            // clear the target so that no one gets confused if it the response from previous or
             // current request
             state.playlistbar.0.clear();
             state.status = "Fetch playlist..";
 
             notifier.notify_one();
 
-            // condition of if made sure that fetched_page[MIDDLE_PLAYLIST_INDEX] is Some vlaue so
+            // condition of if made sure that fetched_page[MIDDLE_PLAYLIST_INDEX] is Some value so
             // unwrapping it is safe.
             let page = state.fetched_page[MIDDLE_PLAYLIST_INDEX].unwrap();
 
@@ -138,8 +138,8 @@ pub async fn communicator<'st, 'nt>(
                 ui::PlaylistbarSource::Artist(ref artist_id) => {
                     playlist_content = fetcher.get_playlist_of_channel(artist_id, page).await;
                 }
-                ui::PlaylistbarSource::Favourates => {
-                    playlist_content = fetcher.get_favourates_playlist(page).await;
+                ui::PlaylistbarSource::Favorites => {
+                    playlist_content = fetcher.get_favorites_playlist(page).await;
                 }
                 ui::PlaylistbarSource::RecentlyPlayed => {
                     // TODO
@@ -147,7 +147,7 @@ pub async fn communicator<'st, 'nt>(
                 }
             }
 
-            // if return action is RETRY set so in need_retry so that nex interation will try again
+            // if return action is RETRY set so in need_retry so that next iteration will try again
             let retry = handle_response!(
                 playlist_content,
                 state_original,
@@ -160,7 +160,7 @@ pub async fn communicator<'st, 'nt>(
         } else {
             // State is always unlocked in above block and dropped in if block. But when if block
             // condition is not met then the state will never be unlocked so always drop the state.
-            // Note, insetad of dropping state inside and outside if statement one could think to
+            // Note, instead of dropping state inside and outside if statement one could think to
             // drop it outside the if/else block so single drop statement will work. But when if
             // block is executed web request is made and when state is dropped outside if/else
             // block then the state will remain locked until web request is made which may even
@@ -190,8 +190,8 @@ pub async fn communicator<'st, 'nt>(
                 ui::ArtistbarSource::Search(ref term) => {
                     artist_content = fetcher.search_artist(term, page).await;
                 }
-                ui::ArtistbarSource::Favourates => {
-                    artist_content = fetcher.get_favourates_artist(page).await;
+                ui::ArtistbarSource::Favorites => {
+                    artist_content = fetcher.get_favorites_artist(page).await;
                 }
                 ui::ArtistbarSource::RecentlyPlayed => {
                     // TODO:
@@ -242,8 +242,8 @@ pub async fn communicator<'st, 'nt>(
                 ui::MusicbarSource::Artist(ref artist_id) => {
                     music_content = fetcher.get_videos_of_channel(artist_id, page).await;
                 }
-                ui::MusicbarSource::Favourates => {
-                    music_content = fetcher.get_favourates_music(page).await;
+                ui::MusicbarSource::Favorites => {
+                    music_content = fetcher.get_favorites_music(page).await;
                 }
                 ui::MusicbarSource::RecentlyPlayed => {
                     // TODO: handle each variant with accurate function

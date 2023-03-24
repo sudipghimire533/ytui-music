@@ -7,11 +7,11 @@ mod communicator;
 mod ui;
 
 /*
-* The role of main function is just to spwan two different loop in each thread and again pass
+* The role of main function is just to spawn two different loop in each thread and again pass
 * control to another loop
 * 1) handler is a sync thread for event_listener: This thread will wait for user input and respond
 *    See ui/event.rs for implementation
-* 2) comminucate is the sync thread for the comminucator which act as the bridge bwteen backend and
+* 2) communicate is the sync thread for the communicator which act as the bridge between backend and
 *    front-end. It checks for data required, get data from fetcher and also handles the filling of
 *    data in respective place
 * And the main thread itself will pass the control to `draw_ui` which handles rendering or painting
@@ -20,19 +20,19 @@ mod ui;
 *
 * See below files for respective function
 * __ui/mod.rs__: Defines structures as well as draw_ui function which render the content. This files
-* contains the decleration and abstraction to control the layout, state and related things.
+* contains the declaration and abstraction to control the layout, state and related things.
 *
-* __ui/utils.rs__: This files decleare and implementat all the defination in __ui/mod.rs__. This
-* includes building the individual components, defining styles and layout, Initilizing the state
+* __ui/utils.rs__: This file declares and implements all the definitions in __ui/mod.rs__. This
+* includes building the individual components, defining styles and layout, Initializing the state
 * and other structs.
 *
 * __ui/event.rs__: The sole purpose of this file is to wait for user event and responds by either
-* updating the ui or by asking the comminucator to fill the required data
+* updating the ui or by asking the communicator to fill the required data
 *
 * __communicator.rs__: This file reads the state variable, compares it to previous state and change
 * the data to be rendered. This includes calling the fetcher backed, navigating pages and so on.
 *
-* All the comminucation required are done via a single state variable which stores the state as
+* All the communication required are done via a single state variable which stores the state as
 * well as presented data. Given state variable is shared via wrapping in condavr so that one thread
 * can notify other thread when it bring some change in state
 */
@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match opts {
             Err(err) => {
                 eprintln!(
-                    "There was an error while prasing cli options.\nError: {err}",
+                    "There was an error while parsing cli options.\nError: {err}",
                     err = err
                 );
                 std::process::exit(1)

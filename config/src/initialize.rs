@@ -4,9 +4,9 @@ use lazy_static::lazy_static as compute_static;
 use rusqlite::{self, Connection};
 use std::sync::Mutex;
 
-pub const TB_FAVOURATES_MUSIC: &str = "favourates_music";
-pub const TB_FAVOURATES_PLAYLIST: &str = "favourates_playlist";
-pub const TB_FAVOURATES_ARTIST: &str = "favourates_artist";
+pub const TB_FAVORITES_MUSIC: &str = "favorites_music";
+pub const TB_FAVORITES_PLAYLIST: &str = "favorites_playlist";
+pub const TB_FAVORITES_ARTIST: &str = "favorites_artist";
 
 compute_static! {
     pub static ref CONFIG: Config = {

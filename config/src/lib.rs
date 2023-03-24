@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path;
 use std::time::Duration;
-pub mod initilize;
+pub mod initialize;
 
 pub const CONF_DIR_NAME: &str = "ytui_music";
 pub const CONFIG_FILE_NAME: &str = "config.json";
@@ -17,20 +17,20 @@ pub const YTUI_CONFIG_DIR_VAR_KEY: &str = "YTUI_CONFIG_DIR";
 
 trait Random {
     #[must_use]
-    fn suffle(&self, timeout: Duration) -> Self;
+    fn shuffle(&self, timeout: Duration) -> Self;
 }
 impl<T> Random for Vec<T>
 where
     T: std::cmp::PartialEq + Clone,
 {
-    fn suffle(&self, timeout: Duration) -> Self {
+    fn shuffle(&self, timeout: Duration) -> Self {
         let length = self.len();
         let mut new_vector = Vec::with_capacity(length);
 
         let now = std::time::Instant::now();
         let mut current = 0;
         while new_vector.len() != length {
-            // When timwout occurs push all the reamining vector directly
+            // When timeout occurs push all the remaining vector directly
             if now.elapsed() > timeout {
                 for val in self {
                     if !new_vector.contains(val) {
@@ -59,11 +59,11 @@ pub struct ShortcutsKeys {
     pub quit: char,
     pub forward: char,
     pub backward: char,
-    pub suffle: char,
+    pub shuffle: char,
     pub repeat: char,
     pub view: char,
-    pub favourates_add: char,
-    pub favourates_remove: char,
+    pub favorites_add: char,
+    pub favorites_remove: char,
     pub vol_increase: char,
     pub vol_decrease: char,
 }
@@ -71,7 +71,7 @@ pub struct ShortcutsKeys {
 impl Default for ShortcutsKeys {
     fn default() -> Self {
         ShortcutsKeys {
-            // This key will pause the playpack if it is currently playing
+            // This key will pause the playback if it is currently playing
             // and unpause the playback if is currently paused
             toggle_play: ' ',
 
@@ -87,7 +87,7 @@ impl Default for ShortcutsKeys {
             // This will move the cursor to the search box
             start_search: '/',
 
-            // This key + CTRL will downlaod the item currently focused from playlistbar/musicbar.
+            // This key + CTRL will download the item currently focused from playlistbar/musicbar.
             // if an item from musicbar is focused, download that music
             // if an item from playlistbat is focused, download all content from that playlist
             // otherwise do nothing
@@ -105,29 +105,29 @@ impl Default for ShortcutsKeys {
             // Same as forward but instead seek backward
             backward: '<',
 
-            // Turn suffle on if already is off and vice-versa
-            // Suffle on: play the playlist in random order
-            // Suffle off: play the playlist in as is order
-            suffle: 's',
+            // Turn shuffle on if already is off and vice-versa
+            // shuffle on: play the playlist in random order
+            // shuffle off: play the playlist in as is order
+            shuffle: 's',
 
             // Turn repeat on if already is off and vice-versa
             // Repeat on: Play all the items from playlist. If last item ends play first
-            // Repeat off: If currenlt playing item ends play same item again. i.e repeat one
+            // Repeat off: If current playing item ends play same item again. i.e repeat one
             repeat: 'r',
 
             // This key will expand the content of playlist but do not play it
             // Also will show the selection url
             view: 'v',
 
-            // Add the current selection to the favourates list
-            favourates_add: 'f',
+            // Add the current selection to the favorites list
+            favorites_add: 'f',
 
-            // Remove the current selection from the favourates lits. Adding and removing from
-            // favourates list are not done by same key because toggeling means first the exsistance of
+            // Remove the current selection from the favorites lits. Adding and removing from
+            // favorites list are not done by same key because toggling means first the existence of
             // given selection should be checked in database and then again query another INSERT/REMOVE
-            // statement. However, if sepearte keys are used, only single INSERT/REMOVE query is to be
+            // statement. However, if separate keys are used, only single INSERT/REMOVE query is to be
             // executed.
-            favourates_remove: 'u',
+            favorites_remove: 'u',
 
             // Key to increase the volume of playback
             vol_increase: '+',
@@ -143,7 +143,7 @@ pub struct Theme {
     pub border_idle: Color,
     pub border_highlight: Color,
     pub list_idle: Color,
-    pub list_hilight: Color,
+    pub list_highlight: Color,
     pub sidebar_list: Color,
     pub block_title: Color,
     pub gauge_fill: Color,
@@ -166,7 +166,7 @@ impl Default for Theme {
             list_idle: (200, 160, 0),
 
             // Apply to the list item that is currently under cursor
-            list_hilight: (255, 255, 255),
+            list_highlight: (255, 255, 255),
 
             // Applies to the text in top status bar
             status_text: (175, 125, 115),
@@ -180,7 +180,7 @@ impl Default for Theme {
             // Applies to the title (top-left corner of border) of the block
             block_title: (175, 125, 115),
 
-            // Color_(promary/secondary/tertiary) are for everything else other than above.
+            // Color_(primary/secondary/tertiary) are for everything else other than above.
             // Instead of relying on terminal color, using this will bring more consistency in the ui
             color_primary: (100, 250, 20),
             color_secondary: (250, 230, 70),
@@ -256,8 +256,8 @@ pub struct Downloads {
 
 impl Default for Downloads {
     fn default() -> Self {
-        // Get Audio directory to which music will be downladed to.
-        // This will first prirotise `crate::AUDIO_DIR_VAR_KEY` and move to get from
+        // Get Audio directory to which music will be downloaded to.
+        // This will first prioritize `crate::AUDIO_DIR_VAR_KEY` and move to get from
         // dirs crate and panic if still can't get required directory
         let audio_folder = {
             match std::env::var(AUDIO_DIR_VAR_KEY) {
@@ -327,7 +327,7 @@ impl Config {
             Ok(val) => Some(val),
             Err(err) => {
                 eprintln!(
-                    "Error while decoding the config file content. Erro: {}",
+                    "Error while decoding the config file content. Error: {}",
                     err
                 );
                 None
@@ -379,7 +379,7 @@ impl ConfigContainer {
 
         // @dir: a path string
         // @returns: An option returning None is the path does not exists or path is not dir or
-        //          A pathbuf that points to the real direcotry(after reading symbolinc link)
+        //          A pathbuf that points to the real directory(after reading symbolic link)
         let validate_dir = |dir: &str| -> Option<path::PathBuf> {
             let mut dir_path = path::PathBuf::from(dir);
             if let Ok(pth) = dir_path.read_link() {
@@ -429,10 +429,10 @@ impl ConfigContainer {
         }
 
         // Most of invidious server do not expect this much of api calls.
-        // So be sure we dont kill a single server instead distribute the load.
-        // Here, it is achived by rearrenging the server list in random order
+        // So be sure we don't kill a single server instead distribute the load.
+        // Here, it is achieved by rearranging the server list in random order
         // so that first server don't always have to be first to send request
-        config.servers.list = config.servers.list.suffle(Duration::from_secs(4));
+        config.servers.list = config.servers.list.shuffle(Duration::from_secs(4));
 
         Some(Self {
             config,
@@ -520,11 +520,11 @@ impl ConfigContainer {
             }
         };
 
-        // All the types are are decleared as text.
+        // All the types are are declared as text.
         // The destination types fetcher::{MusicUnit, Playlistunit, ArtistUnit}
-        // fiels are all decleared in string format. So on retriving with SELECT query
+        // files are all declared in string format. So on retriving with SELECT query
         // it makes easy to fetch columns without any conversion method
-        let create_favourates_table = format!(
+        let create_favorites_table = format!(
             "
                 CREATE TABLE IF NOT EXISTS {tb_music} (
                     id          TEXT    NOT NULL    PRIMARY KEY,
@@ -546,16 +546,16 @@ impl ConfigContainer {
                     count   TEXT    NOT NULL
                 );
            ",
-            tb_music = initilize::TB_FAVOURATES_MUSIC,
-            tb_playlist = initilize::TB_FAVOURATES_PLAYLIST,
-            tb_artist = initilize::TB_FAVOURATES_ARTIST
+            tb_music = initialize::TB_FAVORITES_MUSIC,
+            tb_playlist = initialize::TB_FAVORITES_PLAYLIST,
+            tb_artist = initialize::TB_FAVORITES_ARTIST
         );
 
-        let res = connection.execute_batch(&create_favourates_table);
+        let res = connection.execute_batch(&create_favorites_table);
 
         if let Err(err) = res {
             eprintln!(
-                "Cannot initlize required table in newly created database. Error: {err}",
+                "Cannot initialize required table in newly created database. Error: {err}",
                 err = err
             );
             return None;

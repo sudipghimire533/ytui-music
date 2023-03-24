@@ -1,5 +1,5 @@
 use crate::ui::{self, utils::ExtendMpv};
-use config::initilize::{CONFIG, STORAGE};
+use config::initialize::{CONFIG, STORAGE};
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use std::{
     convert::TryFrom,
@@ -32,10 +32,10 @@ fn advance_index(current: usize, limit: usize, direction: HeadTo) -> usize {
     }
 }
 
-// Helper function to drop the first paramater and call the function in second paramater and
+// Helper function to drop the first parameter and call the function in second parameter and
 // optional arguments provided in later arguments
 // This is used to drop the state and call the function as such pattern is found redundant while
-// calling event handeling closure where unlocked state needs to be droppped before calling the
+// calling event handling closure where unlocked state needs to be dropped before calling the
 // corresponding handler
 macro_rules! drop_and_call {
     // This will call the function in passe in second argument
@@ -44,15 +44,15 @@ macro_rules! drop_and_call {
         std::mem::drop($state);
         $callback()
     }};
-    // This will call the function recived in second argument and pass the later arguments as that
-    // function paramater
+    // This will call the function received in second argument and pass the later arguments as that
+    // function parameter
     ($state: expr, $callback: expr, $($args: expr)*) => {{
         std::mem::drop($state);
         $callback( $($args)* )
     }};
 }
 
-// Heklper function to get the next page depending on the current page and direction to move
+// Helper function to get the next page depending on the current page and direction to move
 // This was mainly created to fetch the next page of the musicbar/playlist bar when user
 // hits NEXT_SH_KEY or PREV_SH_KEY
 #[inline]
@@ -69,14 +69,14 @@ fn get_page(current: &Option<usize>, direction: HeadTo) -> usize {
 }
 
 /*
-* The event_sender function is running in it's own seperate thread.
-* -> A loop is initilized where it waits for any event to happen (keypress and resize for now)
+* The event_sender function is running in it's own separate thread.
+* -> A loop is initialized where it waits for any event to happen (keypress and resize for now)
 * and call the corresponding closure to handle event.
 * -> Inside every closure state that are dependent to this event is checked. eg: checks active
-* window shile handleing left/right direction key
-* -> To fetch data, required data paramater is set in a state variable which is shared across all
+* window while handling left/right direction key
+* -> To fetch data, required data parameter is set in a state variable which is shared across all
 * the threads. And another loop is ran in communicator.rs where it wait checks weather anything
-* should be filled from diffrenet source.
+* should be filled from different source.
 */
 pub async fn event_sender(
     state_original: &mut Arc<Mutex<ui::State<'_>>>,
@@ -91,7 +91,7 @@ pub async fn event_sender(
 
     let download_counter: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
 
-    // There is several option in sidebar like trending/ favourates,
+    // There is several option in sidebar like trending/ favorites,
     // this handler will change the selected option from sidebar depending on the direction user
     // move (Up or DOwn).
     let advance_sidebar = |direction: HeadTo| {
@@ -120,7 +120,7 @@ pub async fn event_sender(
         notifier.notify_all();
     };
 
-    // simialr to advance_music_list but instead rotate data in `playlistbar` variable of state
+    // similar to advance_music_list but instead rotate data in `playlistbar` variable of state
     let advance_playlist_list = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         let next_index;
@@ -134,7 +134,7 @@ pub async fn event_sender(
         notifier.notify_all();
     };
 
-    // simialr to advance_playlist_list but instead rotate data in `artistbar` variable of state
+    // similar to advance_playlist_list but instead rotate data in `artistbar` variable of state
     let advance_artist_list = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
         // if the list is empty then do nothing else.
@@ -155,7 +155,7 @@ pub async fn event_sender(
     // This handle will fire when user hits QUIT_SH_KEY
     // Before breaking the loop which this function is running on
     // this closure will simply set the active_window (`active`) to None so that functions in other
-    // thread can also respond to the event (which is usally again breking the running loop in
+    // thread can also respond to the event (which is usually again breaking the running loop in
     // thread)
     let quit = |force_quit: bool| -> bool {
         let mut state = state_original.lock().unwrap();
@@ -173,7 +173,7 @@ pub async fn event_sender(
 
         // setting active window to None is to quit
         state.active = ui::Window::None;
-        // Also make sure databse is flushed.
+        // Also make sure database is flushed.
         if let Err(err) = STORAGE.lock().unwrap().cache_flush() {
             eprintln!("Cannot flush the storage db. Error: {err}", err = err);
         }
@@ -199,7 +199,7 @@ pub async fn event_sender(
 
     // This handler is fired when user press ESC key,
     // if searchbar is active clear the content in search bar and move to next window
-    // if helpbar is active anway move to sidebar just to hide the help window
+    // if helpbar is active anyway move to sidebar just to hide the help window
     let handle_esc = || {
         let mut state = state_original.lock().unwrap();
         match state.active {
@@ -239,7 +239,7 @@ pub async fn event_sender(
     };
 
     // This is fires when user press any character key
-    // this will simpley push the recived character in search query term and update state
+    // this will simply push the received character in search query term and update state
     // so can the added character becomes visible
     let handle_search_input = |ch| {
         state_original.lock().unwrap().search.0.push(ch);
@@ -247,7 +247,7 @@ pub async fn event_sender(
     };
 
     // This handler is fired when use press SEARCH_SH_KEY
-    // this will move the curson to the searchbar from which user can start to type the query
+    // this will move the cursor to the searchbar from which user can start to type the query
     let activate_search = || {
         let mut state = state_original.lock().unwrap();
         state.active = ui::Window::Searchbar;
@@ -258,7 +258,7 @@ pub async fn event_sender(
     // UP_ARROW will set the direction to PREV and DOWN_ARROW to NEXT
     // for now, these key will only handle the moving of list
     // So, depending on the window which is currently active, this closure will call
-    // the respective handler which will advance the corersponding list
+    // the respective handler which will advance the corresponding list
     let handle_up_down = |direction: HeadTo| {
         let state = state_original.lock().unwrap();
         match state.active {
@@ -282,7 +282,7 @@ pub async fn event_sender(
         if search_term.is_empty() {
             return;
         }
-        // When prefiexed by the string as defined in config only show the specific result type
+        // When prefixed by the string as defined in config only show the specific result type
         // respectively
         else if let Some(0) = search_term.find(&CONFIG.constants.search_by_type[0]) {
             let search_term =
@@ -328,7 +328,7 @@ pub async fn event_sender(
 
     let fill_fav_music = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        state.filled_source.0 = ui::MusicbarSource::Favourates;
+        state.filled_source.0 = ui::MusicbarSource::Favorites;
         let page = get_page(&state.fetched_page[MIDDLE_MUSIC_INDEX], direction);
         state.fetched_page[MIDDLE_MUSIC_INDEX] = Some(page);
         notifier.notify_all();
@@ -336,7 +336,7 @@ pub async fn event_sender(
 
     let fill_fav_playlist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        state.filled_source.1 = ui::PlaylistbarSource::Favourates;
+        state.filled_source.1 = ui::PlaylistbarSource::Favorites;
         let page = get_page(&state.fetched_page[MIDDLE_PLAYLIST_INDEX], direction);
         state.fetched_page[MIDDLE_PLAYLIST_INDEX] = Some(page);
         notifier.notify_all();
@@ -344,7 +344,7 @@ pub async fn event_sender(
 
     let fill_fav_artist = |direction: HeadTo| {
         let mut state = state_original.lock().unwrap();
-        state.filled_source.2 = ui::ArtistbarSource::Favourates;
+        state.filled_source.2 = ui::ArtistbarSource::Favorites;
         let page = get_page(&state.fetched_page[MIDDLE_ARTIST_INDEX], direction);
         state.fetched_page[MIDDLE_ARTIST_INDEX] = Some(page);
         notifier.notify_all();
@@ -399,13 +399,13 @@ pub async fn event_sender(
             ui::Window::Playlistbar => target_index = MIDDLE_PLAYLIST_INDEX,
             ui::Window::Artistbar => target_index = MIDDLE_ARTIST_INDEX,
             ui::Window::BottomControl => {
-                // On reciving next/prev event when active window is bottom control
+                // On receiving next/prev event when active window is bottom control
                 // It implied to change the track
                 return drop_and_call!(state, change_track, direction);
             }
             ui::Window::Searchbar | ui::Window::Sidebar | ui::Window::Popup(..) => {
                 // If none of above windows are active then nothing to navigate.
-                // Early return instead of initilizing `target_index`
+                // Early return instead of initializing `target_index`
                 return;
             }
             ui::Window::None => unreachable!(),
@@ -503,7 +503,7 @@ pub async fn event_sender(
         let counter_clone = Arc::clone(&download_counter);
 
         // Wait for 5 second just to make sure that command has finished executing.
-        // It usually donot take all those 5 seconds
+        // It usually does not take all those 5 seconds
         // Anyway, download won't finish before 5 seconds
         // Then just wait for command to finish by waiting for exit status
         // decrease the download queue count
@@ -637,7 +637,7 @@ pub async fn event_sender(
         }
     };
 
-    let handle_favourates = |add: bool| {
+    let handle_favorites = |add: bool| {
         let mut state = state_original.lock().unwrap();
 
         state.status = "Processing..";
@@ -650,9 +650,9 @@ pub async fn event_sender(
                     let selected_music =
                         &state.musicbar.0[selected_index] as *const fetcher::MusicUnit;
                     if add {
-                        state.add_music_to_favourates(unsafe { &*selected_music });
+                        state.add_music_to_favorites(unsafe { &*selected_music });
                     } else {
-                        state.remove_music_from_favourates(unsafe { &*selected_music });
+                        state.remove_music_from_favorites(unsafe { &*selected_music });
                     }
                 } else {
                     state.status = "Nothing selected..";
@@ -664,9 +664,9 @@ pub async fn event_sender(
                     let selected_playlist =
                         &state.playlistbar.0[selected_index] as *const fetcher::PlaylistUnit;
                     if add {
-                        state.add_playlist_to_favourates(unsafe { &*selected_playlist });
+                        state.add_playlist_to_favorites(unsafe { &*selected_playlist });
                     } else {
-                        state.remove_playlist_from_favourates(unsafe { &*selected_playlist });
+                        state.remove_playlist_from_favorites(unsafe { &*selected_playlist });
                     }
                 } else {
                     state.status = "Nothing selected..";
@@ -678,9 +678,9 @@ pub async fn event_sender(
                     let selected_artist =
                         &state.artistbar.0[selected_index] as *const fetcher::ArtistUnit;
                     if add {
-                        state.add_artist_to_favourates(unsafe { &*selected_artist });
+                        state.add_artist_to_favorites(unsafe { &*selected_artist });
                     } else {
-                        state.remove_artist_from_favourates(unsafe { &*selected_artist });
+                        state.remove_artist_from_favorites(unsafe { &*selected_artist });
                     }
                 } else {
                     state.status = "Nothing selected..";
@@ -725,7 +725,7 @@ pub async fn event_sender(
                             if state_original.lock().unwrap().active == ui::Window::Searchbar {
                                 handle_search_input(ch);
                             }
-                            // Now as this is not the input, call the shortcuts action if this key
+                            // Now as thus is not the input, call the shortcuts action if this key
                             // is defined in shortcuts
                             else if ch == CONFIG.shortcut_keys.start_search {
                                 activate_search();
@@ -733,7 +733,7 @@ pub async fn event_sender(
                                 toggle_play();
                             } else if ch == CONFIG.shortcut_keys.repeat {
                                 handle_repeat();
-                            } else if ch == CONFIG.shortcut_keys.suffle {
+                            } else if ch == CONFIG.shortcut_keys.shuffle {
                                 toggle_shuffle();
                             } else if ch == CONFIG.shortcut_keys.forward {
                                 seek_forward();
@@ -741,10 +741,10 @@ pub async fn event_sender(
                                 seek_backward();
                             } else if ch == CONFIG.shortcut_keys.view {
                                 handle_view();
-                            } else if ch == CONFIG.shortcut_keys.favourates_add {
-                                handle_favourates(true);
-                            } else if ch == CONFIG.shortcut_keys.favourates_remove {
-                                handle_favourates(false);
+                            } else if ch == CONFIG.shortcut_keys.favorites_add {
+                                handle_favorites(true);
+                            } else if ch == CONFIG.shortcut_keys.favorites_remove {
+                                handle_favorites(false);
                             } else if ch == CONFIG.shortcut_keys.prev {
                                 if is_with_control {
                                     change_track(HeadTo::Prev);

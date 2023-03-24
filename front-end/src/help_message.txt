@@ -11,10 +11,10 @@ update:  : Update the ytui-music binary to latest version.
 
 delete:  : Delete configuration/storage file
            Arguments:
-           - config: Delete configuation file. This is located in <config-dir>/.ytui-music/config.json.
+           - config: Delete configuration file. This is located in <config-dir>/.ytui-music/config.json.
                 Run info config-location for exact location
                 On next run you will be asked weather to generate default config.
-           - db: Delete the database storage. This will delete your save data like favourates music.
+           - db: Delete the database storage. This will delete your save data like favorites music.
 
 info:    : Get the information about passed argument.
            Arguments:

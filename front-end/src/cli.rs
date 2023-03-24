@@ -1,4 +1,4 @@
-use config::initilize::CONFIG;
+use config::initialize::CONFIG;
 use reqwest;
 use serde::{self, Deserialize};
 use tokio;
@@ -113,10 +113,10 @@ __   ___         _                           _
             toggle = keys.toggle_play,
             next = keys.next,
             prev = keys.prev,
-            suf = keys.suffle,
+            suf = keys.shuffle,
             rep = keys.repeat,
-            f_add = keys.favourates_add,
-            f_rm = keys.favourates_remove,
+            f_add = keys.favorites_add,
+            f_rm = keys.favorites_remove,
             srch = keys.start_search,
             view = keys.view,
             bkwd = keys.backward,
@@ -133,7 +133,7 @@ __   ___         _                           _
     }
 
     pub fn initialize_globals(&self) {
-        lazy_static::initialize(&config::initilize::INIT);
+        lazy_static::initialize(&config::initialize::INIT);
     }
 
     pub fn update(self) {
@@ -144,7 +144,7 @@ __   ___         _                           _
             println!("Enter path to store updated binary");
             std::io::stdin()
                 .read_line(&mut download_path)
-                .expect("Couldnot accept input");
+                .expect("Could not accept input");
             download_path = download_path.trim().to_string();
         }
 
@@ -179,7 +179,7 @@ __   ___         _                           _
                 response
                     .bytes()
                     .await
-                    .expect("Couldn't extract bytes from recived binary.."),
+                    .expect("Couldn't extract bytes from received binary.."),
             );
 
             if let Err(err) = res {
@@ -202,12 +202,12 @@ __   ___         _                           _
                         eprintln!("To report this problem, you can file this issue in https://github.com/sudipghimire533/ytui-music/issues/");
                     }
                     Some(res) => {
-                        let sucess = after_download(res).await;
-                        if !sucess {
+                        let success = after_download(res).await;
+                        if !success {
                             eprintln!("Cannot write ytui-music to destination. Update failed..");
                             eprintln!("To report this problem, you can file this issue in https://github.com/sudipghimire533/ytui-music/issues/");
                         } else {
-                            println!("Update sucess. Set executable permission if needed.");
+                            println!("Update success. Set executable permission if needed.");
                         }
                     }
                 }
@@ -217,7 +217,7 @@ __   ___         _                           _
     pub async fn download_binary(self, binary_name: &str) -> Option<reqwest::Response> {
         use reqwest::header;
 
-        let assest_api_url =
+        let latest_api_url =
             "https://api.github.com/repos/sudipghimire533/ytui-music/releases/latest".to_string();
 
         let mut headers = header::HeaderMap::new();
@@ -231,11 +231,11 @@ __   ___         _                           _
             .build()
             .expect("Cannot build json accepting reqwest client.");
 
-        let octets_array = match client_json.get(&assest_api_url).send().await {
+        let octets_array = match client_json.get(&latest_api_url).send().await {
             Err(err) => {
                 eprintln!(
-                    "Cannot get the release info from {url}.\n Erro: {err}",
-                    url = assest_api_url,
+                    "Cannot get the release info from {url}.\n Error: {err}",
+                    url = latest_api_url,
                     err = err,
                 );
                 return None;
@@ -260,12 +260,12 @@ __   ___         _                           _
                 break;
             }
         }
-        let asset = asset.expect("Empty asset array recived from github api");
+        let asset = asset.expect("Empty asset array received from github api");
 
         headers.insert(
             header::ACCEPT,
             header::HeaderValue::from_bytes(asset.content_type.as_bytes())
-                .expect("Invalid content type recived from github api"),
+                .expect("Invalid content type received from github api"),
         );
         let client_octet = reqwest::ClientBuilder::new()
             .default_headers(headers)
@@ -274,7 +274,7 @@ __   ___         _                           _
 
         // As of now binary is only of <= 5Mib so if binary happens to grow over time (which is not
         // expected as of now), then instead of holding binary in memory, it should written to file
-        // peridocially
+        // periodically
         let binary = match client_octet.get(&asset.url).send().await {
             Err(err) => {
                 eprintln!(
@@ -291,12 +291,12 @@ __   ___         _                           _
     }
 
     pub fn delete_config(self) {
-        eprintln!("This function is currently unimplented.");
+        eprintln!("This function is currently unimplemented.");
         eprintln!("You may try to manually delete config.json and mpv.conf file under ytui_music directory in config directory");
     }
 
     pub fn delete_db(self) {
-        eprintln!("This function is currently unimplented.");
+        eprintln!("This function is currently unimplemented.");
         eprintln!("You may try to manually delete storage.db3 file under ytui_music directory in config directory");
     }
 }

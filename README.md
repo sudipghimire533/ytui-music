@@ -13,7 +13,7 @@ If binary is not available for your platform, head on to [build from source](#bu
 
 2) Give it executable permission and from downloaded directory, in shell:
 ```
-ytui_music run
+ytui-music run
 ```
 3) You may need to jump to [Usage Guide](#usage)
 

@@ -30,7 +30,7 @@ use crossterm::{
 use shared_import::*;
 
 // Following several state defines the layout of the ui
-// The ui is first splitted into 3 area arranged verticsally in order:
+// The ui is first splitted into 3 area arranged vertically in order:
 // --------------------------------------
 // |            TopLayout               |
 // -------------------------------------
@@ -38,22 +38,22 @@ use shared_import::*;
 // |        MiddleLayout                |
 // |                                    |
 // --------------------------------------
-// |        BottomLaout                 |
+// |        BottomLayout                |
 // --------------------------------------
 // TopLayout and Bottom layout are of small height.
 // 3 row for toplayout(2 for border and 1 for single line text) and
 // 3 or 4 row(2 for border and 1 or 2 for music name and icons) for bottom layout
 // bottomlayout. And all the remaining area is given to MiddleLayout
-// TODO: Above specified division of height is not yet implemented. For now the dovision is based
+// TODO: Above specified division of height is not yet implemented. For now the division is based
 // hardcoded in percentage. But instead change that to 3/4 row length for top/bottom layout
 // and calculate the remaining row height. If remaining row height is less than like 6/7 row ask
 // user to increase size of terminal window or zoom out/ decrease font size of terminal
 
 // TopLayout is off full width in the top. This again contains two components which are splitted
 // horizontally. These area are for searchbar (which covers more than half of layout) and
-// statusbar (show the working status of app like "error occured", "no more result" and so on)
+// statusbar (show the working status of app like "error occurred", "no more result" and so on)
 // They are splitted in such a ratio that searchbar covers much of area but statusbar should also get
-// sufficient enouh so that any printed status is not hidden for now 85%:15% ratio
+// sufficient enough so that any printed status is not hidden for now 85%:15% ratio
 // ---------------------------------------
 // |        Search Bar          | StatusBar |
 // ---------------------------------------
@@ -73,7 +73,7 @@ pub struct MainLayout {
     middle_section: MiddleLayout,
 }
 
-// TODO: Instead of having seperate struct to hold SideBar Rect define Rect directly in MainLayout
+// TODO: Instead of having separate struct to hold SideBar Rect define Rect directly in MainLayout
 // So that this struct is removed and type of `MainLayout::sidebar` is Rect
 pub struct SideBar {
     layout: [Rect; 2],
@@ -110,10 +110,10 @@ pub struct MiddleBottom {
 }
 
 // -------------------------------------
-// |        Rect (MusicConroller)       |
+// |        Rect (MusicController)      |
 // -------------------------------------
-// TODO: Split this area horzontally where small portion in right half shows the info like
-// suffle, repeat, pause/playing and volume using icon
+// TODO: Split this area horizontally where small portion in right half shows the info like
+// shuffle, repeat, pause/playing and volume using icon
 pub struct BottomLayout {
     layout: Rect,
 }
@@ -138,7 +138,7 @@ pub struct BottomLayout {
 // |                        BottomBar                       |
 // ----------------------------------------------------------
 
-// Sotres the position on which respective components (in which field is named after)
+// Sorts the position on which respective components (in which field is named after)
 // are to be rendered
 #[derive(Default)]
 pub struct Position {
@@ -154,20 +154,20 @@ pub struct Position {
 }
 
 // This function will:
-// 1) Initilize the terminal backend
+// 1) Initialize the terminal backend
 // 2) Get the layout of the ui
 // 3) print content in ui
 // 4) Run a loop waiting for state variable to change
 // if user asks to quit the app(denoted by setting active window to None) -> Quit,
 // else -> Update the ui
-// Ui is always updated when notified. No checkes are done to weather the ui is really updated or
-// not as algorithms defined in ternial backend is responsible for such checks.
+// Ui is always updated when notified. No checks are done to weather the ui is really updated or
+// not as algorithms defined in terminal backend is responsible for such checks.
 // Ui is also updated in every REFRESH_RATE specified which will then sync the states like
 // played duration to the ui. Also see documentation in __event.rs__ file
 pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
     let mut stdout = std::io::stdout();
     execute!(stdout, EnterAlternateScreen).expect("Failed to enter alternate screen");
-    terminal::enable_raw_mode().expect("Faild to enable raw mode");
+    terminal::enable_raw_mode().expect("Failed to enable raw mode");
 
     let backed = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backed).expect("Failed to create terminal from backend");
@@ -180,18 +180,18 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
         .unwrap_or_else(|_| eprintln!("Failed to hide cursor"));
 
     let mut previous_dimension: Rect = Rect::default();
-    let mut position = Position::caclulate(&previous_dimension);
+    let mut position = Position::calculate(&previous_dimension);
     let mut paint_ui = || {
         terminal
             .draw(|screen| {
                 let mut state_unlocked = state.lock().unwrap();
 
-                // As screen size doesn't change that often (is chaged when terminal window is
-                // resized) so it is unnecessary to calcuate position for components in every draw
+                // As screen size doesn't change that often (is changed when terminal window is
+                // resized) so it is unnecessary to calculate position for components in every draw
                 // loop. Calculate once and recalculate when window size change
                 let current_dimension = screen.size();
                 if previous_dimension != current_dimension {
-                    position = Position::caclulate(&current_dimension);
+                    position = Position::calculate(&current_dimension);
                     previous_dimension = current_dimension;
                 }
 
@@ -203,7 +203,7 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                     &mut state_unlocked.sidebar,
                 );
 
-                // each of below three state keeps data as reference to prevent unnecessaru copy
+                // each of below three state keeps data as reference to prevent unnecessary copy
                 // i.e they holds immutable reference to internal field of state variable so state
                 // is supposed to be borrowed immutable
                 // Again, as render_stateful_widget takes state of widget as mutable reference
@@ -246,7 +246,7 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
                 // This makes sure that background is not empty and user can
                 // see some things like progress of music player
                 if let Window::Popup(title, ref content) = state_unlocked.active {
-                    utils::show_pupop_text(screen, [title, content], &position.popup);
+                    utils::show_popup_text(screen, [title, content], &position.popup);
                 }
             })
             .unwrap();
@@ -263,8 +263,8 @@ pub fn draw_ui(state: &mut Arc<Mutex<State>>, cvar: &mut Arc<Condvar>) {
         }
     }
 
-    // Attempt to bring terminal in original state before thi appbut when any attempt is failed
-    // do not panic but simply leave the message about failure and user will be responsibe to
+    // Attempt to bring terminal in original state before this app, but when any attempt is failed
+    // do not panic but simply leave the message about failure and user will be responsible to
     // handle their terminal on their own
     crossterm::terminal::disable_raw_mode().unwrap_or_else(|_| {
         eprintln!("Failed to leave raw mode. You may need to restart the terminal")
@@ -314,7 +314,7 @@ pub enum MusicbarSource {
     Search(String),
     Trending,
     RecentlyPlayed,
-    Favourates,
+    Favorites,
     Playlist(String),
     Artist(String),
 }
@@ -322,26 +322,26 @@ pub enum MusicbarSource {
 pub enum PlaylistbarSource {
     Search(String),
     RecentlyPlayed,
-    Favourates,
+    Favorites,
     Artist(String),
 }
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ArtistbarSource {
     Search(String),
     RecentlyPlayed,
-    Favourates,
+    Favorites,
 }
 
 #[derive(Debug)]
 pub struct PlaybackBehaviour {
-    // true if user wishes to suffle the playlist
+    // true if user wishes to shuffle the playlist
     // false otherwise
     shuffle: bool,
     // true if user wished to repeat all items from playlist. i.e when last music of playlist ends
     // play the first music again
-    // flase if user wants to repeat the currently playing music over and over again
+    // false if user wants to repeat the currently playing music over and over again
     repeat: bool,
-    // Current volume level. This is store here instead of fecthing with get_prop everytime
+    // Current volume level. This is store here instead of fetching with get_prop every time
     volume: u8,
 }
 
@@ -353,8 +353,8 @@ pub struct State<'p> {
     // For example. `P` and `_` are used to indicate the player status of playing and paused.
     pub status: &'p str,
 
-    // First memeber of tuple is the data being currently rendered in musicbar area and second is
-    // that state of same list which define the hilighed item index.
+    // First member of tuple is the data being currently rendered in musicbar area and second is
+    // that state of same list which define the highlighted item index.
     pub musicbar: (Vec<fetcher::MusicUnit>, TableState),
 
     // Same as musicbar but keeps a list of playlist
@@ -364,22 +364,22 @@ pub struct State<'p> {
     pub artistbar: (Vec<fetcher::ArtistUnit>, TableState),
 
     // Defined the source in which the music/playlist/artist area are filled.
-    // These are the values like Search(query) and is primerly needed while fecthing next/prev page of
+    // These are the values like Search(query) and is primarily needed while fetching next/prev page of
     // the list
     pub filled_source: (MusicbarSource, PlaylistbarSource, ArtistbarSource),
 
     // First string is the actual string being typed on searchbar (to actually render)
     // If (musicbar or playlistbar or artistbar) is filled with search result
-    // second memebr is Some(result_of_this_query) (to send to fetcher)
+    // second member is Some(result_of_this_query) (to send to fetcher)
     // second member is the string of searchbar when use pressed ENTER last time in searchbar
     pub search: (String, String),
 
-    // Currently active window. In UI, this windows title is hilighted and keypress are evaluated
+    // Currently active window. In UI, this windows title is highlighted and keypress are evaluated
     // depending on active window
     pub active: Window,
 
-    // Currebntly fetched page for music/playlist/artist bar respectivery in index 0,1,2
-    // Initially it is whenever `filled_source` is changed. And is inceremented/decremented by 1 on
+    // Currently fetched page for music/playlist/artist bar respectively in index 0,1,2
+    // Initially it is whenever `filled_source` is changed. And is incremented/decremented by 1 on
     // next/prev respectively
     pub fetched_page: [Option<usize>; 3],
 
