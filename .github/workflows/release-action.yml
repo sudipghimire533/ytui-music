@@ -37,7 +37,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: 'v2.0.0-beta'
+          tag_name: ${{  github.ref_name }}
           files: |
             target/release/ytui_music-linux-amd64
         env:
@@ -73,7 +73,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: 'v2.0.0-beta'
+          tag_name: ${{  github.ref_name }}
           files: target/release/ytui_music-windowns-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -107,7 +107,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: 'v2.0.0-beta'
+          tag_name: ${{  github.ref_name }}
           files: |
             target/release/ytui_music-macos
         env:
