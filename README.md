@@ -36,7 +36,8 @@ brew install mpv youtube-dl
 
 ### - Debian/Ubuntu Derivatives
 ```
-sudo apt update && sudo apt install youtube-dl libmpv1
+sudo apt update -y
+sudo apt install -y youtube-dl libmpv1 libmpv-dev
 ```
 **For other distributions, install youtube-dl and mpv packages in your preferred methods**
 
@@ -85,7 +86,7 @@ ytui-music is single binary so it shouldn't be difficult to run. Just make sure 
 ### Run ytui-music
 ```
 ytui_music run
-``` 
+```
 ### Show help message
 ```
 ytui_music help
