@@ -68,14 +68,20 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 git clone git@github.com:sudipghimire533/ytui-music
 ```
 
-3) `cd` into source root and do:
+3) Initialize and update gitmodules 
+```
+git submodule init
+git submodule update
+```
+
+4) `cd` into source root and do:
 ```
 cargo build --all --release
 ```
 
-4) The compiled binary is located in `target/release/` directory. Copy the `ytui_music` binary and place it somewhere where it is easy to run. Preferrably under `$PATH`.
+5) The compiled binary is located in `target/release/` directory. Copy the `ytui_music` binary and place it somewhere where it is easy to run. Preferrably under `$PATH`.
 
-5) Ytui-music is now ready to fire. [Head over to usage](#usage)
+6) Ytui-music is now ready to fire. [Head over to usage](#usage)
 
 ---
 
