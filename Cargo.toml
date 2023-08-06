@@ -10,3 +10,6 @@ lto = true
 panic = 'abort'
 incremental = false
 codegen-units = 8
+
+[patch.crates-io]
+libmpv = { path = "libmpv-rs/" }
