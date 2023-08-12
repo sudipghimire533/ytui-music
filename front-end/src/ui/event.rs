@@ -555,7 +555,7 @@ pub async fn event_sender(
         let increase_by = match direction {
             HeadTo::Next => CONFIG.constants.volume_step,
             HeadTo::Prev => CONFIG.constants.volume_step * -1,
-            HeadTo::Initial => 0
+            HeadTo::Initial => 0,
         };
 
         let res = state.player.change_volume(increase_by);
