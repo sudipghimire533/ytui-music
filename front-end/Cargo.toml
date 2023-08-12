@@ -7,10 +7,10 @@ authors = ["Sudip Ghimire <sudipghimire533@gmail.com>"]
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 crossterm = { version = "0.20", features = ["event-stream"] }
-tui = { version = "0.16", features = ["crossterm"], default-features = false }
+tui = { package = "ratatui", version = "0.22.0", features = ["crossterm", "all-widgets"], default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-libmpv = { version = "2.0.1" }
+libmpv = { git = "https://github.com/sudipghimire533/libmpv-rs", rev = "18aa79a" }
 fetcher = { path = "../fetcher" }
 lazy_static = "1.4.0"
 config = { path = "../config" }

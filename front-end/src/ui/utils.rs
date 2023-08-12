@@ -1,7 +1,7 @@
 use crate::ui;
 use fetcher::ExtendDuration;
 use std::borrow::Cow;
-use tui;
+use tui::{self, text::Line};
 use ui::shared_import::*;
 
 pub const SIDEBAR_LIST_COUNT: usize = 6;
@@ -63,8 +63,8 @@ impl<'parent> ui::TopLayout {
                 .add_modifier(Modifier::BOLD | Modifier::ITALIC)
                 .fg(rgb!(CONFIG.theme.color_secondary)),
         ))
-        .block(Block::new("status".to_owned()))
-        .block(Block::new("status".to_owned()))
+        .block(Block::with_title("status".to_owned()))
+        .block(Block::with_title("status".to_owned()))
     }
 
     pub fn get_searchbox(state: &'parent ui::State) -> Paragraph<'parent> {
@@ -77,7 +77,7 @@ impl<'parent> ui::TopLayout {
             }
             _ => {
                 cursor_style = cursor_style.add_modifier(Modifier::HIDDEN);
-                Block::new("Search ".to_owned())
+                Block::with_title("Search ".to_owned())
             }
         };
         let text = text::Spans::from(vec![
@@ -125,7 +125,7 @@ impl<'parent> ui::MiddleLayout {
             ui::Window::Musicbar => Block::active("Music ".to_owned()),
             _ => {
                 state.musicbar.1.select(None);
-                Block::new("Music ".to_owned())
+                Block::with_title("Music ".to_owned())
             }
         };
 
@@ -176,7 +176,7 @@ impl<'parent> ui::MiddleBottom {
             ui::Window::Playlistbar => Block::active("Playlist ".to_owned()),
             _ => {
                 state.playlistbar.1.select(None);
-                Block::new("Playlist ".to_owned())
+                Block::with_title("Playlist ".to_owned())
             }
         };
         let data_list = &state.playlistbar.0;
@@ -213,7 +213,7 @@ impl<'parent> ui::MiddleBottom {
         if state.active == ui::Window::Artistbar {
             block = Block::active("Artist ".to_string());
         } else {
-            block = Block::new("Artist ".to_string());
+            block = Block::with_title("Artist ".to_string());
             state.artistbar.1.select(None);
         }
         let data_list = &state.artistbar;
@@ -262,7 +262,7 @@ impl<'parent> ui::SideBar {
     pub fn get_shortcuts(state: &ui::State) -> List<'parent> {
         let block = match state.active {
             ui::Window::Sidebar => Block::active("Shortcut ".to_owned()),
-            _ => Block::new("Shortcut ".to_owned()),
+            _ => Block::with_title("Shortcut ".to_owned()),
         };
         List::new(
             SIDEBAR_LIST_ITEMS
@@ -308,7 +308,7 @@ impl<'parent> ui::BottomLayout {
         if state.active == ui::Window::BottomControl {
             block = Block::active(heading);
         } else {
-            block = Block::new(heading);
+            block = Block::with_title(heading);
         }
         block = block.title_alignment(Alignment::Center);
 
@@ -361,16 +361,22 @@ impl<'parent> ui::BottomLayout {
             format!("Vol: {}", state.playback_behaviour.volume),
             Style::list_highlight(),
         );
+        let content = Text::from(vec![
+            Line::from(volume),
+            Line::from(repeat),
+            Line::from(suffle),
+            Line::from(paused_status),
+        ]);
 
-        let content = Text {
-            lines: [
-                Spans([volume].to_vec()),
-                Spans([repeat].to_vec()),
-                Spans([suffle].to_vec()),
-                Spans([paused_status].to_vec()),
-            ]
-            .to_vec(),
-        };
+        // let content = Text {
+        //     lines: [
+        //         Spands([volume].to_vec()),
+        //         Spans([repeat].to_vec()),
+        //         Spans([suffle].to_vec()),
+        //         Spans([paused_status].to_vec()),
+        //     ]
+        //     .to_vec(),
+        // };
 
         Paragraph::new(content)
             .alignment(Alignment::Left)
@@ -379,7 +385,7 @@ impl<'parent> ui::BottomLayout {
 }
 
 pub trait ExtendBlock<'a> {
-    fn new(title: String) -> Self;
+    fn with_title(title: String) -> Self;
     fn active(title: String) -> Self;
 }
 pub trait ExtendStyle {
@@ -407,6 +413,7 @@ impl ExtendStyle for Style {
             bg: None,
             add_modifier: Modifier::BOLD | Modifier::ITALIC,
             sub_modifier: Modifier::empty(),
+            underline_color: None,
         }
     }
 
@@ -417,12 +424,13 @@ impl ExtendStyle for Style {
             bg: None,
             add_modifier: Modifier::BOLD,
             sub_modifier: Modifier::empty(),
+            underline_color: None,
         }
     }
 }
 
 impl<'a> ExtendBlock<'a> for Block<'_> {
-    fn new(title: String) -> Self {
+    fn with_title(title: String) -> Self {
         Block::default()
             .title(Span::styled(title, Style::block_title()))
             .border_type(BorderType::Rounded)
