@@ -1,0 +1,4 @@
+[submodule "mpv-build"] 
+	path = mpv-build
+	url = https://github.com/mpv-player/mpv-build
+	branch = master

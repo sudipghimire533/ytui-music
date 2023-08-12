@@ -8,6 +8,10 @@ Listen to music from youtube inside terminal with sleek tui
 ---
 
 # Installation
+NOTE: since the dependency `libmpv` seems not to be maintained anymore,
+
+you will probably need to build from source in any platform. See section *Build From Source* below.
+
 1) Download latest binary from [release page](https://github.com/sudipghimire533/ytui-music/releases/latest).
 If binary is not available for your platform, head on to [build from source](#building-from-source)
 
@@ -70,7 +74,8 @@ git clone git@github.com:sudipghimire533/ytui-music
 
 3) `cd` into source root and do:
 ```
-cargo build --all --release
+git submodule init
+MPV_BUILD=mpv-build/ cargo build --all --release --features libmpv_build
 ```
 
 4) The compiled binary is located in `target/release/` directory. Copy the `ytui_music` binary and place it somewhere where it is easy to run. Preferrably under `$PATH`.

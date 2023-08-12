@@ -25,6 +25,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+              git submodule init
               sudo apt update &&
               sudo apt install libmpv-dev
 
