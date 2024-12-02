@@ -1,0 +1,18 @@
+[package]
+name = "rusty-invidious"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { version = "1" }
+
+reqwest = { version = "0.12", optional = true }
+
+[features]
+web-reqwest = ["dep:reqwest"]
+default = ["web-reqwest"]
+
+
+[dev-dependencies]
+rusty-invidious = { path = "./", features = ["web-reqwest"] }

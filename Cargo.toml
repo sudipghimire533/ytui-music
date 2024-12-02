@@ -1,13 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "front-end",
-    "fetcher",
-    "config",
+  "invidious-rusty"
 ]
 
-[profile.release]
-lto = true
-panic = 'abort'
-incremental = false
-codegen-units = 8
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
