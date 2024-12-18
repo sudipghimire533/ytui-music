@@ -1,5 +1,5 @@
 [package]
-name = "rusty-invidious"
+name = "ytui-invidious"
 version = "0.1.0"
 edition = "2021"
 
@@ -15,4 +15,4 @@ default = ["web-reqwest"]
 
 
 [dev-dependencies]
-rusty-invidious = { path = "./", features = ["web-reqwest"] }
+ytui-invidious = { path = "./", features = ["web-reqwest"] }

@@ -47,7 +47,7 @@ pub mod requests {
                 _ => todo!(),
             };
 
-            todo!()
+            base_url
         }
     }
 }

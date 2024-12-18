@@ -1,0 +1,17 @@
+[package]
+name = "ytui-audio"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libmpv2 = { git = "https://github.com/kohsine/libmpv2-rs", rev = "906d957", optional = true }
+libmpv2-sys = { git = "https://github.com/kohsine/libmpv2-rs", rev = "906d957" } 
+
+[features]
+# use statuc libmpv as audio player
+libmpv = ["dep:libmpv2"]
+# use libmpv as audio player and link it dynamically
+libmpv-dynamic = ["libmpv", "libmpv2/build_libmpv"]
+
+[dev-dependencies]
+ytui-audio = { path = "./", features = ["libmpv"]}
