@@ -2,7 +2,7 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::Style,
-    text::Text,
+    text::{Span, Text},
     widgets::{Block, BorderType, Borders, Paragraph, WidgetRef},
 };
 
@@ -27,8 +27,9 @@ impl SearchBarUiAttrs {
 }
 
 pub struct SearchBar<'a> {
-    pub input_text: String,
-    pub widget: Paragraph<'a>,
+    widget: Paragraph<'a>,
+    text: Span<'a>,
+    block: Block<'a>,
 }
 
 impl SearchBar<'_> {
@@ -36,17 +37,29 @@ impl SearchBar<'_> {
         let block = Block::new()
             .borders(style_options.get_block_borders())
             .border_type(BorderType::Rounded);
-
-        let query_text = Text::style(
-            "some query".into(),
-            Style::default().fg(style_options.text_color),
-        );
-
-        let widget = Paragraph::new(query_text).block(block);
+        let text = Span::default().style(Style::default().fg(style_options.text_color));
 
         Self {
-            input_text: "some query".to_string(),
+            text,
+            block,
+            widget: Default::default(),
+        }
+    }
+
+    pub fn with_query(self, query: impl ToString) -> Self {
+        let Self {
+            widget: _default_widget,
+            text,
+            block,
+        } = self;
+
+        let text = text.content(query.to_string());
+        let widget = Paragraph::new(text).block(block);
+
+        Self {
             widget,
+            text: Default::default(),
+            block: Default::default(),
         }
     }
 }
@@ -56,4 +69,3 @@ impl WidgetRef for SearchBar<'_> {
         self.widget.render_ref(area, buf);
     }
 }
-

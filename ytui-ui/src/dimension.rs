@@ -56,6 +56,7 @@ use ratatui::layout::{Constraint, Direction, Layout, Rect};
 pub struct Dimension {
     pub searchbar: Rect,
     pub statusbar: (Rect, [Rect; 4]),
+    pub progressbar: Rect,
 }
 
 pub struct DimensionArgs;
@@ -104,6 +105,7 @@ impl DimensionArgs {
         Dimension {
             searchbar: search_area,
             statusbar: (status_area, status_components),
+            progressbar: bottom_area,
         }
     }
 }
