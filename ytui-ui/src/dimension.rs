@@ -62,6 +62,9 @@ pub struct Dimension {
     pub queue_list: Rect,
     pub state_badge: Rect,
     pub progressbar: Rect,
+    pub music_pane: Rect,
+    pub playlist_pane: Rect,
+    pub artist_pane: Rect,
 }
 
 pub struct DimensionArgs;
@@ -131,7 +134,7 @@ impl DimensionArgs {
             .try_into()
             .unwrap();
 
-        let [navigation_list, bottom_sidebar] = Layout::default()
+        let [mut navigation_list, bottom_sidebar] = Layout::default()
             .direction(Direction::Vertical)
             .flex(ratatui::layout::Flex::SpaceBetween)
             .constraints([Constraint::Max(10), Constraint::Fill(1)])
@@ -151,6 +154,23 @@ impl DimensionArgs {
             .try_into()
             .expect("split to 2");
 
+        // any idea how this can be used?
+        navigation_list.height += middle_sidebar.height;
+
+        let [main_area_up, main_area_down] = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(50); 2])
+            .split(main_area)[..]
+            .try_into()
+            .expect("split into 2");
+
+        let [main_bottom_left, main_bottom_right] = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50); 2])
+            .split(main_area_down)[..]
+            .try_into()
+            .expect("split into 2");
+
         Dimension {
             searchbar: search_area,
             statusbar: (status_area, status_components),
@@ -159,6 +179,9 @@ impl DimensionArgs {
             state_badge,
             navigation_list,
             window_border,
+            music_pane: main_area_up,
+            playlist_pane: main_bottom_left,
+            artist_pane: main_bottom_right,
         }
     }
 }

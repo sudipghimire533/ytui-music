@@ -1,8 +1,10 @@
-use std::time::Duration;
-
 use event_handler::YtuiEvent;
 use ratatui::{style::Color, widgets::StatefulWidgetRef, widgets::WidgetRef, Frame};
+use std::time::Duration;
+use ytui_ui::components::artist_pane::{ArtistPane, ArtistPaneUiAttrs};
+use ytui_ui::components::music_pane::{MusicPane, MusicPaneUiAttrs};
 use ytui_ui::components::navigation_list::{NavigationList, NavigationListUiAttrs};
+use ytui_ui::components::playlist_pane::{PlaylistPane, PlaylistPaneUiAttrs};
 use ytui_ui::components::progressbar::{ProgressBar, ProgressBarUiAttrs};
 use ytui_ui::components::queue_list::{QueueList, QueueListUiAttrs};
 use ytui_ui::components::searchbar::{SearchBar, SearchBarUiAttrs};
@@ -12,7 +14,7 @@ use ytui_ui::components::window_border::WindowBorder;
 use ytui_ui::dimension::DimensionArgs;
 use ytui_ui::ratatui;
 use ytui_ui::ratatui::style::Style;
-use ytui_ui::ratatui::widgets::{Block, ListState};
+use ytui_ui::ratatui::widgets::{Block, ListState, TableState};
 
 mod event_handler;
 
@@ -118,6 +120,51 @@ fn draw_ui_in_frame(frame: &mut Frame, dimenstion_args: &DimensionArgs) {
     };
     let state_badge = StateBadge::create_widget(&state_badge_attrs).with_msg("@sudipghimire533");
 
+    let music_pane_attrs = MusicPaneUiAttrs {
+        title_color: Color::LightCyan,
+        text_color: Color::Green,
+        highlight_color: Color::White,
+    };
+    let music_pane = MusicPane::create_widget(
+        &music_pane_attrs,
+        [["Mero desh birami", "Uniq Poet", "04:04"]]
+            .repeat(20)
+            .into_iter()
+            .map(|[a, b, c]| [a.to_string(), b.to_string(), c.to_string()])
+            .collect(),
+    );
+
+    let playlist_pane_attrs = PlaylistPaneUiAttrs {
+        title_color: Color::LightCyan,
+        text_color: Color::Yellow,
+        highlight_color: Color::DarkGray,
+    };
+    let playlist_pane = PlaylistPane::create_widget(
+        &playlist_pane_attrs,
+        [[
+            "Smoothing sound and something stupid like that",
+            "mighty nepal",
+        ]]
+        .repeat(20)
+        .into_iter()
+        .map(|[a, b]| [a.to_string(), b.to_string()])
+        .collect(),
+    );
+
+    let artist_pane_attrs = ArtistPaneUiAttrs {
+        title_color: Color::LightCyan,
+        text_color: Color::White,
+        highlight_color: Color::Gray,
+    };
+    let artist_pane = ArtistPane::create_widget(
+        &artist_pane_attrs,
+        ["Bartika Eam Rai"]
+            .repeat(20)
+            .into_iter()
+            .map(ToString::to_string)
+            .collect(),
+    );
+
     searchbar.render_ref(dimensions.searchbar, frame.buffer_mut());
     statusbar.render_all(dimensions.statusbar, frame.buffer_mut());
     progressbar.render_ref(dimensions.progressbar, frame.buffer_mut());
@@ -132,4 +179,19 @@ fn draw_ui_in_frame(frame: &mut Frame, dimenstion_args: &DimensionArgs) {
         &mut ListState::default().with_offset(1).with_selected(Some(4)),
     );
     state_badge.render_ref(dimensions.state_badge, frame.buffer_mut());
+    music_pane.render_ref(
+        dimensions.music_pane,
+        frame.buffer_mut(),
+        &mut TableState::default().with_offset(2).with_selected(1),
+    );
+    playlist_pane.render_ref(
+        dimensions.playlist_pane,
+        frame.buffer_mut(),
+        &mut TableState::default().with_offset(1).with_selected(3),
+    );
+    artist_pane.render_ref(
+        dimensions.artist_pane,
+        frame.buffer_mut(),
+        &mut TableState::default().with_offset(2).with_selected(5),
+    );
 }

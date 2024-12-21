@@ -1,4 +1,7 @@
+pub mod artist_pane;
+pub mod music_pane;
 pub mod navigation_list;
+pub mod playlist_pane;
 pub mod progressbar;
 pub mod queue_list;
 pub mod searchbar;
