@@ -59,3 +59,4 @@ impl StatusBar<'_> {
         self.volume.render_ref(volume_rect, buf);
     }
 }
+

@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use event_handler::YtuiEvent;
 use ratatui::{style::Color, widgets::StatefulWidgetRef, widgets::WidgetRef, Frame};
+use ytui_ui::components::navigation_list::{NavigationList, NavigationListUiAttrs};
 use ytui_ui::components::progressbar::{ProgressBar, ProgressBarUiAttrs};
 use ytui_ui::components::queue_list::{QueueList, QueueListUiAttrs};
 use ytui_ui::components::searchbar::{SearchBar, SearchBarUiAttrs};
@@ -76,7 +77,25 @@ fn draw_ui_in_frame(frame: &mut Frame, dimenstion_args: &DimensionArgs) {
             "Espresso by Sabrina Carpenter",
             "Come and take your love by unknwon",
         ]
-        .repeat(4)
+        .repeat(5)
+        .into_iter()
+        .map(ToString::to_string)
+        .collect(),
+    );
+
+    let navigation_list_attrs = NavigationListUiAttrs {
+        text_color: Color::Green,
+        highlight_color: Color::White,
+    };
+    let navigation_list = NavigationList::create_widget(&navigation_list_attrs).with_list(
+        [
+            "Trending",
+            "Youtube Community",
+            "Liked Songs",
+            "Saved playlist",
+            "Following",
+            "Search",
+        ]
         .into_iter()
         .map(ToString::to_string)
         .collect(),
@@ -89,5 +108,10 @@ fn draw_ui_in_frame(frame: &mut Frame, dimenstion_args: &DimensionArgs) {
         dimensions.queue_list,
         frame.buffer_mut(),
         &mut ListState::default().with_offset(1).with_selected(Some(4)),
+    );
+    navigation_list.render_ref(
+        dimensions.navigation_list,
+        frame.buffer_mut(),
+        &mut ListState::default().with_offset(1).with_selected(Some(2)),
     );
 }

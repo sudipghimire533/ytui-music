@@ -2,7 +2,7 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::Style,
-    text::Span,
+    text::{Span, Text},
     widgets::{Block, BorderType, Borders, Paragraph, WidgetRef},
 };
 
@@ -53,7 +53,12 @@ impl SearchBar<'_> {
             block,
         } = self;
 
-        let text = text.content(query.to_string());
+        let search_prefix = Span::from("Explore: ");
+        let query = text.content(query.to_string());
+        let mut text = Text::default();
+        text.push_span(search_prefix);
+        text.push_span(query);
+
         let widget = Paragraph::new(text).block(block);
 
         Self {
