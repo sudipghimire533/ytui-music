@@ -1,5 +1,5 @@
 use super::common;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 /*
 * ImageAttachment

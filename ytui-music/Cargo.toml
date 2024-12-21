@@ -1,0 +1,11 @@
+[package]
+name = "ytui-music"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ytui-ui = { path = "../ytui-ui/" }
+ytui-audio = { path = "../ytui-audio/" }
+ytui-invidious = { path = "../ytui-invidious/" }
+crossterm = { version = "*" }
+tokio = { version = "1", features = ["full"] }
