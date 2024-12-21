@@ -54,6 +54,8 @@ use ratatui::layout::{Constraint, Direction, Layout, Rect};
 */
 
 pub struct Dimension {
+    pub window_border: Rect,
+
     pub searchbar: Rect,
     pub statusbar: (Rect, [Rect; 4]),
     pub progressbar: Rect,
@@ -63,7 +65,32 @@ pub struct Dimension {
 
 pub struct DimensionArgs;
 impl DimensionArgs {
+    const MAX_WINDOW_HEIGHT: u16 = 70;
+    const MAX_WINDOW_WIDTH: u16 = 300;
+
     pub fn calculate_dimension(&self, frame_area: Rect) -> Dimension {
+        let [height_trimmed_area, _vertical_leftover] = Layout::default()
+            .flex(ratatui::layout::Flex::Center)
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Max(Self::MAX_WINDOW_HEIGHT), Constraint::Max(0)])
+            .split(frame_area)[..]
+            .try_into()
+            .expect("will always split to two");
+        let [trimmed_area, _horizontal_leftover] = Layout::default()
+            .direction(Direction::Horizontal)
+            .flex(ratatui::layout::Flex::Center)
+            .constraints([Constraint::Max(Self::MAX_WINDOW_WIDTH), Constraint::Max(0)])
+            .split(height_trimmed_area)[..]
+            .try_into()
+            .expect("will always split to two");
+
+        let window_border = Rect {
+            height: trimmed_area.height + 2,
+            width: trimmed_area.width + 2,
+            x: trimmed_area.x.saturating_sub(1),
+            y: trimmed_area.y.saturating_sub(1),
+        };
+
         let [top_area, middle_area, bottom_area] = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -71,7 +98,7 @@ impl DimensionArgs {
                 Constraint::Fill(1),
                 Constraint::Length(3),
             ])
-            .split(frame_area)[..]
+            .split(trimmed_area)[..]
             .try_into()
             .expect("Always splitted to 3");
 
@@ -84,7 +111,7 @@ impl DimensionArgs {
 
         let [sidebar, main_area] = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
+            .constraints([Constraint::Max(37), Constraint::Fill(1)])
             .split(middle_area)[..]
             .try_into()
             .expect("always split to 2");
@@ -105,7 +132,8 @@ impl DimensionArgs {
 
         let [navigation_list, queue_list] = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(10), Constraint::Fill(1)])
+            .flex(ratatui::layout::Flex::SpaceBetween)
+            .constraints([Constraint::Max(10), Constraint::Max(7)])
             .split(sidebar)[..]
             .try_into()
             .expect("split to 2");
@@ -116,6 +144,7 @@ impl DimensionArgs {
             progressbar: bottom_area,
             queue_list,
             navigation_list,
+            window_border,
         }
     }
 }

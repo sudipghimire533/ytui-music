@@ -2,7 +2,7 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::{Color, Style},
-    widgets::{Block, BorderType, List, ListState, StatefulWidgetRef},
+    widgets::{Block, BorderType, List, ListState, Padding, StatefulWidgetRef},
 };
 
 pub struct NavigationListUiAttrs {
@@ -17,7 +17,11 @@ pub struct NavigationList<'a> {
 impl NavigationList<'_> {
     pub fn create_widget(style_options: &NavigationListUiAttrs) -> Self {
         let widget = List::default()
-            .block(Block::bordered().border_type(BorderType::Rounded))
+            .block(
+                Block::bordered()
+                    .border_type(BorderType::Rounded)
+                    .padding(Padding::left(1)),
+            )
             .direction(ratatui::widgets::ListDirection::TopToBottom)
             .style(Style::default().fg(style_options.text_color))
             .highlight_style(Style::default().fg(style_options.highlight_color));
@@ -39,4 +43,3 @@ impl<'a> StatefulWidgetRef for NavigationList<'a> {
         self.widget.render_ref(area, buf, state);
     }
 }
-

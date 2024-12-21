@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{process::abort, time::Duration};
 
 use ratatui::{
     buffer::Buffer,
@@ -13,6 +13,7 @@ pub struct ProgressBarUiAttrs {
 }
 
 pub struct ProgressBar<'a> {
+    block: Option<Block<'a>>,
     gauge: Gauge<'a>,
 }
 
@@ -25,13 +26,17 @@ impl ProgressBar<'_> {
                     .fg(style_options.foreground)
                     .bg(style_options.background),
             )
-            .block(
-                Block::default()
-                    .border_type(BorderType::Rounded)
-                    .borders(Borders::ALL),
-            );
+            .label("")
+            .use_unicode(true);
 
-        ProgressBar { gauge }
+        let block = Block::default()
+            .border_type(BorderType::Rounded)
+            .borders(Borders::ALL);
+
+        ProgressBar {
+            gauge,
+            block: Some(block),
+        }
     }
 
     pub fn with_duration(self, played: Duration, remaining: Duration) -> Self {
@@ -39,17 +44,22 @@ impl ProgressBar<'_> {
         let total_sec = played_sec + remaining.as_secs();
 
         let duration_text = format!(
-            "{:02}:{:02} / {:02}:{:02}",
+            " {:02}:{:02} | {:02}:{:02} ",
             played_sec / 60,
             played_sec % 60,
             total_sec / 60,
             total_sec % 60
         );
 
+        let block = self
+            .block
+            .expect("is always created by create_widget")
+            .title(duration_text)
+            .title_alignment(ratatui::layout::Alignment::Center);
         let percent = (played_sec * 100) / total_sec;
-        let gauge = self.gauge.percent(percent as u16).label(duration_text);
+        let gauge = self.gauge.block(block).percent(percent as u16);
 
-        Self { gauge }
+        Self { gauge, block: None }
     }
 }
 

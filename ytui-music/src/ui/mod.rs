@@ -7,9 +7,11 @@ use ytui_ui::components::progressbar::{ProgressBar, ProgressBarUiAttrs};
 use ytui_ui::components::queue_list::{QueueList, QueueListUiAttrs};
 use ytui_ui::components::searchbar::{SearchBar, SearchBarUiAttrs};
 use ytui_ui::components::statusbar::{StatusBar, StatusBarUiAttrs};
+use ytui_ui::components::window_border::WindowBorder;
 use ytui_ui::dimension::DimensionArgs;
 use ytui_ui::ratatui;
-use ytui_ui::ratatui::widgets::ListState;
+use ytui_ui::ratatui::style::Style;
+use ytui_ui::ratatui::widgets::{Block, ListState};
 
 mod event_handler;
 
@@ -40,6 +42,15 @@ pub(crate) fn start_ui_render_loop() {
 
 fn draw_ui_in_frame(frame: &mut Frame, dimenstion_args: &DimensionArgs) {
     let dimensions = dimenstion_args.calculate_dimension(frame.area());
+
+    // draw a black background in all of sorrounding area ( if terminal size is too big )
+    Block::default()
+        .style(Style::new().bg(Color::Black))
+        .render_ref(frame.area(), frame.buffer_mut());
+
+    // draw a border around containing all the components render afterwards
+    let window_border = WindowBorder;
+    window_border.render_ref(dimensions.window_border, frame.buffer_mut());
 
     let searchbar_attrs = SearchBarUiAttrs {
         text_color: Color::Red,

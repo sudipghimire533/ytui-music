@@ -17,7 +17,12 @@ pub struct QueueList<'a> {
 impl QueueList<'_> {
     pub fn create_widget(style_options: &QueueListUiAttrs) -> Self {
         let widget = List::default()
-            .block(Block::bordered().border_type(BorderType::Rounded))
+            .block(
+                Block::bordered()
+                    .border_type(BorderType::Rounded)
+                    .title("Next in Queue ")
+                    .title_alignment(ratatui::layout::Alignment::Center),
+            )
             .direction(ratatui::widgets::ListDirection::BottomToTop)
             .style(Style::default().fg(style_options.text_color))
             .highlight_style(Style::default().fg(style_options.highlight_color));
@@ -39,4 +44,3 @@ impl<'a> StatefulWidgetRef for QueueList<'a> {
         self.widget.render_ref(area, buf, state);
     }
 }
-

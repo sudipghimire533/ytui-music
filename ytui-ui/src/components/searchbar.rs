@@ -36,7 +36,8 @@ impl SearchBar<'_> {
     pub fn create_widget(style_options: &SearchBarUiAttrs) -> Self {
         let block = Block::new()
             .borders(style_options.get_block_borders())
-            .border_type(BorderType::Rounded);
+            .border_type(BorderType::Rounded)
+            .title("Search ");
         let text = Span::default().style(Style::default().fg(style_options.text_color));
 
         Self {
@@ -47,19 +48,7 @@ impl SearchBar<'_> {
     }
 
     pub fn with_query(self, query: impl ToString) -> Self {
-        let Self {
-            widget: _default_widget,
-            text,
-            block,
-        } = self;
-
-        let search_prefix = Span::from("Explore: ");
-        let query = text.content(query.to_string());
-        let mut text = Text::default();
-        text.push_span(search_prefix);
-        text.push_span(query);
-
-        let widget = Paragraph::new(text).block(block);
+        let widget = Paragraph::new(self.text.content(query.to_string())).block(self.block);
 
         Self {
             widget,
