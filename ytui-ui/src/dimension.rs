@@ -57,6 +57,8 @@ pub struct Dimension {
     pub searchbar: Rect,
     pub statusbar: (Rect, [Rect; 4]),
     pub progressbar: Rect,
+    pub queue_list: Rect,
+    pub navigation_list: Rect,
 }
 
 pub struct DimensionArgs;
@@ -75,7 +77,7 @@ impl DimensionArgs {
 
         let [search_area, status_area] = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Fill(1), Constraint::Length(35)])
+            .constraints([Constraint::Fill(1), Constraint::Length(22)])
             .split(top_area)[..]
             .try_into()
             .expect("always split to 2");
@@ -94,7 +96,6 @@ impl DimensionArgs {
             .iter()
             .copied()
             .map(|mut rect| {
-                rect.x += 1;
                 rect.y += 1;
                 rect
             })
@@ -102,10 +103,19 @@ impl DimensionArgs {
             .try_into()
             .unwrap();
 
+        let [navigation_list, queue_list] = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(10), Constraint::Fill(1)])
+            .split(sidebar)[..]
+            .try_into()
+            .expect("split to 2");
+
         Dimension {
             searchbar: search_area,
             statusbar: (status_area, status_components),
             progressbar: bottom_area,
+            queue_list,
+            navigation_list,
         }
     }
 }

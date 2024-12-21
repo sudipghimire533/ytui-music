@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
-    layout::{Constraint, Direction, Layout, Rect},
-    text::Text,
+    layout::Rect,
+    text::Line,
     widgets::{Block, BorderType, Borders, WidgetRef},
 };
 
@@ -17,11 +17,11 @@ pub struct StatusBarUiAttrs {
 impl StatusBarUiAttrs {}
 
 pub struct StatusBar<'a> {
-    pub wrapper_block: Block<'a>,
-    pub repeat: Text<'a>,
-    pub shuffle: Text<'a>,
-    pub resume: Text<'a>,
-    pub volume: Text<'a>,
+    wrapper_block: Block<'a>,
+    repeat: Line<'a>,
+    shuffle: Line<'a>,
+    resume: Line<'a>,
+    volume: Line<'a>,
 }
 
 impl StatusBar<'_> {
@@ -38,10 +38,10 @@ impl StatusBar<'_> {
 
         Self {
             wrapper_block: block,
-            repeat: Text::from(style_options.resume_char).centered(),
-            shuffle: Text::from(style_options.shuffle_char).centered(),
-            resume: Text::from(style_options.resume_char).centered(),
-            volume: Text::from(style_options.volume.to_string()).centered(),
+            repeat: Line::from(style_options.repeat_char).centered(),
+            shuffle: Line::from(style_options.shuffle_char).centered(),
+            resume: Line::from(style_options.resume_char).centered(),
+            volume: Line::from(style_options.volume.to_string() + " ").centered(),
         }
     }
 }

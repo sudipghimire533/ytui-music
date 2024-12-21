@@ -1,4 +1,4 @@
-use std::{fmt::format, time::Duration};
+use std::time::Duration;
 
 use ratatui::{
     buffer::Buffer,
@@ -13,7 +13,7 @@ pub struct ProgressBarUiAttrs {
 }
 
 pub struct ProgressBar<'a> {
-    pub gauge: Gauge<'a>,
+    gauge: Gauge<'a>,
 }
 
 impl ProgressBar<'_> {

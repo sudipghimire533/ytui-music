@@ -1,12 +1,14 @@
 use std::time::Duration;
 
 use event_handler::YtuiEvent;
-use ratatui::{style::Color, widgets::WidgetRef, Frame};
+use ratatui::{style::Color, widgets::StatefulWidgetRef, widgets::WidgetRef, Frame};
 use ytui_ui::components::progressbar::{ProgressBar, ProgressBarUiAttrs};
+use ytui_ui::components::queue_list::{QueueList, QueueListUiAttrs};
 use ytui_ui::components::searchbar::{SearchBar, SearchBarUiAttrs};
 use ytui_ui::components::statusbar::{StatusBar, StatusBarUiAttrs};
 use ytui_ui::dimension::DimensionArgs;
 use ytui_ui::ratatui;
+use ytui_ui::ratatui::widgets::ListState;
 
 mod event_handler;
 
@@ -62,7 +64,30 @@ fn draw_ui_in_frame(frame: &mut Frame, dimenstion_args: &DimensionArgs) {
     let progressbar = ProgressBar::create_widget(&progress_bar_attrs)
         .with_duration(Duration::from_secs(200), Duration::from_secs(450));
 
+    let queue_list_attrs = QueueListUiAttrs {
+        text_color: Color::Green,
+        highlight_color: Color::Red,
+    };
+    let queue_list = QueueList::create_widget(&queue_list_attrs).with_list(
+        [
+            "Lose control by Teddy Swims",
+            "Greedy by Tate McRae",
+            "Beautiful Things by Benson Boone",
+            "Espresso by Sabrina Carpenter",
+            "Come and take your love by unknwon",
+        ]
+        .repeat(4)
+        .into_iter()
+        .map(ToString::to_string)
+        .collect(),
+    );
+
     searchbar.render_ref(dimensions.searchbar, frame.buffer_mut());
     statusbar.render_all(dimensions.statusbar, frame.buffer_mut());
     progressbar.render_ref(dimensions.progressbar, frame.buffer_mut());
+    queue_list.render_ref(
+        dimensions.queue_list,
+        frame.buffer_mut(),
+        &mut ListState::default().with_offset(1).with_selected(Some(4)),
+    );
 }
