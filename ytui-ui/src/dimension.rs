@@ -73,6 +73,8 @@ pub struct DimensionArgs;
 impl DimensionArgs {
     const MAX_WINDOW_HEIGHT: u16 = 70;
     const MAX_WINDOW_WIDTH: u16 = 300;
+    const MAX_OVERLAY_HEIGHT: u16 = 25;
+    const MAX_OVERLAY_WIDTH: u16 = 95;
 
     pub fn calculate_dimension(&self, frame_area: Rect) -> Dimension {
         let [height_trimmed_area, _vertical_leftover] = Layout::default()
@@ -98,15 +100,15 @@ impl DimensionArgs {
         };
 
         let overlay = {
-            let height = if trimmed_area.height < 25 {
+            let height = if trimmed_area.height < Self::MAX_OVERLAY_HEIGHT {
                 trimmed_area.height
             } else {
-                25
+                Self::MAX_OVERLAY_HEIGHT
             };
-            let width = if trimmed_area.width < 100 {
+            let width = if trimmed_area.width < Self::MAX_OVERLAY_WIDTH {
                 trimmed_area.width
             } else {
-                100
+                Self::MAX_OVERLAY_WIDTH
             };
 
             Rect {
@@ -188,7 +190,7 @@ impl DimensionArgs {
 
         let [main_bottom_left, main_bottom_right] = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50); 2])
+            .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
             .split(main_area_down)[..]
             .try_into()
             .expect("split into 2");
