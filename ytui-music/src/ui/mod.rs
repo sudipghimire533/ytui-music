@@ -6,6 +6,7 @@ use ytui_ui::components::navigation_list::{NavigationList, NavigationListUiAttrs
 use ytui_ui::components::progressbar::{ProgressBar, ProgressBarUiAttrs};
 use ytui_ui::components::queue_list::{QueueList, QueueListUiAttrs};
 use ytui_ui::components::searchbar::{SearchBar, SearchBarUiAttrs};
+use ytui_ui::components::state_badge::{StateBadge, StateBadgeUiAttrs};
 use ytui_ui::components::statusbar::{StatusBar, StatusBarUiAttrs};
 use ytui_ui::components::window_border::WindowBorder;
 use ytui_ui::dimension::DimensionArgs;
@@ -112,17 +113,23 @@ fn draw_ui_in_frame(frame: &mut Frame, dimenstion_args: &DimensionArgs) {
         .collect(),
     );
 
+    let state_badge_attrs = StateBadgeUiAttrs {
+        text_color: Color::Yellow,
+    };
+    let state_badge = StateBadge::create_widget(&state_badge_attrs).with_msg("@sudipghimire533");
+
     searchbar.render_ref(dimensions.searchbar, frame.buffer_mut());
     statusbar.render_all(dimensions.statusbar, frame.buffer_mut());
     progressbar.render_ref(dimensions.progressbar, frame.buffer_mut());
-    queue_list.render_ref(
-        dimensions.queue_list,
-        frame.buffer_mut(),
-        &mut ListState::default().with_offset(1).with_selected(Some(4)),
-    );
     navigation_list.render_ref(
         dimensions.navigation_list,
         frame.buffer_mut(),
         &mut ListState::default().with_offset(1).with_selected(Some(2)),
     );
+    queue_list.render_ref(
+        dimensions.queue_list,
+        frame.buffer_mut(),
+        &mut ListState::default().with_offset(1).with_selected(Some(4)),
+    );
+    state_badge.render_ref(dimensions.state_badge, frame.buffer_mut());
 }

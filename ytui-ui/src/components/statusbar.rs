@@ -34,7 +34,8 @@ impl StatusBar<'_> {
 
         let block = Block::new()
             .borders(borders)
-            .border_type(BorderType::Rounded);
+            .border_type(BorderType::Rounded)
+            .title("Controls: ");
 
         Self {
             wrapper_block: block,
@@ -59,4 +60,3 @@ impl StatusBar<'_> {
         self.volume.render_ref(volume_rect, buf);
     }
 }
-

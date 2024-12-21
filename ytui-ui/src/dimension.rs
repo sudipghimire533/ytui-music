@@ -58,9 +58,10 @@ pub struct Dimension {
 
     pub searchbar: Rect,
     pub statusbar: (Rect, [Rect; 4]),
-    pub progressbar: Rect,
-    pub queue_list: Rect,
     pub navigation_list: Rect,
+    pub queue_list: Rect,
+    pub state_badge: Rect,
+    pub progressbar: Rect,
 }
 
 pub struct DimensionArgs;
@@ -130,11 +131,23 @@ impl DimensionArgs {
             .try_into()
             .unwrap();
 
-        let [navigation_list, queue_list] = Layout::default()
+        let [navigation_list, bottom_sidebar] = Layout::default()
             .direction(Direction::Vertical)
             .flex(ratatui::layout::Flex::SpaceBetween)
-            .constraints([Constraint::Max(10), Constraint::Max(7)])
+            .constraints([Constraint::Max(10), Constraint::Fill(1)])
             .split(sidebar)[..]
+            .try_into()
+            .expect("split to 2");
+
+        let [middle_sidebar, queue_list, state_badge] = Layout::default()
+            .direction(Direction::Vertical)
+            .flex(ratatui::layout::Flex::End)
+            .constraints([
+                Constraint::Fill(1),
+                Constraint::Max(7),
+                Constraint::Length(3),
+            ])
+            .split(bottom_sidebar)[..]
             .try_into()
             .expect("split to 2");
 
@@ -143,6 +156,7 @@ impl DimensionArgs {
             statusbar: (status_area, status_components),
             progressbar: bottom_area,
             queue_list,
+            state_badge,
             navigation_list,
             window_border,
         }
