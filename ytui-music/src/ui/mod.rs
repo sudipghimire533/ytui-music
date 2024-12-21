@@ -4,6 +4,7 @@ use std::time::Duration;
 use ytui_ui::components::artist_pane::{ArtistPane, ArtistPaneUiAttrs};
 use ytui_ui::components::music_pane::{MusicPane, MusicPaneUiAttrs};
 use ytui_ui::components::navigation_list::{NavigationList, NavigationListUiAttrs};
+use ytui_ui::components::overlay::{Overlay, OverlayUiAttrs};
 use ytui_ui::components::playlist_pane::{PlaylistPane, PlaylistPaneUiAttrs};
 use ytui_ui::components::progressbar::{ProgressBar, ProgressBarUiAttrs};
 use ytui_ui::components::queue_list::{QueueList, QueueListUiAttrs};
@@ -165,6 +166,22 @@ fn draw_ui_in_frame(frame: &mut Frame, dimenstion_args: &DimensionArgs) {
             .collect(),
     );
 
+    let overlay_attrs = OverlayUiAttrs {
+        show_borders: true,
+        title: "Release notes".to_string(),
+    };
+    let overlay = Overlay::construct_widget(&overlay_attrs).with_announcement("Installation
+NOTE: since the dependency libmpv seems not to be maintained anymore,
+
+you will probably need to build from source in any platform. See section Build From Source below.
+
+Download latest binary from release page. If binary is not available for your platform, head on to build from source
+
+Give it executable permission and from downloaded directory, in shell:
+
+ytui_music run
+You may need to jump to Usage Guide".to_string());
+
     searchbar.render_ref(dimensions.searchbar, frame.buffer_mut());
     statusbar.render_all(dimensions.statusbar, frame.buffer_mut());
     progressbar.render_ref(dimensions.progressbar, frame.buffer_mut());
@@ -194,4 +211,6 @@ fn draw_ui_in_frame(frame: &mut Frame, dimenstion_args: &DimensionArgs) {
         frame.buffer_mut(),
         &mut TableState::default().with_offset(2).with_selected(5),
     );
+
+    overlay.render_ref(dimensions.overlay, frame.buffer_mut());
 }

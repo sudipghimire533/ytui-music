@@ -65,6 +65,8 @@ pub struct Dimension {
     pub music_pane: Rect,
     pub playlist_pane: Rect,
     pub artist_pane: Rect,
+
+    pub overlay: Rect,
 }
 
 pub struct DimensionArgs;
@@ -93,6 +95,26 @@ impl DimensionArgs {
             width: trimmed_area.width + 2,
             x: trimmed_area.x.saturating_sub(1),
             y: trimmed_area.y.saturating_sub(1),
+        };
+
+        let overlay = {
+            let height = if trimmed_area.height < 25 {
+                trimmed_area.height
+            } else {
+                25
+            };
+            let width = if trimmed_area.width < 100 {
+                trimmed_area.width
+            } else {
+                100
+            };
+
+            Rect {
+                height,
+                width,
+                x: (trimmed_area.width - width) / 2,
+                y: (trimmed_area.height - height) / 2,
+            }
         };
 
         let [top_area, middle_area, bottom_area] = Layout::default()
@@ -172,13 +194,15 @@ impl DimensionArgs {
             .expect("split into 2");
 
         Dimension {
+            window_border,
+            overlay,
+
             searchbar: search_area,
             statusbar: (status_area, status_components),
             progressbar: bottom_area,
             queue_list,
             state_badge,
             navigation_list,
-            window_border,
             music_pane: main_area_up,
             playlist_pane: main_bottom_left,
             artist_pane: main_bottom_right,
