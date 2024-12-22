@@ -1,5 +1,4 @@
-mod ui;
-
 fn main() {
-    ui::start_ui_render_loop();
+    let ytui_ui = ytui_ui::renderer::YtuiUi::new();
+    ytui_ui.app_start();
 }

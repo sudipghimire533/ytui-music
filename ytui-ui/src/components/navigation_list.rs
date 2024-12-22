@@ -43,4 +43,3 @@ impl<'a> StatefulWidgetRef for NavigationList<'a> {
         self.widget.render_ref(area, buf, state);
     }
 }
-

@@ -1,4 +1,4 @@
-use std::{process::abort, time::Duration};
+use std::time::Duration;
 
 use ratatui::{
     buffer::Buffer,

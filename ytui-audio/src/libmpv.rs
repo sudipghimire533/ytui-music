@@ -3,7 +3,7 @@ use std::{
     path::Path,
 };
 
-#[cfg_attr(test, derive(Debug))]
+#[derive(Debug)]
 pub enum YtuiMvpAudioError {
     MpvErr {
         action: &'static str,
