@@ -1,4 +1,7 @@
-use crate::state;
+use crate::{
+    dimension::Dimension,
+    state::{self, Pane},
+};
 
 use super::components::{
     artist_pane::{ArtistPane, ArtistPaneUiAttrs},
@@ -15,12 +18,11 @@ use super::components::{
 };
 use super::dimension::DimensionArgs;
 use ratatui::{
-    layout::Direction,
+    layout::{Rect, Size},
     style::{Color, Style},
-    widgets::{Block, ListDirection, ListState, StatefulWidgetRef, TableState, WidgetRef as _},
+    widgets::{Block, StatefulWidgetRef, WidgetRef},
 };
 use std::{
-    borrow::BorrowMut,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -30,68 +32,53 @@ pub struct YtuiUi {
 }
 
 impl YtuiUi {
-    pub fn app_start(mut self) {
+    pub fn app_start(mut self) -> std::thread::JoinHandle<()> {
         let mut terminal = ratatui::try_init().unwrap();
+        let mut dimension_size = Size::new(0, 0);
+        let mut dimensions = DimensionArgs.calculate_dimension(Rect::default());
 
-        let (event_sender, event_listener) = std::sync::mpsc::channel::<state::EventAction>();
-
-        let mut state_for_renderer = self.state.clone();
-
-        let mut should_exit_render_loop = false;
-        while !should_exit_render_loop {
+        let mut paint_ui = move |app_state: &mut state::AppState| {
             terminal
                 .draw(|frame| {
-                    let dimension_args = DimensionArgs;
-                    Self::draw_ui_in_frame(frame, &dimension_args, &mut state_for_renderer);
-
-                    match event_listener.try_recv() {
-                        Err(mpsc_err) => {
-                            if matches!(mpsc_err, std::sync::mpsc::TryRecvError::Disconnected) {
-                                should_exit_render_loop = true;
-                            }
-                        }
-
-                        Ok(event_action) => match event_action {
-                            state::EventAction::Quit => {
-                                should_exit_render_loop = true;
-                            }
-                            state::EventAction::SearchQuery(_) => {}
-                            state::EventAction::NewSearchInput(search_query) => {
-                                state_for_renderer.search_query = search_query;
-                            }
-                            state::EventAction::NewPaneSelected(pane) => {
-                                state_for_renderer.select_new_pane(pane);
-                            }
-                            state::EventAction::NewMovement { pane, direction } => match pane {
-                                state::Pane::Overlay => match direction {
-                                    ListDirection::TopToBottom => todo!(),
-                                    ListDirection::BottomToTop => todo!(),
-                                },
-                                state::Pane::NavigationList => todo!(),
-                                state::Pane::QueueList => todo!(),
-                                state::Pane::Music => todo!(),
-                                state::Pane::Playlist => todo!(),
-                                state::Pane::Artist => todo!(),
-
-                                _ => {}
-                            },
-                        },
+                    // re-calcualate dimensions only when screen size changes
+                    let frame_size = frame.area().as_size();
+                    if frame_size != dimension_size {
+                        dimension_size = frame_size;
+                        dimensions = DimensionArgs.calculate_dimension(frame.area());
+                        Self::draw_window_broder_and_background(frame, &dimensions);
                     }
+
+                    Self::draw_components_in_frame(frame, &dimensions, app_state);
                 })
                 .unwrap();
-        }
+        };
+        paint_ui(&mut self.state);
 
-        ratatui::restore();
-        input_listener_handle.join().unwrap();
+        let input_notifier = Arc::new(std::sync::Condvar::new());
+        let input_reactor = Arc::clone(&input_notifier);
+        let state_for_renderer = Arc::new(Mutex::new(self.state));
+        let state_for_listener = Arc::clone(&state_for_renderer);
+
+        let input_listener_handle = std::thread::spawn(move || {
+            state::AppState::start_event_listener_loop(state_for_listener, input_notifier)
+        });
+
+        let ui_render_handler = std::thread::spawn(move || loop {
+            let mut app_state = input_reactor
+                .wait(state_for_renderer.lock().unwrap())
+                .unwrap();
+            if app_state.quit_ui {
+                ratatui::restore();
+                input_listener_handle.join().unwrap();
+                break;
+            }
+            paint_ui(&mut app_state);
+        });
+
+        ui_render_handler
     }
 
-    fn draw_ui_in_frame(
-        frame: &mut ratatui::Frame,
-        dimenstion_args: &DimensionArgs,
-        app_state: &mut state::AppState,
-    ) {
-        let dimensions = dimenstion_args.calculate_dimension(frame.area());
-
+    fn draw_window_broder_and_background(frame: &mut ratatui::Frame, dimensions: &Dimension) {
         // draw a black background in all of sorrounding area ( if terminal size is too big )
         Block::default()
             .style(Style::new().bg(Color::Black))
@@ -100,14 +87,25 @@ impl YtuiUi {
         // draw a border around containing all the components render afterwards
         let window_border = WindowBorder;
         window_border.render_ref(dimensions.window_border, frame.buffer_mut());
+    }
 
+    fn draw_components_in_frame(
+        frame: &mut ratatui::Frame,
+        dimensions: &Dimension,
+        app_state: &mut state::AppState,
+    ) {
         let searchbar_attrs = SearchBarUiAttrs {
             text_color: Color::Red,
             show_border: true,
             show_only_bottom_border: false,
+            is_active: matches!(app_state.selected_pane, Some(Pane::SearchBar)),
         };
-        let searchbar =
-            SearchBar::create_widget(&searchbar_attrs).with_query("searching for something cool");
+        let searchbar = SearchBar::create_widget(&searchbar_attrs).with_query(
+            app_state
+                .search_query
+                .as_deref()
+                .unwrap_or("Listen to something new today"),
+        );
 
         let status_bar_attrs = StatusBarUiAttrs {
             show_border: true,
@@ -146,6 +144,7 @@ impl YtuiUi {
         let navigation_list_attrs = NavigationListUiAttrs {
             text_color: Color::Green,
             highlight_color: Color::White,
+            is_active: matches!(app_state.selected_pane, Some(Pane::NavigationList)),
         };
         let navigation_list = NavigationList::create_widget(&navigation_list_attrs).with_list(
             [
@@ -212,22 +211,6 @@ impl YtuiUi {
                 .collect(),
         );
 
-        let overlay_attrs = OverlayUiAttrs {
-            show_borders: true,
-            title: "Release notes".to_string(),
-        };
-        let overlay = Overlay::construct_widget(&overlay_attrs).with_announcement("Installation
-NOTE: since the dependency libmpv seems not to be maintained anymore,
-
-you will probably need to build from source in any platform. See section Build From Source below.
-
-Download latest binary from release page. If binary is not available for your platform, head on to build from source
-
-Give it executable permission and from downloaded directory, in shell:
-
-ytui_music run
-You may need to jump to Usage Guide".to_string());
-
         searchbar.render_ref(dimensions.searchbar, frame.buffer_mut());
         statusbar.render_all(dimensions.statusbar, frame.buffer_mut());
         progressbar.render_ref(dimensions.progressbar, frame.buffer_mut());
@@ -259,6 +242,21 @@ You may need to jump to Usage Guide".to_string());
         );
 
         if matches!(app_state.selected_pane, Some(state::Pane::Overlay)) {
+            let overlay_attrs = OverlayUiAttrs {
+                show_borders: true,
+                title: "Release notes".to_string(),
+            };
+            let overlay = Overlay::construct_widget(&overlay_attrs).with_announcement("Installation
+NOTE: since the dependency libmpv seems not to be maintained anymore,
+
+you will probably need to build from source in any platform. See section Build From Source below.
+
+Download latest binary from release page. If binary is not available for your platform, head on to build from source
+
+Give it executable permission and from downloaded directory, in shell:
+
+ytui_music run
+You may need to jump to Usage Guide".to_string());
             overlay.render_ref(dimensions.overlay, frame.buffer_mut());
         }
     }

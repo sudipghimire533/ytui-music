@@ -8,6 +8,7 @@ use ratatui::{
 pub struct NavigationListUiAttrs {
     pub text_color: Color,
     pub highlight_color: Color,
+    pub is_active: bool,
 }
 
 pub struct NavigationList<'a> {
@@ -20,6 +21,11 @@ impl NavigationList<'_> {
             .block(
                 Block::bordered()
                     .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(if style_options.is_active {
+                        Color::White
+                    } else {
+                        Color::Green
+                    }))
                     .padding(Padding::left(1)),
             )
             .direction(ratatui::widgets::ListDirection::TopToBottom)

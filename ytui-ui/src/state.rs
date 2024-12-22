@@ -1,9 +1,11 @@
 use ratatui::{
-    crossterm::event::{self, Event, KeyEvent, KeyEventKind, KeyModifiers, ModifierKeyCode},
-    layout::Direction,
+    crossterm::event::{self, Event, KeyEvent, KeyEventKind, KeyModifiers},
     widgets::{ListDirection, ListState, TableState},
 };
-use std::sync::{self, Arc, Mutex};
+use std::{
+    sync::{self, Arc, Condvar, Mutex},
+    time::Duration,
+};
 
 #[derive(Clone, Copy)]
 pub enum Pane {
@@ -32,18 +34,6 @@ pub enum EventAction {
 }
 
 impl Pane {
-    pub fn can_move_to_pane(self) -> bool {
-        matches!(
-            self,
-            Pane::SearchBar
-                | Pane::NavigationList
-                | Pane::QueueList
-                | Pane::Music
-                | Pane::Artist
-                | Pane::Playlist,
-        )
-    }
-
     fn next_pane_to_select(self) -> Self {
         match self {
             Pane::StatusBar | Pane::StateBadge | Pane::Overlay | Pane::Gauge => {
@@ -73,6 +63,8 @@ impl Pane {
 
 #[derive(Clone)]
 pub struct AppState {
+    pub(super) quit_ui: bool,
+
     current_size: (u16, u16),
     previously_selected_pane: Option<Pane>,
 
@@ -88,6 +80,7 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Self {
         Self {
+            quit_ui: false,
             previously_selected_pane: None,
             selected_pane: Some(Pane::Overlay),
             search_query: None,
@@ -101,53 +94,77 @@ impl AppState {
         }
     }
 
-    pub fn start_event_listener_loop(&mut self, event_sender: sync::mpsc::Sender<EventAction>) {
+    pub fn start_event_listener_loop(
+        locked_state: Arc<Mutex<AppState>>,
+        event_sender: Arc<sync::Condvar>,
+    ) {
         loop {
-            let next_event = event::read().unwrap();
-            let event_action = self.handle_event(next_event);
-
-            if let Some(event_action) = event_action {
-                if matches!(event_action, EventAction::Quit) {
-                    event_sender.send(event_action).unwrap();
+            if matches!(event::poll(Duration::from_millis(500)), Ok(true)) {
+                let event = event::read().unwrap();
+                let (should_quit, should_notify) = Self::handle_event(locked_state.clone(), event);
+                if should_quit {
+                    event_sender.notify_all();
                     break;
+                } else if should_notify {
+                    event_sender.notify_all();
                 }
-                event_sender.send(event_action).unwrap();
             }
         }
     }
 
-    fn handle_event(&mut self, event: Event) -> Option<EventAction> {
+    fn handle_event(locked_state: Arc<Mutex<Self>>, event: Event) -> (bool, bool) {
+        let mut should_notify = false;
+        let mut notify = || should_notify = true;
+
         match event {
-            Event::Resize(w, h) => self.current_size = (w, h),
+            Event::Resize(w, h) => {
+                Self::with_unlocked_state(locked_state, |state| {
+                    state.current_size = (w, h);
+                    notify();
+                });
+            }
 
             Event::FocusGained => {
-                self.select_new_pane(Some(
-                    self.previously_selected_pane
-                        .unwrap_or(Pane::NavigationList),
-                ));
+                Self::with_unlocked_state(locked_state, |state| {
+                    state.select_new_pane(Some(
+                        state
+                            .previously_selected_pane
+                            .unwrap_or(Pane::NavigationList),
+                    ));
+                    notify();
+                });
             }
 
             Event::FocusLost => {
-                self.select_new_pane(None);
+                Self::with_unlocked_state(locked_state, |state| {
+                    state.select_new_pane(None);
+                    notify();
+                });
             }
 
-            Event::Paste(pasted_text) if self.search_is_active() => {
-                match self.search_query.as_mut() {
-                    Some(query) => query.push_str(pasted_text.as_str()),
-                    None => self.search_query = Some(pasted_text),
-                }
+            Event::Paste(pasted_text) => {
+                Self::with_unlocked_state(locked_state, move |state| {
+                    match state.search_query.as_mut() {
+                        Some(query) => query.push_str(pasted_text.as_str()),
+                        None => state.search_query = Some(pasted_text.clone()),
+                    }
+                    notify()
+                });
             }
-            Event::Paste(_) => {}
 
-            Event::Key(key_event) => return self.new_key_event(key_event),
+            Event::Key(key_event) => {
+                return Self::with_unlocked_state(locked_state, |state| {
+                    state.new_key_event(key_event)
+                })
+            }
 
             Event::Mouse(mouse_event) => {}
         }
 
-        None
+        (false, should_notify)
     }
 
-    fn new_key_event(&mut self, key_event: KeyEvent) -> Option<EventAction> {
+    fn new_key_event(&mut self, key_event: KeyEvent) -> (bool, bool) {
         let is_key_release = matches!(key_event.kind, KeyEventKind::Release);
         let is_key_repeat = matches!(key_event.kind, KeyEventKind::Repeat);
         let is_key_press = matches!(key_event.kind, KeyEventKind::Press);
@@ -155,11 +172,20 @@ impl AppState {
         let with_ctrl_modifier = key_event.modifiers.contains(KeyModifiers::CONTROL);
         let search_is_active = self.search_is_active();
 
+        let mut should_notify = false;
+        let mut should_quit = false;
+        let mut notify = || should_notify = true;
+        let mut quit = || should_quit = true;
+
         match key_event.code {
-            event::KeyCode::Char('c') if with_ctrl_modifier => Some(EventAction::Quit),
-            event::KeyCode::Char('k') if !search_is_active => {
+            event::KeyCode::Char('c') if with_ctrl_modifier => {
+                self.quit_ui = true;
+                notify();
+                quit();
+            }
+            event::KeyCode::Char('/') if !search_is_active => {
                 self.select_new_pane(Some(Pane::SearchBar));
-                Some(EventAction::NewPaneSelected(self.selected_pane))
+                notify();
             }
 
             event::KeyCode::Char(c) if search_is_active && !with_ctrl_modifier => {
@@ -167,26 +193,22 @@ impl AppState {
                     Some(query) => query.push(c),
                     None => self.search_query = Some(String::from(c)),
                 }
-
-                Some(EventAction::NewSearchInput(self.search_query.clone()))
+                notify()
             }
 
             event::KeyCode::Backspace => {
                 if self.search_is_active() {
                     self.search_query.as_mut().map(String::pop);
-                    Some(EventAction::NewSearchInput(self.search_query.clone()))
                 } else {
                     self.move_to_prev_pane();
-                    Some(EventAction::NewPaneSelected(self.selected_pane))
                 }
+                notify()
             }
             event::KeyCode::Esc | event::KeyCode::Left => {
                 if self.selected_pane.is_some() {
                     self.move_to_next_pane();
-                    Some(EventAction::NewPaneSelected(self.selected_pane))
-                } else {
-                    None
                 }
+                notify()
             }
             event::KeyCode::Tab => {
                 if with_shift_modifier {
@@ -194,8 +216,7 @@ impl AppState {
                 } else {
                     self.move_to_next_pane();
                 }
-                self.move_to_next_pane();
-                Some(EventAction::NewPaneSelected(self.selected_pane))
+                notify()
             }
 
             event::KeyCode::Enter => {
@@ -204,112 +225,78 @@ impl AppState {
                     let trimmed_query = search_query.trim();
                     if !trimmed_query.is_empty() {
                         self.move_to_next_pane();
-                        Some(EventAction::SearchQuery(trimmed_query.to_string()))
-                    } else {
-                        None
+                        notify()
                     }
-                } else {
-                    None
                 }
             }
-            event::KeyCode::Right => None,
-            event::KeyCode::Up => match self.selected_pane {
-                Some(Pane::NavigationList) => {
-                    self.navigation_list_state.select_previous();
-                    Some(EventAction::NewNavigationListState(
-                        self.navigation_list_state.clone(),
-                    ))
-                }
-                Some(Pane::QueueList) => {
-                    self.queue_list_state.select_previous();
-                    Some(EventAction::NewQueueListState(
-                        self.queue_list_state.clone(),
-                    ))
-                }
-                Some(Pane::Music) => {
-                    self.music_pane_state.select_previous();
-                    Some(EventAction::NewMusicPaneListState(
-                        self.music_pane_state.clone(),
-                    ))
-                }
-                Some(Pane::Playlist) => {
-                    self.playlist_pane_state.select_previous();
-                    Some(EventAction::NewMusicPaneListState(
-                        self.music_pane_state.clone(),
-                    ))
-                }
-                Some(Pane::Artist) => None,
-
-                Some(Pane::Overlay) => {
-                    // scroll?
-                    None
-                }
-
-                None
-                | Some(Pane::Gauge)
-                | Some(Pane::StatusBar)
-                | Some(Pane::SearchBar)
-                | Some(Pane::StateBadge) => None,
-            },
             event::KeyCode::Down => match self.selected_pane {
-                Some(Pane::NavigationList) => {
-                    self.navigation_list_state.select_next();
-                    Some(EventAction::NewNavigationListState(
-                        self.navigation_list_state.clone(),
-                    ))
-                }
-                Some(Pane::QueueList) => {
-                    self.queue_list_state.select_next();
-                    Some(EventAction::NewQueueListState(
-                        self.queue_list_state.clone(),
-                    ))
-                }
-                Some(Pane::Music) => {
-                    self.music_pane_state.select_next();
-                    Some(EventAction::NewMusicPaneListState(
-                        self.music_pane_state.clone(),
-                    ))
-                }
-                Some(Pane::Playlist) => {
-                    self.playlist_pane_state.select_next();
-                    Some(EventAction::NewMusicPaneListState(
-                        self.music_pane_state.clone(),
-                    ))
-                }
-                Some(Pane::Artist) => None,
-
-                Some(Pane::Overlay) => {
-                    // scroll?
-                    None
-                }
-
                 None
                 | Some(Pane::Gauge)
                 | Some(Pane::StatusBar)
                 | Some(Pane::SearchBar)
-                | Some(Pane::StateBadge) => None,
+                | Some(Pane::StateBadge) => {}
+
+                Some(Pane::NavigationList) => {
+                    Self::circular_select_list_state(
+                        &mut self.navigation_list_state,
+                        ListDirection::TopToBottom,
+                    );
+                    notify()
+                }
+
+                _ => {}
             },
 
-            event::KeyCode::Home => None,
-            event::KeyCode::End => None,
-            event::KeyCode::PageUp => None,
-            event::KeyCode::PageDown => None,
-            event::KeyCode::BackTab => None,
-            event::KeyCode::Delete => None,
-            event::KeyCode::Insert => None,
-            event::KeyCode::F(_) => None,
-            event::KeyCode::Char(_) => None,
-            event::KeyCode::Null => None,
-            event::KeyCode::CapsLock => None,
-            event::KeyCode::ScrollLock => None,
-            event::KeyCode::NumLock => None,
-            event::KeyCode::PrintScreen => None,
-            event::KeyCode::Pause => None,
-            event::KeyCode::Menu => None,
-            event::KeyCode::KeypadBegin => None,
-            event::KeyCode::Media(media_key_code) => None,
-            event::KeyCode::Modifier(modifier_key_code) => None,
+            event::KeyCode::Up => match self.selected_pane {
+                None
+                | Some(Pane::Gauge)
+                | Some(Pane::StatusBar)
+                | Some(Pane::SearchBar)
+                | Some(Pane::StateBadge) => {}
+
+                Some(Pane::NavigationList) => {
+                    Self::circular_select_list_state(
+                        &mut self.navigation_list_state,
+                        ListDirection::BottomToTop,
+                    );
+
+                    notify()
+                }
+
+                _ => {}
+            },
+
+            event::KeyCode::Right
+            | event::KeyCode::Home
+            | event::KeyCode::End
+            | event::KeyCode::PageUp
+            | event::KeyCode::PageDown
+            | event::KeyCode::BackTab
+            | event::KeyCode::Delete
+            | event::KeyCode::Insert
+            | event::KeyCode::F(_)
+            | event::KeyCode::Char(_)
+            | event::KeyCode::Null
+            | event::KeyCode::CapsLock
+            | event::KeyCode::ScrollLock
+            | event::KeyCode::NumLock
+            | event::KeyCode::PrintScreen
+            | event::KeyCode::Pause
+            | event::KeyCode::Menu
+            | event::KeyCode::KeypadBegin
+            | event::KeyCode::Media(_)
+            | event::KeyCode::Modifier(_) => {}
         }
+
+        (should_quit, should_notify)
+    }
+
+    fn with_unlocked_state<T>(
+        locked_state: Arc<Mutex<Self>>,
+        mut action: impl FnMut(&mut AppState) -> T,
+    ) -> T {
+        let mut unlocked_state = locked_state.lock().unwrap();
+        action(&mut unlocked_state)
     }
 }
 
@@ -335,5 +322,25 @@ impl AppState {
     pub fn select_new_pane(&mut self, new_pane: Option<Pane>) {
         self.previously_selected_pane = self.selected_pane;
         self.selected_pane = new_pane;
+    }
+
+    fn circular_select_list_state(list_state: &mut ListState, direction: ListDirection) {
+        let previous_selection = list_state.selected();
+        match direction {
+            ListDirection::TopToBottom => {
+                list_state.select_next();
+                let new_selection = list_state.selected();
+                if previous_selection == new_selection {
+                    list_state.select_first();
+                }
+            }
+            ListDirection::BottomToTop => {
+                list_state.select_previous();
+                let new_selection = list_state.selected();
+                if previous_selection == new_selection {
+                    list_state.select_last();
+                }
+            }
+        }
     }
 }

@@ -1,8 +1,8 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::Style,
-    text::{Span, Text},
+    style::{Color, Style, Stylize},
+    text::{Span, StyledGrapheme},
     widgets::{Block, BorderType, Borders, Paragraph, WidgetRef},
 };
 
@@ -10,6 +10,7 @@ pub struct SearchBarUiAttrs {
     pub text_color: ratatui::style::Color,
     pub show_border: bool,
     pub show_only_bottom_border: bool,
+    pub is_active: bool,
 }
 
 impl SearchBarUiAttrs {
@@ -28,7 +29,6 @@ impl SearchBarUiAttrs {
 
 pub struct SearchBar<'a> {
     widget: Paragraph<'a>,
-    text: Span<'a>,
     block: Block<'a>,
 }
 
@@ -36,23 +36,34 @@ impl SearchBar<'_> {
     pub fn create_widget(style_options: &SearchBarUiAttrs) -> Self {
         let block = Block::new()
             .borders(style_options.get_block_borders())
+            .border_style(Style::default().fg(if style_options.is_active {
+                Color::Cyan
+            } else {
+                Color::Gray
+            }))
             .border_type(BorderType::Rounded)
-            .title("Search ");
-        let text = Span::default().style(Style::default().fg(style_options.text_color));
+            .title(
+                Span::default()
+                    .content("Search: ")
+                    .italic()
+                    .style(Style::default().fg(if style_options.is_active {
+                        Color::Cyan
+                    } else {
+                        Color::Magenta
+                    })),
+            );
 
         Self {
-            text,
             block,
             widget: Default::default(),
         }
     }
 
     pub fn with_query(self, query: impl ToString) -> Self {
-        let widget = Paragraph::new(self.text.content(query.to_string())).block(self.block);
+        let widget = Paragraph::new(query.to_string()).block(self.block);
 
         Self {
             widget,
-            text: Default::default(),
             block: Default::default(),
         }
     }
