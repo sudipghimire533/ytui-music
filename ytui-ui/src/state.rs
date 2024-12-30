@@ -3,7 +3,7 @@ use ratatui::{
     widgets::{ListDirection, ListState, TableState},
 };
 use std::{
-    sync::{self, Arc, Condvar, Mutex},
+    sync::{self, Arc, Mutex},
     time::Duration,
 };
 
@@ -11,26 +11,14 @@ use std::{
 pub enum Pane {
     SearchBar,
     StatusBar,
-    NavigationList,
-    QueueList,
     StateBadge,
+    NavigationList,
     Gauge,
+    QueueList,
     Overlay,
     Music,
     Playlist,
     Artist,
-}
-
-pub enum EventAction {
-    Quit,
-    SearchQuery(String),
-
-    NewSearchInput(Option<String>),
-    NewPaneSelected(Option<Pane>),
-    NewMovement {
-        pane: Pane,
-        direction: ListDirection,
-    },
 }
 
 impl Pane {
@@ -59,6 +47,12 @@ impl Pane {
             Pane::Artist => Pane::Playlist,
         }
     }
+}
+
+pub struct EventHandleResponse {
+    should_quit: bool,
+    should_notify_renderer: bool,
+    should_notifiy_sourcer: bool,
 }
 
 #[derive(Clone)]
@@ -94,33 +88,57 @@ impl AppState {
         }
     }
 
-    pub fn start_event_listener_loop(
+    pub fn start_event_listener_loop<SourceAction: super::DataRequester>(
+        // state and update condvar for ui
         locked_state: Arc<Mutex<AppState>>,
-        event_sender: Arc<sync::Condvar>,
+        input_event_sender: Arc<sync::Condvar>,
+
+        // state and update condvar for fetching result + playing audio
+        locked_source_action_queue: Arc<tokio::sync::Mutex<SourceAction>>,
+        source_event_notifier: Arc<tokio::sync::Notify>,
     ) {
         loop {
             if matches!(event::poll(Duration::from_millis(500)), Ok(true)) {
-                let event = event::read().unwrap();
-                let (should_quit, should_notify) = Self::handle_event(locked_state.clone(), event);
-                if should_quit {
-                    event_sender.notify_all();
+                let source_response = Self::handle_event(
+                    locked_state.clone(),
+                    event::read().unwrap(),
+                    locked_source_action_queue.clone(),
+                );
+
+                if source_response.should_quit {
+                    input_event_sender.notify_one();
+                    source_event_notifier.notify_one();
                     break;
-                } else if should_notify {
-                    event_sender.notify_all();
+                }
+
+                if source_response.should_notify_renderer {
+                    input_event_sender.notify_one();
+                }
+                if source_response.should_notifiy_sourcer {
+                    eprintln!("asking source for something...");
+                    source_event_notifier.notify_one();
                 }
             }
         }
     }
 
-    fn handle_event(locked_state: Arc<Mutex<Self>>, event: Event) -> (bool, bool) {
-        let mut should_notify = false;
-        let mut notify = || should_notify = true;
+    fn handle_event<SourceAction: super::DataRequester>(
+        locked_state: Arc<Mutex<Self>>,
+        event: Event,
+        locked_source_action_queue: Arc<tokio::sync::Mutex<SourceAction>>,
+    ) -> EventHandleResponse {
+        let mut event_handle_response = EventHandleResponse {
+            should_quit: false,
+            should_notifiy_sourcer: false,
+            should_notify_renderer: false,
+        };
+        let mut notify_ui = || event_handle_response.should_notify_renderer = true;
 
         match event {
             Event::Resize(w, h) => {
                 Self::with_unlocked_state(locked_state, |state| {
                     state.current_size = (w, h);
-                    notify();
+                    notify_ui();
                 });
             }
 
@@ -131,14 +149,14 @@ impl AppState {
                             .previously_selected_pane
                             .unwrap_or(Pane::NavigationList),
                     ));
-                    notify();
+                    notify_ui();
                 });
             }
 
             Event::FocusLost => {
                 Self::with_unlocked_state(locked_state, |state| {
                     state.select_new_pane(None);
-                    notify();
+                    notify_ui();
                 });
             }
 
@@ -148,23 +166,27 @@ impl AppState {
                         Some(query) => query.push_str(pasted_text.as_str()),
                         None => state.search_query = Some(pasted_text.clone()),
                     }
-                    notify()
+                    notify_ui()
                 });
             }
 
             Event::Key(key_event) => {
-                return Self::with_unlocked_state(locked_state, |state| {
-                    state.new_key_event(key_event)
+                return Self::with_unlocked_state(locked_state, move |state| {
+                    state.new_key_event(key_event, locked_source_action_queue.clone())
                 })
             }
 
             Event::Mouse(mouse_event) => {}
         }
 
-        (false, should_notify)
+        event_handle_response
     }
 
-    fn new_key_event(&mut self, key_event: KeyEvent) -> (bool, bool) {
+    fn new_key_event<SourceAction: super::DataRequester>(
+        &mut self,
+        key_event: KeyEvent,
+        locked_action_queue: Arc<tokio::sync::Mutex<SourceAction>>,
+    ) -> EventHandleResponse {
         let is_key_release = matches!(key_event.kind, KeyEventKind::Release);
         let is_key_repeat = matches!(key_event.kind, KeyEventKind::Repeat);
         let is_key_press = matches!(key_event.kind, KeyEventKind::Press);
@@ -172,20 +194,26 @@ impl AppState {
         let with_ctrl_modifier = key_event.modifiers.contains(KeyModifiers::CONTROL);
         let search_is_active = self.search_is_active();
 
-        let mut should_notify = false;
-        let mut should_quit = false;
-        let mut notify = || should_notify = true;
-        let mut quit = || should_quit = true;
+        let mut event_handle_response = EventHandleResponse {
+            should_notifiy_sourcer: false,
+            should_quit: false,
+            should_notify_renderer: false,
+        };
+        let mut notify_ui = || event_handle_response.should_notify_renderer = true;
+        let mut notify_source = || event_handle_response.should_notifiy_sourcer = true;
 
         match key_event.code {
             event::KeyCode::Char('c') if with_ctrl_modifier => {
                 self.quit_ui = true;
-                notify();
-                quit();
+                event_handle_response.should_quit = true;
+                Self::with_unlocked_source(locked_action_queue, |source| source.quit());
+
+                notify_ui();
+                notify_source();
             }
             event::KeyCode::Char('/') if !search_is_active => {
                 self.select_new_pane(Some(Pane::SearchBar));
-                notify();
+                notify_ui();
             }
 
             event::KeyCode::Char(c) if search_is_active && !with_ctrl_modifier => {
@@ -193,7 +221,7 @@ impl AppState {
                     Some(query) => query.push(c),
                     None => self.search_query = Some(String::from(c)),
                 }
-                notify()
+                notify_ui()
             }
 
             event::KeyCode::Backspace => {
@@ -202,13 +230,13 @@ impl AppState {
                 } else {
                     self.move_to_prev_pane();
                 }
-                notify()
+                notify_ui()
             }
             event::KeyCode::Esc | event::KeyCode::Left => {
                 if self.selected_pane.is_some() {
                     self.move_to_next_pane();
                 }
-                notify()
+                notify_ui()
             }
             event::KeyCode::Tab => {
                 if with_shift_modifier {
@@ -216,19 +244,42 @@ impl AppState {
                 } else {
                     self.move_to_next_pane();
                 }
-                notify()
+                notify_ui()
             }
 
-            event::KeyCode::Enter => {
-                if self.search_is_active() {
-                    let search_query = self.search_query.clone().unwrap_or_default();
-                    let trimmed_query = search_query.trim();
+            event::KeyCode::Enter => match self.selected_pane {
+                Some(Pane::SearchBar) => {
+                    let trimmed_query = self
+                        .search_query
+                        .as_ref()
+                        .map(|s| s.trim())
+                        .unwrap_or_default();
                     if !trimmed_query.is_empty() {
+                        Self::with_unlocked_source(locked_action_queue, |source| {
+                            source.search_new_term(trimmed_query.to_string(), true, true, true);
+                        });
+
                         self.move_to_next_pane();
-                        notify()
+                        notify_ui();
+                        notify_source();
                     }
                 }
-            }
+
+                Some(Pane::Music) => {}
+
+                Some(Pane::Artist) => {}
+
+                Some(Pane::Playlist) => {}
+
+                Some(Pane::NavigationList) => {}
+
+                None
+                | Some(Pane::StatusBar)
+                | Some(Pane::StateBadge)
+                | Some(Pane::QueueList)
+                | Some(Pane::Overlay)
+                | Some(Pane::Gauge) => {}
+            },
             event::KeyCode::Down => match self.selected_pane {
                 None
                 | Some(Pane::Gauge)
@@ -241,7 +292,7 @@ impl AppState {
                         &mut self.navigation_list_state,
                         ListDirection::TopToBottom,
                     );
-                    notify()
+                    notify_ui()
                 }
 
                 _ => {}
@@ -260,7 +311,7 @@ impl AppState {
                         ListDirection::BottomToTop,
                     );
 
-                    notify()
+                    notify_ui();
                 }
 
                 _ => {}
@@ -288,7 +339,7 @@ impl AppState {
             | event::KeyCode::Modifier(_) => {}
         }
 
-        (should_quit, should_notify)
+        event_handle_response
     }
 
     fn with_unlocked_state<T>(
@@ -297,6 +348,14 @@ impl AppState {
     ) -> T {
         let mut unlocked_state = locked_state.lock().unwrap();
         action(&mut unlocked_state)
+    }
+
+    fn with_unlocked_source<T, SourceAction>(
+        locked_action_queue: Arc<tokio::sync::Mutex<SourceAction>>,
+        mut action: impl FnMut(&mut SourceAction) -> T,
+    ) -> T {
+        let mut unlocked_source = locked_action_queue.blocking_lock();
+        action(&mut unlocked_source)
     }
 }
 

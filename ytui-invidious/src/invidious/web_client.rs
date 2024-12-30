@@ -15,8 +15,9 @@ pub trait WebClient {
 }
 
 #[cfg(feature = "web-reqwest")]
-mod reqwest_impl {
+pub mod reqwest_impl {
     use super::{WebClient, WebResponse};
+    pub use reqwest;
     use reqwest::header::HeaderName;
 
     impl WebClient for &reqwest::Client {

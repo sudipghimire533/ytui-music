@@ -1,8 +1,3 @@
-use crate::{
-    dimension::Dimension,
-    state::{self, Pane},
-};
-
 use super::components::{
     artist_pane::{ArtistPane, ArtistPaneUiAttrs},
     music_pane::{MusicPane, MusicPaneUiAttrs},
@@ -17,6 +12,10 @@ use super::components::{
     window_border::WindowBorder,
 };
 use super::dimension::DimensionArgs;
+use crate::{
+    dimension::Dimension,
+    state::{self, Pane},
+};
 use ratatui::{
     layout::{Rect, Size},
     style::{Color, Style},
@@ -27,11 +26,42 @@ use std::{
     time::Duration,
 };
 
-pub struct YtuiUi {
+pub struct YtuiUi<RequestQueuer, DataProvidier> {
     state: super::state::AppState,
+
+    source_notifier: Arc<tokio::sync::Notify>,
+    request_new_data: Arc<tokio::sync::Mutex<RequestQueuer>>,
+    request_available_data: Arc<tokio::sync::Mutex<DataProvidier>>,
+
+    ui_renderer_notifier: Arc<std::sync::Condvar>,
 }
 
-impl YtuiUi {
+impl<RequestQueuer, DataProvider> YtuiUi<RequestQueuer, DataProvider>
+where
+    RequestQueuer: super::DataRequester + std::marker::Send + 'static,
+    DataProvider: super::DataGetter + std::marker::Send + 'static,
+{
+    pub fn new(
+        request_new_data: Arc<tokio::sync::Mutex<RequestQueuer>>,
+        request_available_data: Arc<tokio::sync::Mutex<DataProvider>>,
+    ) -> Self {
+        Self {
+            request_new_data,
+            request_available_data,
+            state: super::state::AppState::new(),
+            source_notifier: Arc::new(tokio::sync::Notify::new()),
+            ui_renderer_notifier: Arc::new(std::sync::Condvar::new()),
+        }
+    }
+
+    pub fn get_ui_notifier_copy(&self) -> Arc<std::sync::Condvar> {
+        Arc::clone(&self.ui_renderer_notifier)
+    }
+
+    pub fn get_source_notifier_copy(&self) -> Arc<tokio::sync::Notify> {
+        Arc::clone(&self.source_notifier)
+    }
+
     pub fn app_start(mut self) -> std::thread::JoinHandle<()> {
         let mut terminal = ratatui::try_init().unwrap();
         let mut dimension_size = Size::new(0, 0);
@@ -48,23 +78,29 @@ impl YtuiUi {
                         Self::draw_window_broder_and_background(frame, &dimensions);
                     }
 
-                    Self::draw_components_in_frame(frame, &dimensions, app_state);
+                    let data_provider = self.request_available_data.blocking_lock();
+                    Self::draw_components_in_frame(frame, &dimensions, app_state, &data_provider);
                 })
                 .unwrap();
         };
         paint_ui(&mut self.state);
 
-        let input_notifier = Arc::new(std::sync::Condvar::new());
-        let input_reactor = Arc::clone(&input_notifier);
         let state_for_renderer = Arc::new(Mutex::new(self.state));
         let state_for_listener = Arc::clone(&state_for_renderer);
 
+        let ui_notifier_for_event_handler = Arc::clone(&self.ui_renderer_notifier);
         let input_listener_handle = std::thread::spawn(move || {
-            state::AppState::start_event_listener_loop(state_for_listener, input_notifier)
+            state::AppState::start_event_listener_loop(
+                state_for_listener,
+                ui_notifier_for_event_handler,
+                self.request_new_data,
+                self.source_notifier,
+            )
         });
 
         let ui_render_handler = std::thread::spawn(move || loop {
-            let mut app_state = input_reactor
+            let mut app_state = self
+                .ui_renderer_notifier
                 .wait(state_for_renderer.lock().unwrap())
                 .unwrap();
             if app_state.quit_ui {
@@ -93,6 +129,7 @@ impl YtuiUi {
         frame: &mut ratatui::Frame,
         dimensions: &Dimension,
         app_state: &mut state::AppState,
+        data_source: &DataProvider,
     ) {
         let searchbar_attrs = SearchBarUiAttrs {
             text_color: Color::Red,
@@ -171,14 +208,7 @@ impl YtuiUi {
             text_color: Color::Green,
             highlight_color: Color::White,
         };
-        let music_pane = MusicPane::create_widget(
-            &music_pane_attrs,
-            [["Mero desh birami", "Uniq Poet", "04:04"]]
-                .repeat(20)
-                .into_iter()
-                .map(|[a, b, c]| [a.to_string(), b.to_string(), c.to_string()])
-                .collect(),
-        );
+        let music_pane = MusicPane::create_widget(&music_pane_attrs, data_source.get_music_list());
 
         let playlist_pane_attrs = PlaylistPaneUiAttrs {
             title_color: Color::LightCyan,
@@ -258,12 +288,6 @@ Give it executable permission and from downloaded directory, in shell:
 ytui_music run
 You may need to jump to Usage Guide".to_string());
             overlay.render_ref(dimensions.overlay, frame.buffer_mut());
-        }
-    }
-
-    pub fn new() -> Self {
-        Self {
-            state: super::state::AppState::new(),
         }
     }
 }

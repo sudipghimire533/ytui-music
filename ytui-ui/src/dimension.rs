@@ -114,8 +114,8 @@ impl DimensionArgs {
             Rect {
                 height,
                 width,
-                x: (trimmed_area.width - width) / 2,
-                y: (trimmed_area.height - height) / 2,
+                x: trimmed_area.x + ((trimmed_area.width - width) / 2),
+                y: trimmed_area.y + ((trimmed_area.height - height) / 2),
             }
         };
 

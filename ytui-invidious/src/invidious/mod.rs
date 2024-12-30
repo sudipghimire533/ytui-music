@@ -10,38 +10,73 @@ pub mod requests {
     pub type RequestStats<'a> = _ApiRequestst<'a, types::api_info::UsageStats>;
     pub type RequestVideoById<'a> = _ApiRequestst<'a, types::video::VideoInfo>;
     pub type RequestTrending<'a> = _ApiRequestst<'a, types::video::TrendingVideos>;
+    pub type RequestSearch<'a> = _ApiRequestst<'a, types::common::SearchResults>;
 
-    pub enum InvidiousApi<'a> {
+    pub enum InvidiousApiQuery<'a> {
         Stats,
-        VideoById { video_id: &'a str },
-        Trending { region: types::region::IsoRegion },
+        VideoById {
+            video_id: &'a str,
+        },
+        Trending {
+            region: types::region::IsoRegion,
+        },
+        Search {
+            query: String,
+            find_playlist: bool,
+            find_artist: bool,
+            find_music: bool,
+        },
     }
 
     pub struct _ApiRequestst<'a, ExpectedOutResponse> {
-        api: InvidiousApi<'a>,
+        param: InvidiousApiQuery<'a>,
 
         _out_phantom: std::marker::PhantomData<ExpectedOutResponse>,
         // todo: global options
     }
     impl<'a, Res> _ApiRequestst<'a, Res> {
-        pub fn new(api: InvidiousApi<'a>) -> Self {
+        pub fn new(param: InvidiousApiQuery<'a>) -> Self {
             Self {
-                api,
+                param,
 
                 _out_phantom: std::marker::PhantomData,
             }
         }
 
         pub(super) fn get_endpoint_path(&self, mut base_url: String) -> String {
-            match self.api {
-                InvidiousApi::Stats => {
+            match self.param {
+                InvidiousApiQuery::Stats => {
                     base_url.push_str("/api/v1/stats");
                 }
-                InvidiousApi::VideoById { video_id } => {
+                InvidiousApiQuery::VideoById { video_id } => {
                     base_url.push_str(format!("/api/v1/videos/{video_id}").as_str());
                 }
-                InvidiousApi::Trending { region } => {
+                InvidiousApiQuery::Trending { region } => {
                     base_url.push_str(format!("/trending?region={}", region.as_str()).as_str());
+                }
+
+                InvidiousApiQuery::Search {
+                    ref query,
+                    find_playlist,
+                    find_artist,
+                    find_music,
+                } => {
+                    let result_type = if !find_music && find_artist && find_playlist {
+                        "&type=all"
+                    } else if find_music {
+                        "&type=music"
+                    } else if find_playlist {
+                        "&type=playlist"
+                    } else if find_artist {
+                        "&type=channel"
+                    } else {
+                        "&type=all"
+                    };
+
+                    base_url.push_str("/search?");
+                    base_url.push_str("q=");
+                    base_url.push_str(query);
+                    base_url.push_str(result_type);
                 }
 
                 _ => todo!(),
@@ -57,6 +92,10 @@ pub struct InvidiousBackend {
 }
 
 impl InvidiousBackend {
+    pub fn new(base_url: String) -> Self {
+        Self { base_url }
+    }
+
     pub async fn fetch_endpoint<WebC: web_client::WebClient, ExpectedResponse>(
         &self,
         web_client: WebC,
@@ -94,6 +133,7 @@ impl InvidiousBackend {
     }
 }
 
+#[derive(Debug)]
 pub enum EndpointFetchError<WebE> {
     NonOkWebResponse,
     WebClientError(WebE),

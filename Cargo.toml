@@ -3,7 +3,8 @@ resolver = "2"
 members = [
   "ytui-invidious",
   "ytui-audio",
-  "ytui-ui", "ytui-music",
+  "ytui-ui",
+  "ytui-music", 
 ]
 
 [workspace.dependencies]

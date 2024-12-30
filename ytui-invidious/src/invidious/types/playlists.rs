@@ -33,8 +33,6 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchPlaylistUnit {
-    #[serde(rename = "type")]
-    pub o_type: String,
     pub title: String,
     pub playlist_id: String,
     pub playlist_thumbnail: String,

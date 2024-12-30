@@ -1,3 +1,5 @@
+use std::{borrow::Cow, task::Wake};
+
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
@@ -15,8 +17,11 @@ pub struct MusicPane<'a> {
     widget: Table<'a>,
 }
 
-impl MusicPane<'_> {
-    pub fn create_widget(style_options: &MusicPaneUiAttrs, items: Vec<[String; 3]>) -> Self {
+impl<'a> MusicPane<'a> {
+    pub fn create_widget(
+        style_options: &MusicPaneUiAttrs,
+        items: impl Iterator<Item = [Cow<'a, str>; 3]>,
+    ) -> Self {
         let rows = items
             .into_iter()
             .map(|row| row.into_iter().map(Cell::from).collect())

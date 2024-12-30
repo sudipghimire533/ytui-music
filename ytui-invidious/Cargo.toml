@@ -16,3 +16,5 @@ default = ["web-reqwest"]
 
 [dev-dependencies]
 ytui-invidious = { path = "./", features = ["web-reqwest"] }
+reqwest = { version = "0.12", features = ["blocking"]}
+tokio = { version = "1", features = ["full"]}

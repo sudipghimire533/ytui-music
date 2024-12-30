@@ -208,8 +208,6 @@ pub struct ChannelCommunity {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchChannelUnit {
-    #[serde(rename = "type")]
-    pub o_type: String,
     pub author: String,
     pub author_id: String,
     pub author_url: String,

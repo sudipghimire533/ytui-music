@@ -380,10 +380,13 @@ pub struct SearchSuggestion {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase", untagged)]
+#[serde(rename_all = "camelCase", tag = "type")]
 pub enum SearchResult {
+    #[serde(rename = "video")]
     Video(super::video::SearchVideoUnit),
+    #[serde(rename = "playlist")]
     Playlist(super::playlists::SearchPlaylistUnit),
+    #[serde(rename = "channel")]
     Channel(super::channel::SearchChannelUnit),
 }
 

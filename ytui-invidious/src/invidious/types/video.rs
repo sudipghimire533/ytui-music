@@ -379,8 +379,6 @@ pub struct PopularVideo {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchVideoUnit {
-    #[serde(rename = "type")]
-    pub o_type: String,
     pub title: String,
     pub video_id: String,
     pub author: String,
@@ -390,10 +388,12 @@ pub struct SearchVideoUnit {
     pub description: String,
     pub description_html: String,
     pub view_count: i64,
+    pub view_count_text: String,
     pub published: i64,
     pub published_text: String,
     pub length_seconds: i32,
     pub live_now: bool,
+    #[serde(default)]
     pub paid: bool,
     pub premium: bool,
 }
