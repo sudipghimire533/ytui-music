@@ -37,6 +37,7 @@ pub trait PlayerStatsGetter {
 pub struct PlayerStats {
     pub total_duration: Option<i64>,
     pub elabsed_duration: Option<i64>,
+    pub playback_percent: Option<i64>,
     pub media_title: Option<String>,
     pub paused: Option<bool>,
     pub volume: Option<i64>,
@@ -44,13 +45,29 @@ pub struct PlayerStats {
 
 impl PlayerStats {
     fn from_libmpv_player(mpv_player: &ytui_audio::libmpv::LibmpvPlayer) -> Self {
-        let total_duration = mpv_player.get_property(MpvPropertyGet::Duration).unwrap();
+        let total_duration = mpv_player
+            .get_property::<i64>(MpvPropertyGet::Duration)
+            .unwrap();
         let media_title = mpv_player.get_property(MpvPropertyGet::MediaTitle).unwrap();
-        let elabsed_duration = mpv_player.get_property(MpvPropertyGet::TimePos).unwrap();
+        let elabsed_duration = mpv_player
+            .get_property::<i64>(MpvPropertyGet::TimePos)
+            .unwrap();
         let paused = mpv_player
             .get_property(MpvPropertyGet::PauseStatus)
             .unwrap();
         let volume = mpv_player.get_property(MpvPropertyGet::Volume).unwrap();
+        let playback_percent = mpv_player
+            .get_property(MpvPropertyGet::PercentPos)
+            .ok()
+            .flatten()
+            .map(Option::Some)
+            .unwrap_or_else(|| {
+                if let (Some(total), Some(elapsed)) = (total_duration, elabsed_duration) {
+                    Some(elapsed.saturating_sub(100).saturating_div(total))
+                } else {
+                    None
+                }
+            });
 
         PlayerStats {
             total_duration,
@@ -58,6 +75,7 @@ impl PlayerStats {
             media_title,
             paused,
             volume,
+            playback_percent,
         }
     }
 }

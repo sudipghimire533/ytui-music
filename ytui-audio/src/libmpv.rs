@@ -32,6 +32,7 @@ pub enum MpvPropertyGet {
     TimePos,
     PauseStatus,
     Volume,
+    PercentPos,
 }
 impl MpvPropertyGet {
     const fn prop_key(self) -> &'static str {
@@ -41,6 +42,7 @@ impl MpvPropertyGet {
             Self::TimePos => "time-pos",
             Self::PauseStatus => "pause",
             Self::Volume => "volume",
+            Self::PercentPos => "percent-pos",
         }
     }
 }

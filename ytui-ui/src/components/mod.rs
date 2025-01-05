@@ -75,8 +75,10 @@ pub mod component_collection {
                 background: Color::Reset,
             };
 
-            progressbar::ProgressBar::create_widget(&progress_bar_attrs)
-                .with_player_stats(&data_collection.player_stats)
+            progressbar::ProgressBar::create_widget(
+                &progress_bar_attrs,
+                &data_collection.player_stats,
+            )
         }
 
         pub fn create_status_bar(

@@ -91,7 +91,6 @@ where
                     if frame_size != dimension_size {
                         dimension_size = frame_size;
                         dimensions = DimensionArgs.calculate_dimension(frame.area());
-                        Self::draw_window_broder_and_background(frame, &dimensions);
                     }
                 }
 
@@ -103,6 +102,7 @@ where
                 }
 
                 // every frame should have complete drawing of all components
+                Self::draw_window_broder_and_background(frame, &dimensions);
                 Self::draw_all_components(frame.buffer_mut(), &dimensions, &components, app_state);
             })?;
 
