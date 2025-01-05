@@ -19,8 +19,8 @@ pub trait DataRequester {
 
 pub trait DataGetter {
     fn get_music_list(&self) -> impl Iterator<Item = [String; 3]>;
-    fn get_playlist_list(&self) -> &[&str; 2];
-    fn get_artist_list(&self) -> &[&str];
+    fn get_playlist_list(&self) -> impl Iterator<Item = [String; 2]>;
+    fn get_artist_list(&self) -> impl Iterator<Item = String>;
     fn has_new_data(&self) -> bool;
     fn mark_consumed_new_data(&mut self);
 }

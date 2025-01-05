@@ -301,12 +301,20 @@ impl ytui_ui::DataRequester for SourceAction {
 
 /// Allow UI side to retrive data
 impl ytui_ui::DataGetter for DataSink {
-    fn get_playlist_list(&self) -> &[&str; 2] {
-        panic!()
+    fn get_playlist_list(&self) -> impl Iterator<Item = [String; 2]> {
+        match self.playlist_list {
+            PlaylistList::SearchResult(ref playlist_search_list) => playlist_search_list
+                .iter()
+                .map(|search_result| [search_result.title.clone(), search_result.author.clone()]),
+        }
     }
 
-    fn get_artist_list(&self) -> &[&str] {
-        panic!()
+    fn get_artist_list(&self) -> impl Iterator<Item = String> {
+        match self.artist_list {
+            ArtistList::SearchResult(ref artist_search_list) => artist_search_list
+                .iter()
+                .map(|search_result| search_result.author.clone()),
+        }
     }
 
     fn get_music_list(&self) -> impl Iterator<Item = [String; 3]> {

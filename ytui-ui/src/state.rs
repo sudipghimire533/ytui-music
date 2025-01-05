@@ -302,32 +302,16 @@ impl AppState {
                     ListDirection::BottomToTop
                 };
 
-                match self.selected_pane {
-                    None
-                    | Some(Pane::Gauge)
-                    | Some(Pane::StatusBar)
-                    | Some(Pane::SearchBar)
-                    | Some(Pane::StateBadge) => {}
-
-                    Some(Pane::NavigationList) => {
-                        Self::circular_select_list_state(
-                            &mut self.navigation_list_state,
-                            list_direction,
-                        );
+                if let Some(active_pane) = self.selected_pane {
+                    if let Some(table_state) = self.get_table_state_of(active_pane) {
+                        Self::circular_select_table_state(table_state, list_direction);
+                        self.mark_state_change();
+                        notify_ui();
+                    } else if let Some(list_state) = self.get_list_state_of(active_pane) {
+                        Self::circular_select_list_state(list_state, list_direction);
                         self.mark_state_change();
                         notify_ui();
                     }
-
-                    Some(Pane::Music) => {
-                        Self::circular_select_table_state(
-                            &mut self.music_pane_state,
-                            list_direction,
-                        );
-                        self.mark_state_change();
-                        notify_ui();
-                    }
-
-                    _ => {}
                 }
             }
             event::KeyCode::Right
@@ -405,21 +389,21 @@ impl AppState {
         self.selected_pane = new_pane;
     }
 
-    fn circular_select_table_state(list_state: &mut TableState, direction: ListDirection) {
-        let previous_selection = list_state.selected();
+    fn circular_select_table_state(table_state: &mut TableState, direction: ListDirection) {
+        let previous_selection = table_state.selected();
         match direction {
             ListDirection::TopToBottom => {
-                list_state.select_next();
-                let new_selection = list_state.selected();
+                table_state.select_next();
+                let new_selection = table_state.selected();
                 if previous_selection == new_selection {
-                    list_state.select_first();
+                    table_state.select_first();
                 }
             }
             ListDirection::BottomToTop => {
-                list_state.select_previous();
-                let new_selection = list_state.selected();
+                table_state.select_previous();
+                let new_selection = table_state.selected();
                 if previous_selection == new_selection {
-                    list_state.select_last();
+                    table_state.select_last();
                 }
             }
         }
@@ -443,5 +427,26 @@ impl AppState {
                 }
             }
         }
+    }
+
+    fn get_table_state_of(&mut self, pane: Pane) -> Option<&mut TableState> {
+        let ts = match pane {
+            Pane::Music => &mut self.music_pane_state,
+            Pane::Playlist => &mut self.playlist_pane_state,
+            Pane::Artist => &mut self.artist_pane_state,
+
+            _ => return None,
+        };
+        Some(ts)
+    }
+
+    fn get_list_state_of(&mut self, pane: Pane) -> Option<&mut ListState> {
+        let ls = match pane {
+            Pane::QueueList => &mut self.queue_list_state,
+            Pane::NavigationList => &mut self.navigation_list_state,
+
+            _ => return None,
+        };
+        Some(ls)
     }
 }

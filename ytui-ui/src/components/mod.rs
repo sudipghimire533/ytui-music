@@ -37,6 +37,8 @@ pub mod component_collection {
     #[derive(Default, Debug)]
     pub struct ComponentsDataCollection {
         pub music_list: Vec<[String; 3]>,
+        pub playlist_list: Vec<[String; 2]>,
+        pub artist_list: Vec<String>,
         pub player_stats: PlayerStats,
     }
 
@@ -46,6 +48,8 @@ pub mod component_collection {
             DataProvider: crate::DataGetter + std::marker::Send + 'static,
         {
             self.music_list = data_provider.get_music_list().collect();
+            self.playlist_list = data_provider.get_playlist_list().collect();
+            self.artist_list = data_provider.get_artist_list().collect();
         }
 
         pub fn refresh_from_player(&mut self, player: &LibmpvPlayer) {
@@ -150,33 +154,24 @@ pub mod component_collection {
 
             let playlist_pane_attrs = playlist_pane::PlaylistPaneUiAttrs {
                 title_color: Color::LightCyan,
-                text_color: Color::Yellow,
-                highlight_color: Color::DarkGray,
+                text_color: Color::Green,
+                highlight_color: Color::White,
+                is_active: matches!(app_state.selected_pane, Some(Pane::Playlist)),
             };
             let playlist_pane = playlist_pane::PlaylistPane::create_widget(
                 &playlist_pane_attrs,
-                [[
-                    "Smoothing sound and something stupid like that",
-                    "mighty nepal",
-                ]]
-                .repeat(20)
-                .into_iter()
-                .map(|[a, b]| [a.to_string(), b.to_string()])
-                .collect(),
+                &data_collection.playlist_list,
             );
 
             let artist_pane_attrs = artist_pane::ArtistPaneUiAttrs {
                 title_color: Color::LightCyan,
-                text_color: Color::White,
-                highlight_color: Color::Gray,
+                text_color: Color::Green,
+                highlight_color: Color::White,
+                is_active: matches!(app_state.selected_pane, Some(Pane::Artist)),
             };
             let artist_pane = artist_pane::ArtistPane::create_widget(
                 &artist_pane_attrs,
-                ["Bartika Eam Rai"]
-                    .repeat(20)
-                    .into_iter()
-                    .map(ToString::to_string)
-                    .collect(),
+                &data_collection.artist_list,
             );
 
             let mut overlay = None;

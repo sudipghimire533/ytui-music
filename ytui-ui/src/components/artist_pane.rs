@@ -9,6 +9,7 @@ pub struct ArtistPaneUiAttrs {
     pub title_color: Color,
     pub text_color: Color,
     pub highlight_color: Color,
+    pub is_active: bool,
 }
 
 pub struct ArtistPane<'a> {
@@ -16,10 +17,10 @@ pub struct ArtistPane<'a> {
 }
 
 impl ArtistPane<'_> {
-    pub fn create_widget(style_options: &ArtistPaneUiAttrs, items: Vec<String>) -> Self {
+    pub fn create_widget(style_options: &ArtistPaneUiAttrs, items: &[String]) -> Self {
         let rows = items
-            .into_iter()
-            .map(|d| Row::new([d]))
+            .iter()
+            .map(|d| Row::new([d.clone()]))
             .collect::<Vec<Row>>();
 
         let headers = ["Name"]
@@ -35,7 +36,11 @@ impl ArtistPane<'_> {
                 Block::bordered()
                     .border_type(BorderType::Rounded)
                     .padding(Padding::left(1))
-                    .border_style(Style::default().fg(Color::White)),
+                    .border_style(Style::default().fg(if style_options.is_active {
+                        Color::Cyan
+                    } else {
+                        Color::White
+                    })),
             )
             .style(Style::default().fg(style_options.text_color))
             .row_highlight_style(Style::default().fg(style_options.highlight_color));

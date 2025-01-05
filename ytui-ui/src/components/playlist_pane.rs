@@ -9,6 +9,7 @@ pub struct PlaylistPaneUiAttrs {
     pub title_color: Color,
     pub text_color: Color,
     pub highlight_color: Color,
+    pub is_active: bool,
 }
 
 pub struct PlaylistPane<'a> {
@@ -16,10 +17,10 @@ pub struct PlaylistPane<'a> {
 }
 
 impl PlaylistPane<'_> {
-    pub fn create_widget(style_options: &PlaylistPaneUiAttrs, items: Vec<[String; 2]>) -> Self {
+    pub fn create_widget(style_options: &PlaylistPaneUiAttrs, items: &[[String; 2]]) -> Self {
         let rows = items
-            .into_iter()
-            .map(|row| row.into_iter().map(Cell::from).collect())
+            .iter()
+            .map(|row| row.iter().cloned().map(Cell::from).collect())
             .collect::<Vec<Row>>();
 
         let headers = ["Name", "Creator"]
@@ -35,7 +36,11 @@ impl PlaylistPane<'_> {
                 Block::bordered()
                     .border_type(BorderType::Rounded)
                     .padding(Padding::left(1))
-                    .border_style(Style::default().fg(Color::White)),
+                    .border_style(Style::default().fg(if style_options.is_active {
+                        Color::Cyan
+                    } else {
+                        Color::White
+                    })),
             )
             .style(Style::default().fg(style_options.text_color))
             .row_highlight_style(Style::default().fg(style_options.highlight_color));

@@ -20,7 +20,7 @@ impl MusicPane<'_> {
     pub fn create_widget(style_options: &MusicPaneUiAttrs, items: &[[String; 3]]) -> Self {
         let rows = items
             .iter()
-            .map(|rows| rows.iter().map(|a| Cell::from(a.clone())).collect())
+            .map(|rows| rows.iter().cloned().map(Cell::from).collect())
             .collect::<Vec<Row>>();
 
         let headers = ["Title", "Artist", "Length"]
