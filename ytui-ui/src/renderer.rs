@@ -10,7 +10,6 @@ use ratatui::{
     widgets::{Block, StatefulWidgetRef, WidgetRef},
 };
 use std::{
-    borrow::Borrow,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -105,6 +104,7 @@ where
 
             Ok::<(), std::io::Error>(())
         };
+        paint_ui(&mut AppState::new(), false).unwrap();
 
         let state_for_renderer = Arc::new(Mutex::new(self.state));
         let state_for_listener = Arc::clone(&state_for_renderer);
@@ -119,27 +119,25 @@ where
             )
         });
 
-        let ui_render_handler = std::thread::spawn(move || loop {
-            let progressbar_update_latency = Duration::from_millis(900000);
+        let ui_render_handler = std::thread::spawn(move || {
+            let progressbar_update_latency = Duration::from_millis(900);
 
-            let (mut app_state, timeout_res) = self
-                .ui_renderer_notifier
-                .wait_timeout(
-                    state_for_renderer.lock().unwrap(),
-                    progressbar_update_latency,
-                )
-                .unwrap();
+            loop {
+                let (mut app_state, timeout_res) = self
+                    .ui_renderer_notifier
+                    .wait_timeout(
+                        state_for_renderer.lock().unwrap(),
+                        progressbar_update_latency,
+                    )
+                    .unwrap();
 
-            if !timeout_res.timed_out() && !app_state.app_state_changed {
-                eprintln!("notified from source >>>>");
+                if app_state.quit_ui {
+                    ratatui::restore();
+                    input_listener_handle.join().unwrap();
+                    break;
+                }
+                paint_ui(&mut app_state, timeout_res.timed_out()).ok();
             }
-
-            if app_state.quit_ui {
-                ratatui::restore();
-                input_listener_handle.join().unwrap();
-                break;
-            }
-            paint_ui(&mut app_state, timeout_res.timed_out()).ok();
         });
 
         ui_render_handler

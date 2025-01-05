@@ -88,7 +88,7 @@ impl AppState {
             playlist_pane_state: Default::default(),
             artist_pane_state: Default::default(),
 
-            app_state_changed: false,
+            app_state_changed: true,
         }
     }
 

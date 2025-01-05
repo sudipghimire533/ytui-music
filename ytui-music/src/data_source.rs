@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::sync::Arc;
 use ytui_audio::libmpv::LibmpvPlayer;
 use ytui_invidious::invidious::{
     requests::{self, InvidiousApiQuery},
@@ -190,34 +190,16 @@ impl DataSource {
             // to hide the result of outdated query?
 
             // make request
-            //let search_query = requests::RequestSearch::new(InvidiousApiQuery::Search {
-            //    query: search_query.0,
-            //    find_playlist: search_query.1,
-            //    find_artist: search_query.2,
-            //    find_music: search_query.3,
-            //});
-            //let search_results = invidious
-            //    .fetch_endpoint(reqwest.as_ref(), search_query)
-            //    .await
-            //    .unwrap();
-            let search_results = vec![SearchResult::Video(SearchVideoUnit {
-                title: "something".to_string(),
-                video_id: "NKQQJnBClAg".to_string(),
-                author: "sudip".to_string(),
-                author_id: Default::default(),
-                author_url: Default::default(),
-                video_thumbnails: Default::default(),
-                description: Default::default(),
-                description_html: Default::default(),
-                view_count: Default::default(),
-                view_count_text: Default::default(),
-                published: Default::default(),
-                published_text: Default::default(),
-                length_seconds: 300,
-                live_now: Default::default(),
-                paid: Default::default(),
-                premium: Default::default(),
-            })];
+            let search_query = requests::RequestSearch::new(InvidiousApiQuery::Search {
+                query: search_query.0,
+                find_playlist: search_query.1,
+                find_artist: search_query.2,
+                find_music: search_query.3,
+            });
+            let search_results = invidious
+                .fetch_endpoint(reqwest.as_ref(), search_query)
+                .await
+                .unwrap();
 
             // classify search results into music/ channel and artist
             let mut music_results = Vec::new();
