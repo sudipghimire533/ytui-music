@@ -30,6 +30,8 @@ pub enum MpvPropertyGet {
     Duration,
     MediaTitle,
     TimePos,
+    PauseStatus,
+    Volume,
 }
 impl MpvPropertyGet {
     const fn prop_key(self) -> &'static str {
@@ -37,6 +39,8 @@ impl MpvPropertyGet {
             Self::Duration => "duration",
             Self::MediaTitle => "media-title",
             Self::TimePos => "time-pos",
+            Self::PauseStatus => "pause",
+            Self::Volume => "volume",
         }
     }
 }
@@ -92,6 +96,13 @@ impl LibmpvPlayer {
         self.execute_command(MpvCommand::StreamFiles(&[file_path]))
     }
 
+    pub fn cycle_pause_status(&self) -> Result<(), YtuiMvpAudioError> {
+        let current_status = self
+            .get_property::<bool>(MpvPropertyGet::PauseStatus)?
+            .unwrap();
+        self.set_property(MpvPropertyGet::PauseStatus.prop_key(), !current_status)
+    }
+
     pub fn execute_command(&self, command: MpvCommand) -> Result<(), YtuiMvpAudioError> {
         let (command, args) = command.get_raw_command()?;
         self.mpv_handle
@@ -121,10 +132,10 @@ impl LibmpvPlayer {
         }
     }
 
-    fn set_property(
+    fn set_property<PropertyValueType: libmpv2::SetData>(
         &self,
         property_key: &str,
-        property_value: &str,
+        property_value: PropertyValueType,
     ) -> Result<(), YtuiMvpAudioError> {
         self.mpv_handle
             .set_property(property_key, property_value)

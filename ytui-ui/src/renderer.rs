@@ -66,18 +66,20 @@ where
         let mut paint_ui = move |app_state: &mut state::AppState, trigerred_by_timeout: bool| {
             terminal.draw(|frame| {
                 let trigerred_by_ui = std::mem::take(&mut app_state.app_state_changed);
-                let mut trigerred_by_source = false;
+                let mut new_data_in_source = false;
 
                 if trigerred_by_timeout {
                     data_collection.refresh_from_player(&self.player);
                     components.progressbar =
                         components::ComponentsCollection::create_progress_bar(&data_collection);
+                    components.statusbar =
+                        components::ComponentsCollection::create_status_bar(&data_collection);
                 } else {
                     let mut data_provider = self.request_available_data.blocking_lock();
                     if data_provider.has_new_data() {
                         data_collection.refresh_from_data_provider(&*data_provider);
                         data_provider.mark_consumed_new_data();
-                        trigerred_by_source = true;
+                        new_data_in_source = true;
                     }
                 }
 
@@ -93,7 +95,7 @@ where
                     }
                 }
 
-                if trigerred_by_ui || trigerred_by_source {
+                if trigerred_by_ui || new_data_in_source {
                     components = components::ComponentsCollection::create_all_components(
                         app_state,
                         &data_collection,

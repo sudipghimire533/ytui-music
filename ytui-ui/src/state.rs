@@ -339,6 +339,16 @@ impl AppState {
                     }
                 }
             }
+
+            event::KeyCode::Char(' ') | event::KeyCode::Media(event::MediaKeyCode::PlayPause) => {
+                Self::with_unlocked_source(locked_action_queue, |source| {
+                    source.toggle_pause_playback();
+                });
+                self.mark_state_change();
+                notify_source();
+                notify_ui();
+            }
+
             event::KeyCode::Right
             | event::KeyCode::Home
             | event::KeyCode::End

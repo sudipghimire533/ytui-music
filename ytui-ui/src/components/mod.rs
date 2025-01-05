@@ -79,11 +79,26 @@ pub mod component_collection {
                 .with_player_stats(&data_collection.player_stats)
         }
 
+        pub fn create_status_bar(
+            data_collection: &ComponentsDataCollection,
+        ) -> statusbar::StatusBar<'a> {
+            let status_bar_attrs = statusbar::StatusBarUiAttrs {
+                show_border: true,
+                repeat_char: "󰑖",
+                shuffle_char: "󰒝",
+                pause_char: "\u{F04C}",
+                resume_char: "\u{F04B}",
+            };
+            statusbar::StatusBar::create_widget(&status_bar_attrs, &data_collection.player_stats)
+        }
+
         pub fn create_all_components(
             app_state: &mut AppState,
             data_collection: &ComponentsDataCollection,
         ) -> ComponentsCollection<'a> {
             let progressbar = Self::create_progress_bar(data_collection);
+            let statusbar = Self::create_status_bar(data_collection);
+
             let searchbar_attrs = searchbar::SearchBarUiAttrs {
                 text_color: Color::Red,
                 show_border: true,
@@ -96,15 +111,6 @@ pub mod component_collection {
                     .as_deref()
                     .unwrap_or("Listen to something new today"),
             );
-
-            let status_bar_attrs = statusbar::StatusBarUiAttrs {
-                show_border: true,
-                repeat_char: "󰑖",
-                shuffle_char: "󰒝",
-                resume_char: "󰏤",
-                volume: 100,
-            };
-            let statusbar = statusbar::StatusBar::create_widget(&status_bar_attrs);
 
             let queue_list_attrs = queue_list::QueueListUiAttrs {
                 text_color: Color::Green,

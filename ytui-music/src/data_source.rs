@@ -73,6 +73,9 @@ pub struct SourceAction {
     artist_fetch_index: Option<usize>,
     /// Fetch trending music
     fetch_trending_music: Option<()>,
+
+    /// .0: weather to pause or to resume
+    pause_playback_toggle: Option<()>,
 }
 
 impl DataSource {
@@ -141,6 +144,9 @@ impl DataSource {
         if let Some(music_index) = source_action.music_play_index {
             self.play_from_music_pane(music_index, Arc::clone(&data_dump))
                 .await;
+            ui_renderer_notifier.notify_one();
+        } else if let Some(()) = source_action.pause_playback_toggle {
+            self.toggle_pause_status().await;
             ui_renderer_notifier.notify_one();
         }
 
@@ -317,6 +323,10 @@ impl DataSource {
         self.player.load_uri(music_url.as_str()).unwrap();
     }
 
+    async fn toggle_pause_status(&self) {
+        self.player.cycle_pause_status();
+    }
+
     async fn abort_all_task(&self) {
         self.search_invidious_handle.abort();
         self.fetch_playlist_handle.abort();
@@ -368,6 +378,10 @@ impl ytui_ui::DataRequester for SourceAction {
 
     fn fetch_trending_music(&mut self) {
         self.fetch_trending_music = Some(());
+    }
+
+    fn toggle_pause_playback(&mut self) {
+        self.pause_playback_toggle = Some(());
     }
 }
 
