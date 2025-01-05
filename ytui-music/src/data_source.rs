@@ -3,7 +3,9 @@ use ytui_audio::libmpv::LibmpvPlayer;
 use ytui_invidious::invidious::{
     requests::{self, InvidiousApiQuery},
     types::{
-        channel::SearchChannelUnit, common::SearchResult, playlists::SearchPlaylistUnit,
+        channel::SearchChannelUnit,
+        common::SearchResult,
+        playlists::{PlaylistVideoUnit, SearchPlaylistUnit},
         video::SearchVideoUnit,
     },
     web_client::reqwest_impl::reqwest,
@@ -45,6 +47,8 @@ pub struct DataSource {
     // handles that should be drooped if another task of same kind is spawned.
     // example: if user input new search term, we can abort processing previous search term
     search_invidious_handle: tokio::task::JoinHandle<()>,
+    fetch_playlist_handle: tokio::task::JoinHandle<()>,
+    fetch_artist_handle: tokio::task::JoinHandle<()>,
 }
 
 #[derive(Default)]
@@ -58,16 +62,12 @@ pub struct SourceAction {
     /// .3: include artists results
     search_query: Option<(String, bool, bool, bool)>,
 
-    /// .0: playlist id to fetch music from
-    fetch_playlist: Option<String>,
-
-    /// .0: artist id to fetch from
-    /// .1: if true, fetch music of this artist
-    /// .2: if true, fetch playlist from this artists
-    fetch_artist: Option<(String, bool, bool)>,
-
     /// .0: play music of this index in music results
     music_play_index: Option<usize>,
+    /// .0: fetch all the music from this playlist
+    playlist_fetch_index: Option<usize>,
+    /// .0: fetch all playlist and music from this artist
+    artist_fetch_index: Option<usize>,
 }
 
 impl DataSource {
@@ -76,15 +76,16 @@ impl DataSource {
             InvidiousBackend::new("https://invidious.jing.rocks/api/v1".to_string());
         let source_action = SourceAction::default();
         let reqwest_client = reqwest::Client::new();
-        let noop_tokio_task = tokio::task::spawn(async {});
+        let noop_tokio_task = || tokio::task::spawn(async {});
 
         Self {
             player: mpv_player,
-            //player: mpv_player,
+            reqwest: Arc::new(reqwest_client),
             invidious: Arc::new(invidious_backend),
             source_action_queue: Arc::new(tokio::sync::Mutex::new(source_action)),
-            search_invidious_handle: noop_tokio_task,
-            reqwest: Arc::new(reqwest_client),
+            search_invidious_handle: noop_tokio_task(),
+            fetch_playlist_handle: noop_tokio_task(),
+            fetch_artist_handle: noop_tokio_task(),
         }
     }
 }
@@ -137,26 +138,14 @@ impl DataSource {
             ui_renderer_notifier.notify_one();
         }
 
-        if let Some(search_query) = source_action.search_query {
-            self.apply_search_query(
-                Arc::clone(&data_dump),
-                search_query,
-                Arc::clone(&ui_renderer_notifier),
-            )
-            .await;
-        }
-
-        if let Some(playlist_query) = source_action.fetch_playlist {
-            self.apply_playlist_query(
-                Arc::clone(&data_dump),
-                playlist_query,
-                Arc::clone(&ui_renderer_notifier),
-            )
-            .await;
-        }
-
-        if let Some(artist_query) = source_action.fetch_artist {
-            self.apply_artist_query(data_dump, artist_query, Arc::clone(&ui_renderer_notifier))
+        if let Some(playlist_index) = source_action.playlist_fetch_index {
+            self.apply_playlist_query(data_dump, playlist_index, ui_renderer_notifier)
+                .await;
+        } else if let Some(artist_index) = source_action.artist_fetch_index {
+            self.apply_artist_query(data_dump, artist_index, ui_renderer_notifier)
+                .await;
+        } else if let Some(search_query) = source_action.search_query {
+            self.apply_search_query(data_dump, search_query, ui_renderer_notifier)
                 .await;
         }
     }
@@ -164,15 +153,48 @@ impl DataSource {
     async fn apply_playlist_query(
         &mut self,
         data_dump: Arc<tokio::sync::Mutex<DataSink>>,
-        playlist_query: String,
+        playlist_index: usize,
         ui_notifier: Arc<std::sync::Condvar>,
     ) {
+        let invidious = Arc::clone(&self.invidious);
+        let reqwest = Arc::clone(&self.reqwest);
+        let mut new_fetch_future = tokio::task::spawn(async move {
+            let playlist_id_to_fetch = Self::with_unlocked_mutex(data_dump.clone(), |data_dump| {
+                data_dump
+                    .playlist_id_at_index_or_last(playlist_index)
+                    .map(str::to_string)
+            })
+            .await;
+
+            let Some(playlist_id) = playlist_id_to_fetch else {
+                return;
+            };
+
+            let fetch_query = requests::RequestPlaylistById::new(InvidiousApiQuery::PlaylistById {
+                playlist_id: playlist_id.as_str(),
+            });
+            let playlist_result = invidious
+                .fetch_endpoint(reqwest.as_ref(), fetch_query)
+                .await
+                .unwrap();
+
+            Self::with_unlocked_mutex(data_dump, |data_dump| {
+                data_dump.music_list = MusicList::FetchedFromPlaylist(playlist_result.videos);
+                data_dump.mark_new_data_arrival();
+            })
+            .await;
+
+            ui_notifier.notify_one();
+        });
+
+        std::mem::swap(&mut self.fetch_playlist_handle, &mut new_fetch_future);
+        new_fetch_future.abort();
     }
 
     async fn apply_artist_query(
         &mut self,
         data_dump: Arc<tokio::sync::Mutex<DataSink>>,
-        artist_query: (String, bool, bool),
+        artist_index: usize,
         ui_notifier: Arc<std::sync::Condvar>,
     ) {
     }
@@ -243,13 +265,10 @@ impl DataSource {
     ) {
         const MUSIC_ID_PREFIX: &str = "https://youtube.com/watch?v=";
 
-        let mut music_id_to_stream = None;
-        Self::with_unlocked_mutex(data_dump, |data_dump| {
-            music_id_to_stream = match data_dump.music_list {
-                MusicList::SearchResult(ref music_list) => {
-                    music_list.get(music_index).map(|m| m.video_id.clone())
-                }
-            };
+        let music_id_to_stream = Self::with_unlocked_mutex(data_dump, |data_dump| {
+            data_dump
+                .music_id_at_index_or_last(music_index)
+                .map(str::to_string)
         })
         .await;
 
@@ -262,6 +281,8 @@ impl DataSource {
 
     async fn abort_all_task(&self) {
         self.search_invidious_handle.abort();
+        self.fetch_playlist_handle.abort();
+        self.fetch_artist_handle.abort();
     }
 
     async fn with_unlocked_mutex<LockedData, ReturnData>(
@@ -297,41 +318,66 @@ impl ytui_ui::DataRequester for SourceAction {
     fn play_from_music_pane(&mut self, selected_index: usize) {
         self.music_play_index = Some(selected_index);
     }
+
+    fn fetch_from_artist_pane(&mut self, selected_index: usize) {
+        self.playlist_fetch_index = Some(selected_index);
+    }
+
+    fn fetch_from_playlist_pane(&mut self, selected_index: usize) {
+        self.playlist_fetch_index = Some(selected_index)
+    }
 }
 
 /// Allow UI side to retrive data
 impl ytui_ui::DataGetter for DataSink {
-    fn get_playlist_list(&self) -> impl Iterator<Item = [String; 2]> {
+    fn get_playlist_list(&self) -> Vec<[String; 2]> {
         match self.playlist_list {
             PlaylistList::SearchResult(ref playlist_search_list) => playlist_search_list
                 .iter()
-                .map(|search_result| [search_result.title.clone(), search_result.author.clone()]),
+                .map(|search_result| [search_result.title.clone(), search_result.author.clone()])
+                .collect(),
         }
     }
 
-    fn get_artist_list(&self) -> impl Iterator<Item = String> {
+    fn get_artist_list(&self) -> Vec<String> {
         match self.artist_list {
             ArtistList::SearchResult(ref artist_search_list) => artist_search_list
                 .iter()
-                .map(|search_result| search_result.author.clone()),
+                .map(|search_result| search_result.author.clone())
+                .collect(),
         }
     }
 
-    fn get_music_list(&self) -> impl Iterator<Item = [String; 3]> {
+    fn get_music_list(&self) -> Vec<[String; 3]> {
         match self.music_list {
-            MusicList::SearchResult(ref music_search_list) => {
-                music_search_list.iter().map(|search_result| {
+            MusicList::SearchResult(ref music_list) => music_list
+                .iter()
+                .map(|music_unit| {
                     [
-                        search_result.title.clone(),
-                        search_result.author.clone(),
+                        music_unit.title.clone(),
+                        music_unit.author.clone(),
                         format!(
                             "{:02}:{:02}",
-                            search_result.length_seconds / 60,
-                            search_result.length_seconds % 60
+                            music_unit.length_seconds / 60,
+                            music_unit.length_seconds % 60
                         ),
                     ]
                 })
-            }
+                .collect(),
+            MusicList::FetchedFromPlaylist(ref music_list) => music_list
+                .iter()
+                .map(|music_unit| {
+                    [
+                        music_unit.title.clone(),
+                        music_unit.author.clone(),
+                        format!(
+                            "{:02}:{:02}",
+                            music_unit.length_seconds / 60,
+                            music_unit.length_seconds % 60
+                        ),
+                    ]
+                })
+                .collect(),
         }
     }
 
@@ -348,11 +394,37 @@ impl DataSink {
     fn mark_new_data_arrival(&mut self) {
         self.has_new_data = true;
     }
+
+    fn music_id_at_index_or_last(&self, index: usize) -> Option<&str> {
+        match &self.music_list {
+            MusicList::SearchResult(music_list) => music_list
+                .get(index)
+                .map(Option::Some)
+                .unwrap_or(music_list.last())
+                .map(|music| music.video_id.as_str()),
+            MusicList::FetchedFromPlaylist(music_list) => music_list
+                .get(index)
+                .map(Option::Some)
+                .unwrap_or(music_list.last())
+                .map(|music| music.video_id.as_str()),
+        }
+    }
+
+    fn playlist_id_at_index_or_last(&self, index: usize) -> Option<&str> {
+        match &self.playlist_list {
+            PlaylistList::SearchResult(playlist_list) => playlist_list
+                .get(index)
+                .map(Option::Some)
+                .unwrap_or(playlist_list.last())
+                .map(|playlist| playlist.playlist_id.as_str()),
+        }
+    }
 }
 
 #[derive(Debug)]
 pub enum MusicList {
     SearchResult(Vec<SearchVideoUnit>),
+    FetchedFromPlaylist(Vec<PlaylistVideoUnit>),
 }
 
 pub enum PlaylistList {

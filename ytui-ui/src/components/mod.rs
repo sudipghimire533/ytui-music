@@ -21,6 +21,15 @@ pub mod component_collection {
     use ratatui::style::Color;
     use ytui_audio::libmpv::LibmpvPlayer;
 
+    const NAVIGATION_LIST: &[&str] = &[
+        "Trending",
+        "Youtube Community",
+        "Liked Songs",
+        "Saved playlist",
+        "Following",
+        "Search",
+    ];
+
     pub struct ComponentsCollection<'a> {
         pub searchbar: searchbar::SearchBar<'a>,
         pub state_badge: state_badge::StateBadge<'a>,
@@ -47,9 +56,9 @@ pub mod component_collection {
         where
             DataProvider: crate::DataGetter + std::marker::Send + 'static,
         {
-            self.music_list = data_provider.get_music_list().collect();
-            self.playlist_list = data_provider.get_playlist_list().collect();
-            self.artist_list = data_provider.get_artist_list().collect();
+            self.music_list = data_provider.get_music_list();
+            self.playlist_list = data_provider.get_playlist_list();
+            self.artist_list = data_provider.get_artist_list();
         }
 
         pub fn refresh_from_player(&mut self, player: &LibmpvPlayer) {
@@ -71,10 +80,10 @@ pub mod component_collection {
         }
 
         pub fn create_all_components(
-            app_state: &AppState,
+            app_state: &mut AppState,
             data_collection: &ComponentsDataCollection,
         ) -> ComponentsCollection<'a> {
-            let progressbar = Self::create_progress_bar(&data_collection);
+            let progressbar = Self::create_progress_bar(data_collection);
             let searchbar_attrs = searchbar::SearchBarUiAttrs {
                 text_color: Color::Red,
                 show_border: true,
@@ -122,17 +131,10 @@ pub mod component_collection {
             };
             let navigation_list =
                 navigation_list::NavigationList::create_widget(&navigation_list_attrs).with_list(
-                    [
-                        "Trending",
-                        "Youtube Community",
-                        "Liked Songs",
-                        "Saved playlist",
-                        "Following",
-                        "Search",
-                    ]
-                    .into_iter()
-                    .map(ToString::to_string)
-                    .collect(),
+                    NAVIGATION_LIST
+                        .into_iter()
+                        .map(ToString::to_string)
+                        .collect(),
                 );
 
             let state_badge_attrs = state_badge::StateBadgeUiAttrs {
@@ -195,6 +197,7 @@ You may need to jump to Usage Guide".to_string());
                 overlay = Some(new_overlay);
             }
 
+            Self::fix_list_selection(app_state, data_collection);
             Self {
                 searchbar,
                 state_badge,
@@ -206,6 +209,45 @@ You may need to jump to Usage Guide".to_string());
                 progressbar,
                 overlay,
                 statusbar,
+            }
+        }
+
+        fn fix_list_selection(
+            app_state: &mut AppState,
+            data_collection: &ComponentsDataCollection,
+        ) {
+            let music_selection_overflown = app_state
+                .music_pane_state
+                .selected()
+                .map(|s| s > data_collection.music_list.len())
+                .unwrap_or_default();
+            let playlist_selection_overflown = app_state
+                .playlist_pane_state
+                .selected()
+                .map(|s| s > data_collection.playlist_list.len())
+                .unwrap_or_default();
+            let artist_selection_overflown = app_state
+                .artist_pane_state
+                .selected()
+                .map(|s| s > data_collection.artist_list.len())
+                .unwrap_or_default();
+            let navigation_selection_overflown = app_state
+                .navigation_list_state
+                .selected()
+                .map(|s| s > NAVIGATION_LIST.len())
+                .unwrap_or_default();
+
+            if music_selection_overflown {
+                app_state.music_pane_state.select_first();
+            }
+            if playlist_selection_overflown {
+                app_state.playlist_pane_state.select_first();
+            }
+            if artist_selection_overflown {
+                app_state.artist_pane_state.select_first();
+            }
+            if navigation_selection_overflown {
+                app_state.navigation_list_state.select_first();
             }
         }
     }

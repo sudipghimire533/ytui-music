@@ -15,12 +15,14 @@ pub trait DataRequester {
     );
     fn quit(&mut self);
     fn play_from_music_pane(&mut self, selected_index: usize);
+    fn fetch_from_playlist_pane(&mut self, selected_index: usize);
+    fn fetch_from_artist_pane(&mut self, selected_index: usize);
 }
 
 pub trait DataGetter {
-    fn get_music_list(&self) -> impl Iterator<Item = [String; 3]>;
-    fn get_playlist_list(&self) -> impl Iterator<Item = [String; 2]>;
-    fn get_artist_list(&self) -> impl Iterator<Item = String>;
+    fn get_music_list(&self) -> Vec<[String; 3]>;
+    fn get_playlist_list(&self) -> Vec<[String; 2]>;
+    fn get_artist_list(&self) -> Vec<String>;
     fn has_new_data(&self) -> bool;
     fn mark_consumed_new_data(&mut self);
 }

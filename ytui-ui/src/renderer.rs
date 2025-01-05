@@ -53,13 +53,15 @@ where
         Arc::clone(&self.source_notifier)
     }
 
-    pub fn app_start(self) -> std::thread::JoinHandle<()> {
+    pub fn app_start(mut self) -> std::thread::JoinHandle<()> {
         let mut terminal = ratatui::try_init().unwrap();
         let mut dimension_size = Size::new(0, 0);
         let mut dimensions = DimensionArgs.calculate_dimension(Rect::default());
         let mut data_collection = components::ComponentsDataCollection::default();
-        let mut components =
-            components::ComponentsCollection::create_all_components(&self.state, &data_collection);
+        let mut components = components::ComponentsCollection::create_all_components(
+            &mut self.state,
+            &data_collection,
+        );
 
         let mut paint_ui = move |app_state: &mut state::AppState, trigerred_by_timeout: bool| {
             terminal.draw(|frame| {

@@ -276,14 +276,30 @@ impl AppState {
                         Self::with_unlocked_source(locked_action_queue, |source| {
                             source.play_from_music_pane(selected_music_index)
                         });
-
                         notify_source();
                     }
                 }
 
-                Some(Pane::Artist) => {}
+                Some(Pane::Artist) => {
+                    if let Some(selected_artist_index) = self.artist_pane_state.selected() {
+                        Self::with_unlocked_source(locked_action_queue, |source| {
+                            source.fetch_from_artist_pane(selected_artist_index);
+                        });
+                        self.music_pane_state.select(None);
+                        self.playlist_pane_state.select(None);
+                        notify_source();
+                    }
+                }
 
-                Some(Pane::Playlist) => {}
+                Some(Pane::Playlist) => {
+                    if let Some(selected_playlist_index) = self.playlist_pane_state.selected() {
+                        Self::with_unlocked_source(locked_action_queue, |source| {
+                            source.fetch_from_artist_pane(selected_playlist_index);
+                        });
+                        self.music_pane_state.select(None);
+                        notify_source();
+                    }
+                }
 
                 Some(Pane::NavigationList) => {}
 

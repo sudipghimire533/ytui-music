@@ -11,11 +11,15 @@ pub mod requests {
     pub type RequestVideoById<'a> = _ApiRequestst<'a, types::video::VideoInfo>;
     pub type RequestTrending<'a> = _ApiRequestst<'a, types::video::TrendingVideos>;
     pub type RequestSearch<'a> = _ApiRequestst<'a, types::common::SearchResults>;
+    pub type RequestPlaylistById<'a> = _ApiRequestst<'a, types::playlists::PlaylistInfo>;
 
     pub enum InvidiousApiQuery<'a> {
         Stats,
         VideoById {
             video_id: &'a str,
+        },
+        PlaylistById {
+            playlist_id: &'a str,
         },
         Trending {
             region: types::region::IsoRegion,
@@ -46,10 +50,13 @@ pub mod requests {
         pub(super) fn get_endpoint_path(&self, mut base_url: String) -> String {
             match self.param {
                 InvidiousApiQuery::Stats => {
-                    base_url.push_str("/api/v1/stats");
+                    base_url.push_str("/stats");
                 }
                 InvidiousApiQuery::VideoById { video_id } => {
-                    base_url.push_str(format!("/api/v1/videos/{video_id}").as_str());
+                    base_url.push_str(format!("/videos/{video_id}").as_str());
+                }
+                InvidiousApiQuery::PlaylistById { playlist_id } => {
+                    base_url.push_str(format!("/playlists/{playlist_id}").as_str());
                 }
                 InvidiousApiQuery::Trending { region } => {
                     base_url.push_str(format!("/trending?region={}", region.as_str()).as_str());
@@ -78,8 +85,6 @@ pub mod requests {
                     base_url.push_str(query);
                     base_url.push_str(result_type);
                 }
-
-                _ => todo!(),
             };
 
             base_url
@@ -105,6 +110,7 @@ impl InvidiousBackend {
         ExpectedResponse: serde::de::DeserializeOwned,
     {
         let endpoint_path = request.get_endpoint_path(self.base_url.clone());
+        eprintln!("making request to: {endpoint_path}");
         let web_response = web_client
             .request_binary(endpoint_path.as_str())
             .await
@@ -113,6 +119,11 @@ impl InvidiousBackend {
         ensure!(
             (200..300).contains(&web_response.status_code),
             EndpointFetchError::NonOkWebResponse
+        );
+
+        eprintln!(
+            "Response:\n{:?}",
+            String::from_utf8(web_response.body.as_slice().to_vec()).unwrap()
         );
 
         // if response is deserialized into SimpleError ( have serde::deny_unknwon_fields )
