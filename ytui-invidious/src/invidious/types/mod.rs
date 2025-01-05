@@ -9,12 +9,12 @@ pub mod video;
 
 #[cfg(test)]
 pub mod tests {
-    use std::io::{BufRead, BufReader};
+    
 
     use common::SearchResult;
 
     use super::*;
-    use crate::invidious;
+    
 
     #[test]
     fn verify_search_result_response() {

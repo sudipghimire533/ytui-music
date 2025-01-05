@@ -1,5 +1,5 @@
 use ratatui::{
-    crossterm::event::{self, Event, KeyEvent, KeyEventKind, KeyModifiers},
+    crossterm::event::{self, Event, KeyEvent, KeyModifiers},
     widgets::{ListDirection, ListState, TableState},
 };
 use std::{
