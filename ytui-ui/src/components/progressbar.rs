@@ -1,11 +1,11 @@
-use std::time::Duration;
-
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::Style,
     widgets::{Block, BorderType, Borders, Gauge, WidgetRef},
 };
+
+use crate::PlayerStats;
 
 pub struct ProgressBarUiAttrs {
     pub foreground: ratatui::style::Color,
@@ -39,16 +39,16 @@ impl ProgressBar<'_> {
         }
     }
 
-    pub fn with_duration(self, played: Duration, remaining: Duration) -> Self {
-        let played_sec = played.as_secs();
-        let total_sec = played_sec + remaining.as_secs();
+    pub fn with_player_stats(self, player_stats: &PlayerStats) -> Self {
+        let elapsed_duration = player_stats.elabsed_duration.unwrap_or_default();
+        let total_duration = player_stats.total_duration.unwrap_or_default();
 
         let duration_text = format!(
             " {:02}:{:02} | {:02}:{:02} ",
-            played_sec / 60,
-            played_sec % 60,
-            total_sec / 60,
-            total_sec % 60
+            elapsed_duration / 60,
+            elapsed_duration % 60,
+            total_duration / 60,
+            total_duration % 60
         );
 
         let block = self
@@ -56,7 +56,7 @@ impl ProgressBar<'_> {
             .expect("is always created by create_widget")
             .title(duration_text)
             .title_alignment(ratatui::layout::Alignment::Center);
-        let percent = (played_sec * 100) / total_sec;
+        let percent = (elapsed_duration * 100) / player_stats.total_duration.unwrap_or(1);
         let gauge = self.gauge.block(block).percent(percent as u16);
 
         Self { gauge, block: None }

@@ -26,6 +26,21 @@ pub enum MpvCommand<'a> {
     StreamUrls(&'a [&'a str]),
 }
 
+pub enum MpvPropertyGet {
+    Duration,
+    MediaTitle,
+    TimePos,
+}
+impl MpvPropertyGet {
+    const fn prop_key(self) -> &'static str {
+        match self {
+            Self::Duration => "duration",
+            Self::MediaTitle => "media-title",
+            Self::TimePos => "time-pos",
+        }
+    }
+}
+
 impl<'a> MpvCommand<'a> {
     pub fn get_raw_command(self) -> Result<(&'static str, Cow<'a, [&'a str]>), YtuiMvpAudioError> {
         match self {
@@ -82,6 +97,38 @@ impl LibmpvPlayer {
         self.mpv_handle
             .command(command, args.borrow())
             .map_err(|e| YtuiMvpAudioError::mpv("executing command", e))
+    }
+
+    pub fn enable_video(&self) -> Result<(), YtuiMvpAudioError> {
+        self.set_property("video", "auto")
+    }
+
+    pub fn disable_video(&self) -> Result<(), YtuiMvpAudioError> {
+        self.set_property("video", "no")
+    }
+
+    pub fn get_property<PropertyValueType: libmpv2::GetData>(
+        &self,
+        property_key: MpvPropertyGet,
+    ) -> Result<Option<PropertyValueType>, YtuiMvpAudioError> {
+        match self
+            .mpv_handle
+            .get_property::<PropertyValueType>(property_key.prop_key())
+        {
+            Ok(v) => Ok(Some(v)),
+            Err(libmpv2::Error::Raw(libmpv2::mpv_error::PropertyUnavailable)) => Ok(None),
+            Err(e) => Err(YtuiMvpAudioError::mpv("getting property", e)),
+        }
+    }
+
+    fn set_property(
+        &self,
+        property_key: &str,
+        property_value: &str,
+    ) -> Result<(), YtuiMvpAudioError> {
+        self.mpv_handle
+            .set_property(property_key, property_value)
+            .map_err(|e| YtuiMvpAudioError::mpv("setting property", e))
     }
 }
 

@@ -1,5 +1,3 @@
-use std::{borrow::Cow, task::Wake};
-
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
@@ -11,20 +9,18 @@ pub struct MusicPaneUiAttrs {
     pub title_color: Color,
     pub text_color: Color,
     pub highlight_color: Color,
+    pub is_active: bool,
 }
 
 pub struct MusicPane<'a> {
     widget: Table<'a>,
 }
 
-impl<'a> MusicPane<'a> {
-    pub fn create_widget(
-        style_options: &MusicPaneUiAttrs,
-        items: impl Iterator<Item = [Cow<'a, str>; 3]>,
-    ) -> Self {
+impl MusicPane<'_> {
+    pub fn create_widget(style_options: &MusicPaneUiAttrs, items: &[[String; 3]]) -> Self {
         let rows = items
-            .into_iter()
-            .map(|row| row.into_iter().map(Cell::from).collect())
+            .iter()
+            .map(|rows| rows.iter().map(|a| Cell::from(a.clone())).collect())
             .collect::<Vec<Row>>();
 
         let headers = ["Title", "Artist", "Length"]
@@ -47,7 +43,11 @@ impl<'a> MusicPane<'a> {
             Block::bordered()
                 .border_type(BorderType::Rounded)
                 .padding(Padding::left(1))
-                .border_style(Style::default().fg(Color::White)),
+                .border_style(Style::default().fg(if style_options.is_active {
+                    Color::Cyan
+                } else {
+                    Color::White
+                })),
         )
         .style(Style::default().fg(style_options.text_color))
         .row_highlight_style(Style::default().fg(style_options.highlight_color));

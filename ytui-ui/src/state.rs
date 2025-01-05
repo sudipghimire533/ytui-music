@@ -69,6 +69,8 @@ pub struct AppState {
     pub(super) music_pane_state: TableState,
     pub(super) playlist_pane_state: TableState,
     pub(super) artist_pane_state: TableState,
+
+    pub(super) app_state_changed: bool,
 }
 
 impl AppState {
@@ -85,6 +87,8 @@ impl AppState {
             music_pane_state: Default::default(),
             playlist_pane_state: Default::default(),
             artist_pane_state: Default::default(),
+
+            app_state_changed: false,
         }
     }
 
@@ -115,7 +119,6 @@ impl AppState {
                     input_event_sender.notify_one();
                 }
                 if source_response.should_notifiy_sourcer {
-                    eprintln!("asking source for something...");
                     source_event_notifier.notify_one();
                 }
             }
@@ -137,9 +140,10 @@ impl AppState {
         match event {
             Event::Resize(w, h) => {
                 Self::with_unlocked_state(locked_state, |state| {
+                    state.mark_state_change();
                     state.current_size = (w, h);
-                    notify_ui();
                 });
+                notify_ui();
             }
 
             Event::FocusGained => {
@@ -155,6 +159,7 @@ impl AppState {
 
             Event::FocusLost => {
                 Self::with_unlocked_state(locked_state, |state| {
+                    state.mark_state_change();
                     state.select_new_pane(None);
                     notify_ui();
                 });
@@ -162,6 +167,7 @@ impl AppState {
 
             Event::Paste(pasted_text) => {
                 Self::with_unlocked_state(locked_state, move |state| {
+                    state.mark_state_change();
                     match state.search_query.as_mut() {
                         Some(query) => query.push_str(pasted_text.as_str()),
                         None => state.search_query = Some(pasted_text.clone()),
@@ -187,9 +193,6 @@ impl AppState {
         key_event: KeyEvent,
         locked_action_queue: Arc<tokio::sync::Mutex<SourceAction>>,
     ) -> EventHandleResponse {
-        let is_key_release = matches!(key_event.kind, KeyEventKind::Release);
-        let is_key_repeat = matches!(key_event.kind, KeyEventKind::Repeat);
-        let is_key_press = matches!(key_event.kind, KeyEventKind::Press);
         let with_shift_modifier = key_event.modifiers.contains(KeyModifiers::SHIFT);
         let with_ctrl_modifier = key_event.modifiers.contains(KeyModifiers::CONTROL);
         let search_is_active = self.search_is_active();
@@ -208,6 +211,7 @@ impl AppState {
                 event_handle_response.should_quit = true;
                 Self::with_unlocked_source(locked_action_queue, |source| source.quit());
 
+                self.mark_state_change();
                 notify_ui();
                 notify_source();
             }
@@ -221,6 +225,7 @@ impl AppState {
                     Some(query) => query.push(c),
                     None => self.search_query = Some(String::from(c)),
                 }
+                self.mark_state_change();
                 notify_ui()
             }
 
@@ -230,6 +235,7 @@ impl AppState {
                 } else {
                     self.move_to_prev_pane();
                 }
+                self.mark_state_change();
                 notify_ui()
             }
             event::KeyCode::Esc | event::KeyCode::Left => {
@@ -265,7 +271,15 @@ impl AppState {
                     }
                 }
 
-                Some(Pane::Music) => {}
+                Some(Pane::Music) => {
+                    if let Some(selected_music_index) = self.music_pane_state.selected() {
+                        Self::with_unlocked_source(locked_action_queue, |source| {
+                            source.play_from_music_pane(selected_music_index)
+                        });
+
+                        notify_source();
+                    }
+                }
 
                 Some(Pane::Artist) => {}
 
@@ -280,43 +294,42 @@ impl AppState {
                 | Some(Pane::Overlay)
                 | Some(Pane::Gauge) => {}
             },
-            event::KeyCode::Down => match self.selected_pane {
-                None
-                | Some(Pane::Gauge)
-                | Some(Pane::StatusBar)
-                | Some(Pane::SearchBar)
-                | Some(Pane::StateBadge) => {}
 
-                Some(Pane::NavigationList) => {
-                    Self::circular_select_list_state(
-                        &mut self.navigation_list_state,
-                        ListDirection::TopToBottom,
-                    );
-                    notify_ui()
+            event::KeyCode::Down | event::KeyCode::Up => {
+                let list_direction = if matches!(key_event.code, event::KeyCode::Down) {
+                    ListDirection::TopToBottom
+                } else {
+                    ListDirection::BottomToTop
+                };
+
+                match self.selected_pane {
+                    None
+                    | Some(Pane::Gauge)
+                    | Some(Pane::StatusBar)
+                    | Some(Pane::SearchBar)
+                    | Some(Pane::StateBadge) => {}
+
+                    Some(Pane::NavigationList) => {
+                        Self::circular_select_list_state(
+                            &mut self.navigation_list_state,
+                            list_direction,
+                        );
+                        self.mark_state_change();
+                        notify_ui();
+                    }
+
+                    Some(Pane::Music) => {
+                        Self::circular_select_table_state(
+                            &mut self.music_pane_state,
+                            list_direction,
+                        );
+                        self.mark_state_change();
+                        notify_ui();
+                    }
+
+                    _ => {}
                 }
-
-                _ => {}
-            },
-
-            event::KeyCode::Up => match self.selected_pane {
-                None
-                | Some(Pane::Gauge)
-                | Some(Pane::StatusBar)
-                | Some(Pane::SearchBar)
-                | Some(Pane::StateBadge) => {}
-
-                Some(Pane::NavigationList) => {
-                    Self::circular_select_list_state(
-                        &mut self.navigation_list_state,
-                        ListDirection::BottomToTop,
-                    );
-
-                    notify_ui();
-                }
-
-                _ => {}
-            },
-
+            }
             event::KeyCode::Right
             | event::KeyCode::Home
             | event::KeyCode::End
@@ -360,6 +373,14 @@ impl AppState {
 }
 
 impl AppState {
+    pub fn mark_state_change(&mut self) {
+        self.app_state_changed = true;
+    }
+
+    pub fn reset_state_change(&mut self) {
+        self.app_state_changed = false;
+    }
+
     pub fn search_is_active(&self) -> bool {
         self.selected_pane
             .map(|pane| matches!(pane, Pane::SearchBar))
@@ -379,8 +400,29 @@ impl AppState {
     }
 
     pub fn select_new_pane(&mut self, new_pane: Option<Pane>) {
+        self.mark_state_change();
         self.previously_selected_pane = self.selected_pane;
         self.selected_pane = new_pane;
+    }
+
+    fn circular_select_table_state(list_state: &mut TableState, direction: ListDirection) {
+        let previous_selection = list_state.selected();
+        match direction {
+            ListDirection::TopToBottom => {
+                list_state.select_next();
+                let new_selection = list_state.selected();
+                if previous_selection == new_selection {
+                    list_state.select_first();
+                }
+            }
+            ListDirection::BottomToTop => {
+                list_state.select_previous();
+                let new_selection = list_state.selected();
+                if previous_selection == new_selection {
+                    list_state.select_last();
+                }
+            }
+        }
     }
 
     fn circular_select_list_state(list_state: &mut ListState, direction: ListDirection) {

@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 ratatui = { version = "*", features = ["macros", "unstable-widget-ref"]}
 tokio = { workspace = true }
+ytui-audio = { path = "../ytui-audio/" }

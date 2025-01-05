@@ -1,31 +1,42 @@
-use std::{
-    borrow::Cow,
-    sync::{atomic::AtomicBool, Arc, Mutex},
-    time::Duration,
-};
-
+use std::{borrow::Cow, sync::Arc};
 use ytui_audio::libmpv::LibmpvPlayer;
 use ytui_invidious::invidious::{
     requests::{self, InvidiousApiQuery},
     types::{
-        channel::SearchChannelUnit,
-        common::{SearchResult, SearchResults},
-        playlists::SearchPlaylistUnit,
+        channel::SearchChannelUnit, common::SearchResult, playlists::SearchPlaylistUnit,
         video::SearchVideoUnit,
     },
     web_client::reqwest_impl::reqwest,
     InvidiousBackend,
 };
 
-#[derive(Default)]
 pub struct DataSink {
-    music_search_list: Vec<SearchVideoUnit>,
-    playlist_search_list: Vec<SearchPlaylistUnit>,
-    artist_search_list: Vec<SearchChannelUnit>,
+    pub(crate) player: Arc<LibmpvPlayer>,
+    music_list: MusicList,
+    playlist_list: PlaylistList,
+    artist_list: ArtistList,
+
+    has_new_data: bool,
+}
+
+impl Default for DataSink {
+    fn default() -> Self {
+        let mpv_player = LibmpvPlayer::new().unwrap();
+        // by-default only stream audio
+        mpv_player.disable_video().unwrap();
+
+        Self {
+            player: Arc::new(mpv_player),
+            music_list: MusicList::SearchResult(Default::default()),
+            playlist_list: PlaylistList::SearchResult(Default::default()),
+            artist_list: ArtistList::SearchResult(Default::default()),
+            has_new_data: false,
+        }
+    }
 }
 
 pub struct DataSource {
-    player: LibmpvPlayer,
+    player: Arc<LibmpvPlayer>,
     invidious: Arc<InvidiousBackend>,
 
     reqwest: Arc<reqwest::Client>,
@@ -54,18 +65,26 @@ pub struct SourceAction {
     /// .1: if true, fetch music of this artist
     /// .2: if true, fetch playlist from this artists
     fetch_artist: Option<(String, bool, bool)>,
+
+    /// .0: play music of this index in music results
+    music_play_index: Option<usize>,
 }
 
 impl DataSource {
-    pub async fn new() -> Self {
+    pub async fn new(mpv_player: Arc<LibmpvPlayer>) -> Self {
+        let invidious_backend =
+            InvidiousBackend::new("https://invidious.jing.rocks/api/v1".to_string());
+        let source_action = SourceAction::default();
+        let reqwest_client = reqwest::Client::new();
+        let noop_tokio_task = tokio::task::spawn(async {});
+
         Self {
-            player: LibmpvPlayer::new().unwrap(),
-            invidious: Arc::new(InvidiousBackend::new(
-                "https://invidious.jing.rocks/api/v1".to_string(),
-            )),
-            source_action_queue: Arc::new(tokio::sync::Mutex::new(SourceAction::default())),
-            search_invidious_handle: tokio::task::spawn(async {}),
-            reqwest: Arc::new(reqwest::Client::new()),
+            player: mpv_player,
+            //player: mpv_player,
+            invidious: Arc::new(invidious_backend),
+            source_action_queue: Arc::new(tokio::sync::Mutex::new(source_action)),
+            search_invidious_handle: noop_tokio_task,
+            reqwest: Arc::new(reqwest_client),
         }
     }
 }
@@ -79,18 +98,25 @@ impl DataSource {
     ) {
         loop {
             source_listener.notified().await;
+
+            // extract action needed to be performed,
+            // self.source_action_queue is not locked afterwards ( while performing the actual
+            // action as it will involve network requests )
+            //
+            // swap with SourceAction::default() as all of this action should be performed only
+            // once and can be aborted if new action is requested
             let mut queued_action = SourceAction::default();
-            {
-                let mut unlocked_queued_action = self.source_action_queue.lock().await;
-                std::mem::swap(&mut queued_action, &mut *unlocked_queued_action);
-            }
+            Self::with_unlocked_mutex(self.source_action_queue.clone(), |source_action| {
+                std::mem::swap(&mut queued_action, source_action);
+            })
+            .await;
 
             if queued_action.should_quit {
                 self.abort_all_task().await;
                 break;
             }
 
-            self.finish_pending_task(
+            self.finish_pending_tasks(
                 queued_action,
                 data_dump.clone(),
                 ui_renderer_notifier.clone(),
@@ -99,20 +125,34 @@ impl DataSource {
         }
     }
 
-    pub async fn finish_pending_task(
+    pub async fn finish_pending_tasks(
         &mut self,
         source_action: SourceAction,
         data_dump: Arc<tokio::sync::Mutex<DataSink>>,
         ui_renderer_notifier: Arc<std::sync::Condvar>,
     ) {
-        if let Some(search_query) = source_action.search_query {
-            self.apply_search_query(data_dump, search_query, Arc::clone(&ui_renderer_notifier))
+        if let Some(music_index) = source_action.music_play_index {
+            self.play_from_music_pane(music_index, Arc::clone(&data_dump))
                 .await;
+            ui_renderer_notifier.notify_one();
+        }
+
+        if let Some(search_query) = source_action.search_query {
+            self.apply_search_query(
+                Arc::clone(&data_dump),
+                search_query,
+                Arc::clone(&ui_renderer_notifier),
+            )
+            .await;
         }
 
         if let Some(playlist_query) = source_action.fetch_playlist {
-            self.apply_playlist_query(data_dump, playlist_query, Arc::clone(&ui_renderer_notifier))
-                .await;
+            self.apply_playlist_query(
+                Arc::clone(&data_dump),
+                playlist_query,
+                Arc::clone(&ui_renderer_notifier),
+            )
+            .await;
         }
 
         if let Some(artist_query) = source_action.fetch_artist {
@@ -143,22 +183,41 @@ impl DataSource {
         search_query: (String, bool, bool, bool),
         ui_notifier: Arc<std::sync::Condvar>,
     ) {
-        let (invidious, reqwest, data_dump) = self.get_invidious(data_dump);
+        let invidious = Arc::clone(&self.invidious);
+        let reqwest = Arc::clone(&self.reqwest);
         let mut new_search_future = tokio::task::spawn(async move {
             // todo: remove current search result from database
             // to hide the result of outdated query?
 
             // make request
-            let search_query = requests::RequestSearch::new(InvidiousApiQuery::Search {
-                query: search_query.0,
-                find_playlist: search_query.1,
-                find_artist: search_query.2,
-                find_music: search_query.3,
-            });
-            let search_results = invidious
-                .fetch_endpoint(reqwest.as_ref(), search_query)
-                .await
-                .unwrap();
+            //let search_query = requests::RequestSearch::new(InvidiousApiQuery::Search {
+            //    query: search_query.0,
+            //    find_playlist: search_query.1,
+            //    find_artist: search_query.2,
+            //    find_music: search_query.3,
+            //});
+            //let search_results = invidious
+            //    .fetch_endpoint(reqwest.as_ref(), search_query)
+            //    .await
+            //    .unwrap();
+            let search_results = vec![SearchResult::Video(SearchVideoUnit {
+                title: "something".to_string(),
+                video_id: "NKQQJnBClAg".to_string(),
+                author: "sudip".to_string(),
+                author_id: Default::default(),
+                author_url: Default::default(),
+                video_thumbnails: Default::default(),
+                description: Default::default(),
+                description_html: Default::default(),
+                view_count: Default::default(),
+                view_count_text: Default::default(),
+                published: Default::default(),
+                published_text: Default::default(),
+                length_seconds: 300,
+                live_now: Default::default(),
+                paid: Default::default(),
+                premium: Default::default(),
+            })];
 
             // classify search results into music/ channel and artist
             let mut music_results = Vec::new();
@@ -179,14 +238,15 @@ impl DataSource {
             }
 
             // fill result
-            Self::with_unlocked_data_dump(data_dump, move |data_dump| {
-                std::mem::swap(&mut data_dump.music_search_list, &mut music_results);
-                std::mem::swap(&mut data_dump.playlist_search_list, &mut playlist_results);
-                std::mem::swap(&mut data_dump.artist_search_list, &mut artist_results);
+            Self::with_unlocked_mutex(data_dump, move |data_dump| {
+                data_dump.music_list = MusicList::SearchResult(music_results);
+                data_dump.playlist_list = PlaylistList::SearchResult(playlist_results);
+                data_dump.artist_list = ArtistList::SearchResult(artist_results);
+
+                data_dump.mark_new_data_arrival();
             })
             .await;
 
-            // render newly fetch results
             ui_notifier.notify_one();
         });
 
@@ -194,31 +254,40 @@ impl DataSource {
         new_search_future.abort();
     }
 
-    fn get_invidious(
+    async fn play_from_music_pane(
         &self,
+        music_index: usize,
         data_dump: Arc<tokio::sync::Mutex<DataSink>>,
-    ) -> (
-        Arc<InvidiousBackend>,
-        Arc<reqwest::Client>,
-        Arc<tokio::sync::Mutex<DataSink>>,
     ) {
-        (
-            Arc::clone(&self.invidious),
-            Arc::clone(&self.reqwest),
-            Arc::clone(&data_dump),
-        )
+        const MUSIC_ID_PREFIX: &str = "https://youtube.com/watch?v=";
+
+        let mut music_id_to_stream = None;
+        Self::with_unlocked_mutex(data_dump, |data_dump| {
+            music_id_to_stream = match data_dump.music_list {
+                MusicList::SearchResult(ref music_list) => {
+                    music_list.get(music_index).map(|m| m.video_id.clone())
+                }
+            };
+        })
+        .await;
+
+        let Some(music_id) = music_id_to_stream else {
+            return;
+        };
+        let music_url = String::from(MUSIC_ID_PREFIX) + music_id.as_str();
+        self.player.load_uri(music_url.as_str()).unwrap();
     }
 
     async fn abort_all_task(&self) {
         self.search_invidious_handle.abort();
     }
 
-    async fn with_unlocked_data_dump<R>(
-        locked_data_sink: Arc<tokio::sync::Mutex<DataSink>>,
-        mut action: impl FnMut(&mut DataSink) -> R,
-    ) -> R {
-        let mut unlocked_data_sink = locked_data_sink.lock().await;
-        action(&mut unlocked_data_sink)
+    async fn with_unlocked_mutex<LockedData, ReturnData>(
+        locked_data: Arc<tokio::sync::Mutex<LockedData>>,
+        action: impl FnOnce(&mut LockedData) -> ReturnData,
+    ) -> ReturnData {
+        let mut unlocked_data = locked_data.lock().await;
+        action(&mut unlocked_data)
     }
 }
 
@@ -242,6 +311,10 @@ impl ytui_ui::DataRequester for SourceAction {
     fn quit(&mut self) {
         self.should_quit = true;
     }
+
+    fn play_from_music_pane(&mut self, selected_index: usize) {
+        self.music_play_index = Some(selected_index);
+    }
 }
 
 /// Allow UI side to retrive data
@@ -254,17 +327,48 @@ impl ytui_ui::DataGetter for DataSink {
         panic!()
     }
 
-    fn get_music_list(&self) -> impl Iterator<Item = [std::borrow::Cow<'_, str>; 3]> {
-        self.music_search_list.iter().map(|search_result| {
-            [
-                Cow::Borrowed(search_result.title.as_str()),
-                Cow::Borrowed(search_result.author.as_str()),
-                Cow::Owned(format!(
-                    "{:02}:{:02}",
-                    search_result.length_seconds / 60,
-                    search_result.length_seconds % 60
-                )),
-            ]
-        })
+    fn get_music_list(&self) -> impl Iterator<Item = [String; 3]> {
+        match self.music_list {
+            MusicList::SearchResult(ref music_search_list) => {
+                music_search_list.iter().map(|search_result| {
+                    [
+                        search_result.title.clone(),
+                        search_result.author.clone(),
+                        format!(
+                            "{:02}:{:02}",
+                            search_result.length_seconds / 60,
+                            search_result.length_seconds % 60
+                        ),
+                    ]
+                })
+            }
+        }
     }
+
+    fn mark_consumed_new_data(&mut self) {
+        self.has_new_data = false;
+    }
+
+    fn has_new_data(&self) -> bool {
+        self.has_new_data
+    }
+}
+
+impl DataSink {
+    fn mark_new_data_arrival(&mut self) {
+        self.has_new_data = true;
+    }
+}
+
+#[derive(Debug)]
+pub enum MusicList {
+    SearchResult(Vec<SearchVideoUnit>),
+}
+
+pub enum PlaylistList {
+    SearchResult(Vec<SearchPlaylistUnit>),
+}
+
+pub enum ArtistList {
+    SearchResult(Vec<SearchChannelUnit>),
 }
