@@ -116,7 +116,8 @@ pub mod component_collection {
 
             let queue_list_attrs = queue_list::QueueListUiAttrs {
                 text_color: Color::Green,
-                highlight_color: Color::Red,
+                highlight_color: Color::White,
+                is_active: matches!(app_state.selected_pane, Some(Pane::QueueList)),
             };
             let queue_list = queue_list::QueueList::create_widget(&queue_list_attrs).with_list(
                 [
@@ -138,12 +139,8 @@ pub mod component_collection {
                 is_active: matches!(app_state.selected_pane, Some(Pane::NavigationList)),
             };
             let navigation_list =
-                navigation_list::NavigationList::create_widget(&navigation_list_attrs).with_list(
-                    NAVIGATION_LIST
-                        .into_iter()
-                        .map(ToString::to_string)
-                        .collect(),
-                );
+                navigation_list::NavigationList::create_widget(&navigation_list_attrs)
+                    .with_list(NAVIGATION_LIST.iter().map(ToString::to_string).collect());
 
             let state_badge_attrs = state_badge::StateBadgeUiAttrs {
                 text_color: Color::Yellow,

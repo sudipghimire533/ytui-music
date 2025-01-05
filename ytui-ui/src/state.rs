@@ -42,7 +42,7 @@ impl Pane {
             Pane::SearchBar => Pane::Artist,
             Pane::NavigationList => Pane::SearchBar,
             Pane::QueueList => Pane::NavigationList,
-            Pane::Music => Pane::Artist,
+            Pane::Music => Pane::NavigationList,
             Pane::Playlist => Pane::Music,
             Pane::Artist => Pane::Playlist,
         }
@@ -238,19 +238,19 @@ impl AppState {
                 self.mark_state_change();
                 notify_ui()
             }
-            event::KeyCode::Esc | event::KeyCode::Left => {
-                if self.selected_pane.is_some() {
+            event::KeyCode::Esc => {
+                if search_is_active || matches!(self.selected_pane, Some(Pane::Overlay)) {
                     self.move_to_next_pane();
+                    notify_ui()
                 }
-                notify_ui()
             }
             event::KeyCode::Tab => {
-                if with_shift_modifier {
-                    self.move_to_prev_pane();
-                } else {
-                    self.move_to_next_pane();
-                }
-                notify_ui()
+                self.move_to_next_pane();
+                notify_ui();
+            }
+            event::KeyCode::BackTab => {
+                self.move_to_prev_pane();
+                notify_ui();
             }
 
             event::KeyCode::Enter => match self.selected_pane {
@@ -302,13 +302,18 @@ impl AppState {
                 }
 
                 Some(Pane::NavigationList) => {
-                    if self.navigation_list_state.selected() == Some(0) {
-                        Self::with_unlocked_source(locked_action_queue, |source| {
-                            source.fetch_trending_music();
-                        });
-                        self.music_pane_state.select(None);
-                        self.select_new_pane(Some(Pane::Music));
-                        notify_source();
+                    if let Some(selected_index) = self.navigation_list_state.selected() {
+                        if selected_index == 0 {
+                            Self::with_unlocked_source(locked_action_queue, |source| {
+                                source.fetch_trending_music();
+                            });
+                            self.music_pane_state.select(None);
+                            self.select_new_pane(Some(Pane::Music));
+                            notify_source();
+                        } else if selected_index == 5 {
+                            self.select_new_pane(Some(Pane::SearchBar));
+                            notify_ui();
+                        }
                     }
                 }
 
@@ -350,11 +355,11 @@ impl AppState {
             }
 
             event::KeyCode::Right
+            | event::KeyCode::Left
             | event::KeyCode::Home
             | event::KeyCode::End
             | event::KeyCode::PageUp
             | event::KeyCode::PageDown
-            | event::KeyCode::BackTab
             | event::KeyCode::Delete
             | event::KeyCode::Insert
             | event::KeyCode::F(_)
@@ -394,10 +399,6 @@ impl AppState {
 impl AppState {
     pub fn mark_state_change(&mut self) {
         self.app_state_changed = true;
-    }
-
-    pub fn reset_state_change(&mut self) {
-        self.app_state_changed = false;
     }
 
     pub fn search_is_active(&self) -> bool {

@@ -2,12 +2,14 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::{Color, Style},
+    text::Span,
     widgets::{Block, BorderType, List, ListState, StatefulWidgetRef},
 };
 
 pub struct QueueListUiAttrs {
     pub text_color: Color,
     pub highlight_color: Color,
+    pub is_active: bool,
 }
 
 pub struct QueueList<'a> {
@@ -20,10 +22,15 @@ impl QueueList<'_> {
             .block(
                 Block::bordered()
                     .border_type(BorderType::Rounded)
-                    .title("Next in Queue ")
+                    .title(Span::from(" Next in Queue ").style(Style::default().fg(Color::Cyan)))
+                    .style(Style::default().fg(if style_options.is_active {
+                        Color::Cyan
+                    } else {
+                        Color::Green
+                    }))
                     .title_alignment(ratatui::layout::Alignment::Center),
             )
-            .direction(ratatui::widgets::ListDirection::BottomToTop)
+            .direction(ratatui::widgets::ListDirection::TopToBottom)
             .style(Style::default().fg(style_options.text_color))
             .highlight_style(Style::default().fg(style_options.highlight_color));
 

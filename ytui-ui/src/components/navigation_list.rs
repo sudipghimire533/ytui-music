@@ -22,7 +22,7 @@ impl NavigationList<'_> {
                 Block::bordered()
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(if style_options.is_active {
-                        Color::White
+                        Color::Cyan
                     } else {
                         Color::Green
                     }))
