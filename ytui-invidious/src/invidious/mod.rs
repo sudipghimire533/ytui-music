@@ -110,7 +110,6 @@ impl InvidiousBackend {
         ExpectedResponse: serde::de::DeserializeOwned,
     {
         let endpoint_path = request.get_endpoint_path(self.base_url.clone());
-        eprintln!("making request to: {endpoint_path}");
         let web_response = web_client
             .request_binary(endpoint_path.as_str())
             .await
@@ -119,11 +118,6 @@ impl InvidiousBackend {
         ensure!(
             (200..300).contains(&web_response.status_code),
             EndpointFetchError::NonOkWebResponse
-        );
-
-        eprintln!(
-            "Response:\n{:?}",
-            String::from_utf8(web_response.body.as_slice().to_vec()).unwrap()
         );
 
         // if response is deserialized into SimpleError ( have serde::deny_unknwon_fields )

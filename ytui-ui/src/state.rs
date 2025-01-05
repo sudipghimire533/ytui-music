@@ -406,40 +406,30 @@ impl AppState {
     }
 
     fn circular_select_table_state(table_state: &mut TableState, direction: ListDirection) {
-        let previous_selection = table_state.selected();
         match direction {
             ListDirection::TopToBottom => {
                 table_state.select_next();
-                let new_selection = table_state.selected();
-                if previous_selection == new_selection {
-                    table_state.select_first();
-                }
             }
             ListDirection::BottomToTop => {
-                table_state.select_previous();
-                let new_selection = table_state.selected();
-                if previous_selection == new_selection {
+                if table_state.selected() == Some(0) {
                     table_state.select_last();
+                } else {
+                    table_state.select_previous();
                 }
             }
         }
     }
 
     fn circular_select_list_state(list_state: &mut ListState, direction: ListDirection) {
-        let previous_selection = list_state.selected();
         match direction {
             ListDirection::TopToBottom => {
                 list_state.select_next();
-                let new_selection = list_state.selected();
-                if previous_selection == new_selection {
-                    list_state.select_first();
-                }
             }
             ListDirection::BottomToTop => {
-                list_state.select_previous();
-                let new_selection = list_state.selected();
-                if previous_selection == new_selection {
+                if list_state.selected() == Some(0) {
                     list_state.select_last();
+                } else {
+                    list_state.select_previous();
                 }
             }
         }

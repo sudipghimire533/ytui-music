@@ -197,7 +197,6 @@ You may need to jump to Usage Guide".to_string());
                 overlay = Some(new_overlay);
             }
 
-            Self::fix_list_selection(app_state, data_collection);
             Self {
                 searchbar,
                 state_badge,
@@ -209,45 +208,6 @@ You may need to jump to Usage Guide".to_string());
                 progressbar,
                 overlay,
                 statusbar,
-            }
-        }
-
-        fn fix_list_selection(
-            app_state: &mut AppState,
-            data_collection: &ComponentsDataCollection,
-        ) {
-            let music_selection_overflown = app_state
-                .music_pane_state
-                .selected()
-                .map(|s| s > data_collection.music_list.len())
-                .unwrap_or_default();
-            let playlist_selection_overflown = app_state
-                .playlist_pane_state
-                .selected()
-                .map(|s| s > data_collection.playlist_list.len())
-                .unwrap_or_default();
-            let artist_selection_overflown = app_state
-                .artist_pane_state
-                .selected()
-                .map(|s| s > data_collection.artist_list.len())
-                .unwrap_or_default();
-            let navigation_selection_overflown = app_state
-                .navigation_list_state
-                .selected()
-                .map(|s| s > NAVIGATION_LIST.len())
-                .unwrap_or_default();
-
-            if music_selection_overflown {
-                app_state.music_pane_state.select_first();
-            }
-            if playlist_selection_overflown {
-                app_state.playlist_pane_state.select_first();
-            }
-            if artist_selection_overflown {
-                app_state.artist_pane_state.select_first();
-            }
-            if navigation_selection_overflown {
-                app_state.navigation_list_state.select_first();
             }
         }
     }
