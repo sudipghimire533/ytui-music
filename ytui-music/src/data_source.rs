@@ -1,12 +1,14 @@
 use std::sync::Arc;
 use ytui_audio::libmpv::LibmpvPlayer;
 use ytui_invidious::invidious::{
+    self,
     requests::{self, InvidiousApiQuery},
     types::{
         channel::SearchChannelUnit,
         common::SearchResult,
         playlists::{PlaylistVideoUnit, SearchPlaylistUnit},
-        video::SearchVideoUnit,
+        region,
+        video::{SearchVideoUnit, TrendingVideos},
     },
     web_client::reqwest_impl::reqwest,
     InvidiousBackend,
@@ -49,6 +51,7 @@ pub struct DataSource {
     search_invidious_handle: tokio::task::JoinHandle<()>,
     fetch_playlist_handle: tokio::task::JoinHandle<()>,
     fetch_artist_handle: tokio::task::JoinHandle<()>,
+    fetch_trending_handle: tokio::task::JoinHandle<()>,
 }
 
 #[derive(Default)]
@@ -68,6 +71,8 @@ pub struct SourceAction {
     playlist_fetch_index: Option<usize>,
     /// .0: fetch all playlist and music from this artist
     artist_fetch_index: Option<usize>,
+    /// Fetch trending music
+    fetch_trending_music: Option<()>,
 }
 
 impl DataSource {
@@ -86,6 +91,7 @@ impl DataSource {
             search_invidious_handle: noop_tokio_task(),
             fetch_playlist_handle: noop_tokio_task(),
             fetch_artist_handle: noop_tokio_task(),
+            fetch_trending_handle: noop_tokio_task(),
         }
     }
 }
@@ -147,7 +153,39 @@ impl DataSource {
         } else if let Some(search_query) = source_action.search_query {
             self.apply_search_query(data_dump, search_query, ui_renderer_notifier)
                 .await;
+        } else if let Some(()) = source_action.fetch_trending_music {
+            self.apply_trending_query(data_dump, region::IsoRegion::NP, ui_renderer_notifier)
+                .await;
         }
+    }
+
+    async fn apply_trending_query(
+        &mut self,
+        data_dump: Arc<tokio::sync::Mutex<DataSink>>,
+        region: region::IsoRegion,
+        ui_notifier: Arc<std::sync::Condvar>,
+    ) {
+        let invidious = Arc::clone(&self.invidious);
+        let reqwest = Arc::clone(&self.reqwest);
+        let mut new_fetch_future = tokio::task::spawn(async move {
+            let fetch_query =
+                requests::RequestTrending::new(InvidiousApiQuery::Trending { region });
+            let trending_results = invidious
+                .fetch_endpoint(reqwest.as_ref(), fetch_query)
+                .await
+                .unwrap();
+
+            Self::with_unlocked_mutex(data_dump, |data_dump| {
+                data_dump.music_list = MusicList::Trending(trending_results);
+                data_dump.mark_new_data_arrival();
+            })
+            .await;
+
+            ui_notifier.notify_one();
+        });
+
+        std::mem::swap(&mut self.fetch_trending_handle, &mut new_fetch_future);
+        new_fetch_future.abort();
     }
 
     async fn apply_playlist_query(
@@ -283,6 +321,7 @@ impl DataSource {
         self.search_invidious_handle.abort();
         self.fetch_playlist_handle.abort();
         self.fetch_artist_handle.abort();
+        self.fetch_trending_handle.abort();
     }
 
     async fn with_unlocked_mutex<LockedData, ReturnData>(
@@ -326,6 +365,10 @@ impl ytui_ui::DataRequester for SourceAction {
     fn fetch_from_playlist_pane(&mut self, selected_index: usize) {
         self.playlist_fetch_index = Some(selected_index)
     }
+
+    fn fetch_trending_music(&mut self) {
+        self.fetch_trending_music = Some(());
+    }
 }
 
 /// Allow UI side to retrive data
@@ -349,6 +392,8 @@ impl ytui_ui::DataGetter for DataSink {
     }
 
     fn get_music_list(&self) -> Vec<[String; 3]> {
+        let format_second_text = |seconds: i32| format!("{:02}:{:02}", seconds / 60, seconds % 60);
+
         match self.music_list {
             MusicList::SearchResult(ref music_list) => music_list
                 .iter()
@@ -356,11 +401,7 @@ impl ytui_ui::DataGetter for DataSink {
                     [
                         music_unit.title.clone(),
                         music_unit.author.clone(),
-                        format!(
-                            "{:02}:{:02}",
-                            music_unit.length_seconds / 60,
-                            music_unit.length_seconds % 60
-                        ),
+                        format_second_text(music_unit.length_seconds),
                     ]
                 })
                 .collect(),
@@ -370,11 +411,17 @@ impl ytui_ui::DataGetter for DataSink {
                     [
                         music_unit.title.clone(),
                         music_unit.author.clone(),
-                        format!(
-                            "{:02}:{:02}",
-                            music_unit.length_seconds / 60,
-                            music_unit.length_seconds % 60
-                        ),
+                        format_second_text(music_unit.length_seconds),
+                    ]
+                })
+                .collect(),
+            MusicList::Trending(ref music_list) => music_list
+                .iter()
+                .map(|music_unit| {
+                    [
+                        music_unit.title.clone(),
+                        music_unit.author.clone(),
+                        format_second_text(music_unit.length_seconds),
                     ]
                 })
                 .collect(),
@@ -407,6 +454,11 @@ impl DataSink {
                 .map(Option::Some)
                 .unwrap_or(music_list.last())
                 .map(|music| music.video_id.as_str()),
+            MusicList::Trending(music_list) => music_list
+                .get(index)
+                .map(Option::Some)
+                .unwrap_or(music_list.last())
+                .map(|music| music.video_id.as_str()),
         }
     }
 
@@ -425,6 +477,7 @@ impl DataSink {
 pub enum MusicList {
     SearchResult(Vec<SearchVideoUnit>),
     FetchedFromPlaylist(Vec<PlaylistVideoUnit>),
+    Trending(TrendingVideos),
 }
 
 pub enum PlaylistList {

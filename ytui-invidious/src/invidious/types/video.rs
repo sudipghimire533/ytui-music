@@ -294,6 +294,7 @@ pub struct TrendingVideo {
     pub description_html: String,
 
     pub live_now: bool,
+    #[serde(default)]
     pub paid: bool,
     pub premium: bool,
 }

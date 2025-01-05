@@ -301,7 +301,16 @@ impl AppState {
                     }
                 }
 
-                Some(Pane::NavigationList) => {}
+                Some(Pane::NavigationList) => {
+                    if self.navigation_list_state.selected() == Some(0) {
+                        Self::with_unlocked_source(locked_action_queue, |source| {
+                            source.fetch_trending_music();
+                        });
+                        self.music_pane_state.select(None);
+                        self.select_new_pane(Some(Pane::Music));
+                        notify_source();
+                    }
+                }
 
                 None
                 | Some(Pane::StatusBar)

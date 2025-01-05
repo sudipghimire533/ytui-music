@@ -17,6 +17,7 @@ pub trait DataRequester {
     fn play_from_music_pane(&mut self, selected_index: usize);
     fn fetch_from_playlist_pane(&mut self, selected_index: usize);
     fn fetch_from_artist_pane(&mut self, selected_index: usize);
+    fn fetch_trending_music(&mut self);
 }
 
 pub trait DataGetter {

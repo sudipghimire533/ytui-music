@@ -59,7 +59,9 @@ pub mod requests {
                     base_url.push_str(format!("/playlists/{playlist_id}").as_str());
                 }
                 InvidiousApiQuery::Trending { region } => {
-                    base_url.push_str(format!("/trending?region={}", region.as_str()).as_str());
+                    base_url.push_str(
+                        format!("/trending?region={}&type=music", region.as_str()).as_str(),
+                    );
                 }
 
                 InvidiousApiQuery::Search {
