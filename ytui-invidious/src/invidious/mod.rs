@@ -153,3 +153,22 @@ pub enum EndpointFetchError<WebE> {
         content: Vec<u8>,
     },
 }
+
+impl<WebE> EndpointFetchError<WebE> {
+    pub fn as_error_string(&self) -> String {
+        match self {
+            EndpointFetchError::NonOkWebResponse => String::from("Server returned non-ok response"),
+            EndpointFetchError::WebClientError(_web_client_e) => {
+                String::from("Web client returned error")
+            }
+            EndpointFetchError::ApiError(api_err) => format!("Api Server errored with: {api_err}"),
+            EndpointFetchError::InvalidJsonResponse {
+                content: _response_bytes,
+            } => String::from("Json response was not in expected format"),
+            EndpointFetchError::ResponseDeserilizationError {
+                err,
+                content: _response_bytes,
+            } => format!("Could not deserialize: {err}"),
+        }
+    }
+}

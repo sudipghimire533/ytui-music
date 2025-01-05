@@ -179,10 +179,12 @@ impl DataSource {
             let trending_results = invidious
                 .fetch_endpoint(reqwest.as_ref(), fetch_query)
                 .await
-                .unwrap();
+                .map_err(|e| e.as_error_string())
+                .map(MusicList::Trending)
+                .unwrap_or_else(MusicList::Error);
 
             Self::with_unlocked_mutex(data_dump, |data_dump| {
-                data_dump.music_list = MusicList::Trending(trending_results);
+                data_dump.music_list = trending_results;
                 data_dump.mark_new_data_arrival();
             })
             .await;
@@ -220,10 +222,12 @@ impl DataSource {
             let playlist_result = invidious
                 .fetch_endpoint(reqwest.as_ref(), fetch_query)
                 .await
-                .unwrap();
+                .map_err(|e| e.as_error_string())
+                .map(|fetched_res| MusicList::FetchedFromPlaylist(fetched_res.videos))
+                .unwrap_or_else(MusicList::Error);
 
             Self::with_unlocked_mutex(data_dump, |data_dump| {
-                data_dump.music_list = MusicList::FetchedFromPlaylist(playlist_result.videos);
+                data_dump.music_list = playlist_result;
                 data_dump.mark_new_data_arrival();
             })
             .await;
@@ -265,32 +269,45 @@ impl DataSource {
             let search_results = invidious
                 .fetch_endpoint(reqwest.as_ref(), search_query)
                 .await
-                .unwrap();
+                .map_err(|e| e.as_error_string())
+                .map(|search_results| {
+                    // classify search results into music/ channel and artist
+                    let mut music_results = Vec::new();
+                    let mut playlist_results = Vec::new();
+                    let mut artist_results = Vec::new();
+                    for search_result in search_results {
+                        match search_result {
+                            SearchResult::Video(search_video_unit) => {
+                                music_results.push(search_video_unit);
+                            }
+                            SearchResult::Playlist(search_playlist_unit) => {
+                                playlist_results.push(search_playlist_unit);
+                            }
+                            SearchResult::Channel(search_channel_unit) => {
+                                artist_results.push(search_channel_unit);
+                            }
+                        }
+                    }
 
-            // classify search results into music/ channel and artist
-            let mut music_results = Vec::new();
-            let mut playlist_results = Vec::new();
-            let mut artist_results = Vec::new();
-            for search_result in search_results {
-                match search_result {
-                    SearchResult::Video(search_video_unit) => {
-                        music_results.push(search_video_unit);
-                    }
-                    SearchResult::Playlist(search_playlist_unit) => {
-                        playlist_results.push(search_playlist_unit);
-                    }
-                    SearchResult::Channel(search_channel_unit) => {
-                        artist_results.push(search_channel_unit);
-                    }
-                }
-            }
+                    (
+                        MusicList::SearchResult(music_results),
+                        PlaylistList::SearchResult(playlist_results),
+                        ArtistList::SearchResult(artist_results),
+                    )
+                })
+                .unwrap_or_else(|error_as_str| {
+                    (
+                        MusicList::Error(error_as_str.clone()),
+                        PlaylistList::Error(error_as_str.clone()),
+                        ArtistList::Error(error_as_str),
+                    )
+                });
 
             // fill result
             Self::with_unlocked_mutex(data_dump, move |data_dump| {
-                data_dump.music_list = MusicList::SearchResult(music_results);
-                data_dump.playlist_list = PlaylistList::SearchResult(playlist_results);
-                data_dump.artist_list = ArtistList::SearchResult(artist_results);
-
+                data_dump.music_list = search_results.0;
+                data_dump.playlist_list = search_results.1;
+                data_dump.artist_list = search_results.2;
                 data_dump.mark_new_data_arrival();
             })
             .await;
@@ -324,7 +341,7 @@ impl DataSource {
     }
 
     async fn toggle_pause_status(&self) {
-        self.player.cycle_pause_status();
+        self.player.cycle_pause_status().unwrap();
     }
 
     async fn abort_all_task(&self) {
@@ -389,6 +406,12 @@ impl ytui_ui::DataRequester for SourceAction {
 impl ytui_ui::DataGetter for DataSink {
     fn get_playlist_list(&self) -> Vec<[String; 2]> {
         match self.playlist_list {
+            PlaylistList::Error(ref error_message) => {
+                vec![[
+                    String::from("Error: ") + error_message.as_str(),
+                    String::from("@sudipghimire533"),
+                ]]
+            }
             PlaylistList::SearchResult(ref playlist_search_list) => playlist_search_list
                 .iter()
                 .map(|search_result| [search_result.title.clone(), search_result.author.clone()])
@@ -398,6 +421,9 @@ impl ytui_ui::DataGetter for DataSink {
 
     fn get_artist_list(&self) -> Vec<String> {
         match self.artist_list {
+            ArtistList::Error(ref error_message) => {
+                vec![String::from("Error: ") + error_message.as_str()]
+            }
             ArtistList::SearchResult(ref artist_search_list) => artist_search_list
                 .iter()
                 .map(|search_result| search_result.author.clone())
@@ -409,6 +435,13 @@ impl ytui_ui::DataGetter for DataSink {
         let format_second_text = |seconds: i32| format!("{:02}:{:02}", seconds / 60, seconds % 60);
 
         match self.music_list {
+            MusicList::Error(ref error_message) => {
+                vec![[
+                    String::from("Error: ") + error_message.as_str(),
+                    String::from("@sudipghimire533"),
+                    String::from("NaN / NaN"),
+                ]]
+            }
             MusicList::SearchResult(ref music_list) => music_list
                 .iter()
                 .map(|music_unit| {
@@ -458,6 +491,8 @@ impl DataSink {
 
     fn music_id_at_index_or_last(&self, index: usize) -> Option<&str> {
         match &self.music_list {
+            MusicList::Error(_error_message) => None,
+
             MusicList::SearchResult(music_list) => music_list
                 .get(index)
                 .map(Option::Some)
@@ -483,21 +518,25 @@ impl DataSink {
                 .map(Option::Some)
                 .unwrap_or(playlist_list.last())
                 .map(|playlist| playlist.playlist_id.as_str()),
+            PlaylistList::Error(_error_message) => None,
         }
     }
 }
 
 #[derive(Debug)]
 pub enum MusicList {
+    Error(String),
     SearchResult(Vec<SearchVideoUnit>),
     FetchedFromPlaylist(Vec<PlaylistVideoUnit>),
     Trending(TrendingVideos),
 }
 
 pub enum PlaylistList {
+    Error(String),
     SearchResult(Vec<SearchPlaylistUnit>),
 }
 
 pub enum ArtistList {
+    Error(String),
     SearchResult(Vec<SearchChannelUnit>),
 }
