@@ -1,72 +1,76 @@
-use super::{ArtistList, MusicList, PlaylistList};
-
 impl ytui_ui::DataGetter for super::DataSink {
     fn get_playlist_list(&self) -> Vec<[String; 2]> {
         match self.playlist_list {
-            PlaylistList::Error(ref error_message) => {
+            Err(ref error_message) => {
                 vec![[
                     String::from("Error: ") + error_message.as_str(),
                     String::from("@sudipghimire533"),
                 ]]
             }
-            PlaylistList::SearchResult(ref playlist_search_list) => playlist_search_list
+            Ok(ref playlist_search_list) => playlist_search_list
                 .iter()
-                .map(|search_result| [search_result.title.clone(), search_result.author.clone()])
+                .map(|search_result| {
+                    [
+                        search_result
+                            .title
+                            .clone()
+                            .unwrap_or(String::from("ERR: NO TITLE")),
+                        search_result
+                            .author_name
+                            .clone()
+                            .unwrap_or(String::from("ERR: NO AUTHOR NAME")),
+                    ]
+                })
                 .collect(),
         }
     }
 
     fn get_artist_list(&self) -> Vec<String> {
         match self.artist_list {
-            ArtistList::Error(ref error_message) => {
+            Err(ref error_message) => {
                 vec![String::from("Error: ") + error_message.as_str()]
             }
-            ArtistList::SearchResult(ref artist_search_list) => artist_search_list
+            Ok(ref artist_search_list) => artist_search_list
                 .iter()
-                .map(|search_result| search_result.author.clone())
+                .map(|search_result| {
+                    search_result
+                        .name
+                        .clone()
+                        .unwrap_or(String::from("ERR: NO NAME"))
+                })
                 .collect(),
         }
     }
 
     fn get_music_list(&self) -> Vec<[String; 3]> {
-        let format_second_text = |seconds: i32| format!("{:02}:{:02}", seconds / 60, seconds % 60);
-
         match self.music_list {
-            MusicList::Error(ref error_message) => {
+            Err(ref error_message) => {
                 vec![[
                     String::from("Error: ") + error_message.as_str(),
                     String::from("@sudipghimire533"),
                     String::from("NaN / NaN"),
                 ]]
             }
-            MusicList::SearchResult(ref music_list) => music_list
+            Ok(ref music_list) => music_list
                 .iter()
                 .map(|music_unit| {
-                    [
-                        music_unit.title.clone(),
-                        music_unit.author.clone(),
-                        format_second_text(music_unit.length_seconds),
-                    ]
-                })
-                .collect(),
-            MusicList::FetchedFromPlaylist(ref music_list) => music_list
-                .iter()
-                .map(|music_unit| {
-                    [
-                        music_unit.title.clone(),
-                        music_unit.author.clone(),
-                        format_second_text(music_unit.length_seconds),
-                    ]
-                })
-                .collect(),
-            MusicList::Trending(ref music_list) => music_list
-                .iter()
-                .map(|music_unit| {
-                    [
-                        music_unit.title.clone(),
-                        music_unit.author.clone(),
-                        format_second_text(music_unit.length_seconds),
-                    ]
+                    let title = music_unit
+                        .title
+                        .clone()
+                        .unwrap_or(String::from("ERR: NO TITLE"));
+                    let author = music_unit
+                        .author_name
+                        .clone()
+                        .unwrap_or(String::from("@sudipghimire533"));
+                    let duration = music_unit
+                        .length
+                        .map(|duration| {
+                            let seconds = duration.as_secs();
+                            format!("{:02}: {:02}", seconds / 60, seconds % 60)
+                        })
+                        .unwrap_or(String::from("NaN/ NaN"));
+
+                    [title, author, duration]
                 })
                 .collect(),
         }

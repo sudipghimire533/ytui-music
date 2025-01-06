@@ -6,6 +6,6 @@ edition = "2021"
 [dependencies]
 ytui-ui = { path = "../ytui-ui/" }
 ytui-audio = { path = "../ytui-audio/", features = ["libmpv"] }
-ytui-invidious = { path = "../ytui-invidious/", features = ["web-reqwest"] }
+stream-mandu = { path = "../stream-mandu/", features = ["web-reqwest", "invidious", "common-interface"] }
 crossterm = { version = "*" }
 tokio = { workspace = true }

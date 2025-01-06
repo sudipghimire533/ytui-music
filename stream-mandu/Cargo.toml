@@ -1,20 +1,19 @@
 [package]
-name = "ytui-invidious"
+name = "stream-mandu"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
 serde_json = { version = "1" }
-
+async-trait = { workspace = true }
 reqwest = { version = "0.12", optional = true }
 
 [features]
+invidious = []
+common-interface = []
 web-reqwest = ["dep:reqwest"]
-default = ["web-reqwest"]
-
+default = ["web-reqwest", "invidious"]
 
 [dev-dependencies]
-ytui-invidious = { path = "./", features = ["web-reqwest"] }
-reqwest = { version = "0.12", features = ["blocking"]}
-tokio = { version = "1", features = ["full"]}
+stream-mandu = { path = "./", features = ["default", "common-interface"]}

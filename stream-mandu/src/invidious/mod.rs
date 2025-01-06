@@ -1,11 +1,14 @@
 pub mod types;
-pub mod web_client;
 
 use crate::ensure;
+use crate::web_client::WebClient;
 use requests::*;
+#[cfg(feature = "common-interface")]
+mod common_interface_impl;
 
 pub mod requests {
     use super::types;
+    use crate::region;
 
     pub type RequestStats<'a> = _ApiRequestst<'a, types::api_info::UsageStats>;
     pub type RequestVideoById<'a> = _ApiRequestst<'a, types::video::VideoInfo>;
@@ -22,10 +25,10 @@ pub mod requests {
             playlist_id: &'a str,
         },
         Trending {
-            region: types::region::IsoRegion,
+            region: region::IsoRegion,
         },
         Search {
-            query: String,
+            query: &'a str,
             find_playlist: bool,
             find_artist: bool,
             find_music: bool,
@@ -94,25 +97,30 @@ pub mod requests {
     }
 }
 
-pub struct InvidiousBackend {
+pub struct InvidiousBackend<WebC: WebClient> {
     pub(crate) base_url: String,
+
+    web_client: WebC,
 }
 
-impl InvidiousBackend {
-    pub fn new(base_url: String) -> Self {
-        Self { base_url }
+impl<WebC: WebClient> InvidiousBackend<WebC> {
+    pub fn new(base_url: String, web_client: WebC) -> Self {
+        Self {
+            base_url,
+            web_client,
+        }
     }
 
-    pub async fn fetch_endpoint<WebC: web_client::WebClient, ExpectedResponse>(
+    pub async fn fetch_endpoint<ExpectedResponse>(
         &self,
-        web_client: WebC,
         request: _ApiRequestst<'_, ExpectedResponse>,
     ) -> Result<ExpectedResponse, EndpointFetchError<WebC::WebError>>
     where
         ExpectedResponse: serde::de::DeserializeOwned,
     {
         let endpoint_path = request.get_endpoint_path(self.base_url.clone());
-        let web_response = web_client
+        let web_response = self
+            .web_client
             .request_binary(endpoint_path.as_str())
             .await
             .map_err(EndpointFetchError::WebClientError)?;

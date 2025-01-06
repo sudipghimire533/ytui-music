@@ -1,10 +1,6 @@
-use crate::data_sink::{DataSink, MusicList};
+use crate::data_sink::DataSink;
 use std::{borrow::Borrow, sync::Arc};
-use ytui_invidious::invidious::{
-    requests::{self, InvidiousApiQuery},
-    web_client::reqwest_impl::reqwest,
-    InvidiousBackend,
-};
+use stream_mandu::StreamMandu;
 
 impl super::DataSource {
     pub(super) async fn apply_playlist_query(
@@ -13,13 +9,11 @@ impl super::DataSource {
         playlist_index: usize,
         ui_notifier: Arc<std::sync::Condvar>,
     ) {
-        let invidious = Arc::clone(&self.invidious);
-        let reqwest = Arc::clone(&self.reqwest);
+        let remote_source = Arc::clone(&self.remote_source);
         let mut new_fetch_future = tokio::task::spawn(async move {
             Self::playlist_query_inner(
                 data_sink,
-                invidious.borrow(),
-                reqwest.borrow(),
+                remote_source.borrow(),
                 ui_notifier.borrow(),
                 playlist_index,
             )
@@ -32,34 +26,34 @@ impl super::DataSource {
 
     async fn playlist_query_inner(
         data_sink: Arc<tokio::sync::Mutex<DataSink>>,
-        invidious: &InvidiousBackend,
-        reqwest: &reqwest::Client,
+        remote_source: &dyn StreamMandu,
         ui_notifier: &std::sync::Condvar,
         playlist_index: usize,
     ) {
-        let playlist_id_to_fetch = Self::with_unlocked_mutex(data_sink.clone(), |data_sink| {
+        let Some(playlist_id) = Self::with_unlocked_mutex(data_sink.clone(), |data_sink| {
             data_sink
-                .playlist_id_at_index_or_last(playlist_index)
-                .map(str::to_string)
+                .playlist_list
+                .as_ref()
+                .map(|playlist_list| {
+                    let selected_playlist = DataSink::at_or_last(playlist_list, playlist_index)?;
+                    Some(selected_playlist.id.clone())
+                })
+                .ok()
+                .flatten()
         })
-        .await;
-
-        let Some(playlist_id) = playlist_id_to_fetch else {
+        .await
+        else {
             return;
         };
 
-        let fetch_query = requests::RequestPlaylistById::new(InvidiousApiQuery::PlaylistById {
-            playlist_id: playlist_id.as_str(),
-        });
-        let playlist_result = invidious
-            .fetch_endpoint(reqwest, fetch_query)
+        let music_items = remote_source
+            .get_playlist_info(playlist_id.as_str())
             .await
-            .map_err(|e| e.as_error_string())
-            .map(|fetched_res| MusicList::FetchedFromPlaylist(fetched_res.videos))
-            .unwrap_or_else(MusicList::Error);
+            .map_err(|err| format!("Id: {playlist_id}. Error: {err}"))
+            .map(|playlist| playlist.item_list);
 
         Self::with_unlocked_mutex(data_sink, |data_dump| {
-            data_dump.music_list = playlist_result;
+            data_dump.music_list = music_items;
             data_dump.mark_new_data_arrival();
         })
         .await;

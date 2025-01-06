@@ -1,7 +1,9 @@
 pub use super::data_sink::DataSink;
 use std::sync::Arc;
+use stream_mandu::{
+    invidious::InvidiousBackend, region::IsoRegion, web_client::async_reqwest_impl::reqwest,
+};
 use ytui_audio::libmpv::LibmpvPlayer;
-use ytui_invidious::invidious::{self, web_client::reqwest_impl::reqwest};
 
 mod impl_artist_query;
 mod impl_audio_request;
@@ -12,9 +14,7 @@ mod impl_trending_query;
 
 pub struct DataSource {
     player: Arc<LibmpvPlayer>,
-    invidious: Arc<invidious::InvidiousBackend>,
-
-    reqwest: Arc<reqwest::Client>,
+    remote_source: Arc<dyn stream_mandu::StreamMandu>,
 
     pub(super) source_action_queue: Arc<tokio::sync::Mutex<SourceAction>>,
     // handles that should be drooped if another task of same kind is spawned.
@@ -51,17 +51,15 @@ pub struct SourceAction {
 
 impl DataSource {
     pub async fn new(mpv_player: Arc<LibmpvPlayer>) -> Self {
+        let reqwest = reqwest::Client::new();
         let invidious_backend =
-            invidious::InvidiousBackend::new("https://invidious.jing.rocks/api/v1".to_string());
-        let source_action = SourceAction::default();
-        let reqwest_client = reqwest::Client::new();
-        let noop_tokio_task = || tokio::task::spawn(async {});
+            InvidiousBackend::new("https://invidious.jing.rocks/api/v1".to_string(), reqwest);
 
+        let noop_tokio_task = || tokio::task::spawn(async {});
         Self {
             player: mpv_player,
-            reqwest: Arc::new(reqwest_client),
-            invidious: Arc::new(invidious_backend),
-            source_action_queue: Arc::new(tokio::sync::Mutex::new(source_action)),
+            remote_source: Arc::new(invidious_backend),
+            source_action_queue: Arc::new(tokio::sync::Mutex::new(SourceAction::default())),
             search_invidious_handle: noop_tokio_task(),
             fetch_playlist_handle: noop_tokio_task(),
             fetch_artist_handle: noop_tokio_task(),
@@ -131,12 +129,8 @@ impl DataSource {
             self.apply_search_query(data_sink, search_query, ui_renderer_notifier)
                 .await;
         } else if let Some(()) = source_action.fetch_trending_music {
-            self.apply_trending_query(
-                data_sink,
-                invidious::types::region::IsoRegion::NP,
-                ui_renderer_notifier,
-            )
-            .await;
+            self.apply_trending_query(data_sink, IsoRegion::NP, ui_renderer_notifier)
+                .await;
         }
     }
 

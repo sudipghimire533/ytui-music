@@ -4,17 +4,14 @@ pub mod channel;
 pub mod common;
 pub mod params;
 pub mod playlists;
-pub mod region;
 pub mod video;
 
 #[cfg(test)]
 pub mod tests {
-    
 
     use common::SearchResult;
 
     use super::*;
-    
 
     #[test]
     fn verify_search_result_response() {

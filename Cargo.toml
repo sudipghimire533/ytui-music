@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-  "ytui-invidious",
+  "stream-mandu",
   "ytui-audio",
   "ytui-ui",
   "ytui-music", 
@@ -11,5 +11,4 @@ members = [
 serde = { version = "1", features = ["derive"] }
 reqwest = { version = "0.12", features = ["stream"] }
 tokio = { version = "1", features = ["full"] }
-
-
+async-trait = { version = "*" }

@@ -9,16 +9,21 @@ impl super::DataSource {
         music_index: usize,
         data_sink: Arc<tokio::sync::Mutex<DataSink>>,
     ) {
-        let music_id_to_stream = Self::with_unlocked_mutex(data_sink, |data_sink| {
+        let Some(music_id) = Self::with_unlocked_mutex(data_sink, |data_sink| {
             data_sink
-                .music_id_at_index_or_last(music_index)
-                .map(str::to_string)
+                .music_list
+                .as_ref()
+                .map(|music_list| {
+                    DataSink::at_or_last(music_list, music_index).map(|music| music.id.clone())
+                })
+                .ok()
+                .flatten()
         })
-        .await;
-
-        let Some(music_id) = music_id_to_stream else {
+        .await
+        else {
             return;
         };
+
         let music_url = String::from(Self::MUSIC_URL_PREFIX) + music_id.as_str();
         self.player.load_uri(music_url.as_str()).unwrap();
     }
