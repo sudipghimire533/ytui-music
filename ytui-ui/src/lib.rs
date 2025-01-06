@@ -22,6 +22,7 @@ pub trait DataRequester {
 }
 
 pub trait DataGetter {
+    fn startup_overlay_announcement(&self) -> Option<(String, String)>;
     fn get_music_list(&self) -> Vec<[String; 3]>;
     fn get_playlist_list(&self) -> Vec<[String; 2]>;
     fn get_artist_list(&self) -> Vec<String>;

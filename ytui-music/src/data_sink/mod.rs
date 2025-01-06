@@ -2,6 +2,7 @@ use std::sync::Arc;
 use stream_mandu::common_interface::types::{ArtistInfo, MusicInfo, PlaylistInfo};
 use ytui_audio::libmpv::LibmpvPlayer;
 
+mod app_announcement;
 mod impl_data_getter;
 
 pub struct DataSink {

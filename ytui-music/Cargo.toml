@@ -9,3 +9,5 @@ ytui-audio = { path = "../ytui-audio/", features = ["libmpv"] }
 stream-mandu = { path = "../stream-mandu/", features = ["web-reqwest", "invidious", "common-interface"] }
 crossterm = { version = "*" }
 tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

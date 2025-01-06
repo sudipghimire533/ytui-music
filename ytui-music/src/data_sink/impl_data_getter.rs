@@ -83,4 +83,9 @@ impl ytui_ui::DataGetter for super::DataSink {
     fn has_new_data(&self) -> bool {
         self.has_new_data
     }
+
+    fn startup_overlay_announcement(&self) -> Option<(String, String)> {
+        super::app_announcement::AnnouncementInfo::fetch_startup_announcement()
+            .map(|announcement| announcement.get_title_and_body())
+    }
 }

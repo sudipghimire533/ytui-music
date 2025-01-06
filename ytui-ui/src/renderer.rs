@@ -35,11 +35,16 @@ where
         request_available_data: Arc<tokio::sync::Mutex<DataProvider>>,
         player: Arc<ytui_audio::libmpv::LibmpvPlayer>,
     ) -> Self {
+        let mut app_state = super::state::AppState::new();
+        app_state.overlay_announcement = request_available_data
+            .blocking_lock()
+            .startup_overlay_announcement();
+
         Self {
             player,
             request_new_data,
             request_available_data,
-            state: super::state::AppState::new(),
+            state: app_state,
             source_notifier: Arc::new(tokio::sync::Notify::new()),
             ui_renderer_notifier: Arc::new(std::sync::Condvar::new()),
         }

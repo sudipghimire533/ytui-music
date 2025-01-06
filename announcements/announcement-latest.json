@@ -1,0 +1,8 @@
+{
+  "title": "Welcome to new version of Ytui-Music",
+  "announcement_text": "This is a cool announcement. Good day :)",
+
+  "exclude_version": [],
+  "target_min_version": [0,0,0],
+  "target_max_version": [254, 254, 254]
+}

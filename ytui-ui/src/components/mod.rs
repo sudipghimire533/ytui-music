@@ -183,21 +183,15 @@ pub mod component_collection {
 
             let mut overlay = None;
             if matches!(app_state.selected_pane, Some(Pane::Overlay)) {
-                let overlay_attrs = overlay::OverlayUiAttrs {
-                    show_borders: true,
-                    title: "Release notes".to_string(),
-                };
-                let new_overlay = overlay:: Overlay::construct_widget(&overlay_attrs).with_announcement("Installation
-NOTE: since the dependency libmpv seems not to be maintained anymore,
+                let (title, text) = app_state.overlay_announcement.clone().unwrap_or_else(|| {
+                    (
+                        String::from(" @sudipghimire533 "),
+                        String::from("No announcement here. But I wish you a great day man! :)"),
+                    )
+                });
 
-you will probably need to build from source in any platform. See section Build From Source below.
-
-Download latest binary from release page. If binary is not available for your platform, head on to build from source
-
-Give it executable permission and from downloaded directory, in shell:
-
-ytui_music run
-You may need to jump to Usage Guide".to_string());
+                let overlay_attrs = overlay::OverlayUiAttrs { show_borders: true };
+                let new_overlay = overlay::Overlay::construct_widget(&overlay_attrs, title, text);
 
                 overlay = Some(new_overlay);
             }

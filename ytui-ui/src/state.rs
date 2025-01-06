@@ -64,6 +64,7 @@ pub struct AppState {
 
     pub(super) selected_pane: Option<Pane>,
     pub(super) search_query: Option<String>,
+    pub(super) overlay_announcement: Option<(String, String)>,
     pub(super) queue_list_state: ListState,
     pub(super) navigation_list_state: ListState,
     pub(super) music_pane_state: TableState,
@@ -80,6 +81,7 @@ impl AppState {
             previously_selected_pane: None,
             selected_pane: Some(Pane::Overlay),
             search_query: None,
+            overlay_announcement: None,
             current_size: (0, 0),
 
             queue_list_state: Default::default(),
