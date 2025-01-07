@@ -5,7 +5,10 @@ edition = "2021"
 
 [dependencies]
 libmpv2 = { git = "https://github.com/kohsine/libmpv2-rs", rev = "906d957", optional = true }
-libmpv2-sys = { git = "https://github.com/kohsine/libmpv2-rs", rev = "906d957" } 
+libmpv2-sys = { git = "https://github.com/kohsine/libmpv2-rs", rev = "906d957" }
+smallvec = { workspace = true }
+strum = { version = "*", features = ["derive"] }
+strum_macros = { version = "*" }
 
 [features]
 # use statuc libmpv as audio player

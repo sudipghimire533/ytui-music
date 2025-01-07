@@ -127,7 +127,7 @@ impl<WebC: WebClient> InvidiousBackend<WebC> {
 
         ensure!(
             (200..300).contains(&web_response.status_code),
-            EndpointFetchError::NonOkWebResponse
+            EndpointFetchError::NonOkWebResponse(web_response.status_code)
         );
 
         // if response is deserialized into SimpleError ( have serde::deny_unknwon_fields )
@@ -150,7 +150,7 @@ impl<WebC: WebClient> InvidiousBackend<WebC> {
 
 #[derive(Debug)]
 pub enum EndpointFetchError<WebE> {
-    NonOkWebResponse,
+    NonOkWebResponse(u16),
     WebClientError(WebE),
     ApiError(String),
     InvalidJsonResponse {
@@ -165,7 +165,9 @@ pub enum EndpointFetchError<WebE> {
 impl<WebE> EndpointFetchError<WebE> {
     pub fn as_error_string(&self) -> String {
         match self {
-            EndpointFetchError::NonOkWebResponse => String::from("Server returned non-ok response"),
+            EndpointFetchError::NonOkWebResponse(code) => {
+                String::from("Server returned non-ok response: ") + code.to_string().as_str()
+            }
             EndpointFetchError::WebClientError(_web_client_e) => {
                 String::from("Web client returned error")
             }

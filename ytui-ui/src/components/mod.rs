@@ -94,12 +94,31 @@ pub mod component_collection {
             statusbar::StatusBar::create_widget(&status_bar_attrs, &data_collection.player_stats)
         }
 
+        pub fn create_queue_list(
+            data_collection: &ComponentsDataCollection,
+            app_state: &AppState,
+        ) -> queue_list::QueueList<'a> {
+            let queue_list_attrs = queue_list::QueueListUiAttrs {
+                text_color: Color::Green,
+                highlight_color: Color::White,
+                is_active: matches!(app_state.selected_pane, Some(Pane::QueueList)),
+            };
+            queue_list::QueueList::create_widget(&queue_list_attrs).with_list(
+                data_collection
+                    .player_stats
+                    .next_in_queue
+                    .clone()
+                    .into_iter(),
+            )
+        }
+
         pub fn create_all_components(
             app_state: &mut AppState,
             data_collection: &ComponentsDataCollection,
         ) -> ComponentsCollection<'a> {
             let progressbar = Self::create_progress_bar(data_collection);
             let statusbar = Self::create_status_bar(data_collection);
+            let queue_list = Self::create_queue_list(data_collection, app_state);
 
             let searchbar_attrs = searchbar::SearchBarUiAttrs {
                 text_color: Color::Red,
@@ -112,25 +131,6 @@ pub mod component_collection {
                     .search_query
                     .as_deref()
                     .unwrap_or("Listen to something new today"),
-            );
-
-            let queue_list_attrs = queue_list::QueueListUiAttrs {
-                text_color: Color::Green,
-                highlight_color: Color::White,
-                is_active: matches!(app_state.selected_pane, Some(Pane::QueueList)),
-            };
-            let queue_list = queue_list::QueueList::create_widget(&queue_list_attrs).with_list(
-                [
-                    "Lose control by Teddy Swims",
-                    "Greedy by Tate McRae",
-                    "Beautiful Things by Benson Boone",
-                    "Espresso by Sabrina Carpenter",
-                    "Come and take your love by unknwon",
-                ]
-                .repeat(5)
-                .into_iter()
-                .map(ToString::to_string)
-                .collect(),
             );
 
             let navigation_list_attrs = navigation_list::NavigationListUiAttrs {

@@ -48,12 +48,12 @@ impl<WebC: WebClient + Send + Sync> StreamMandu for InvidiousBackend<WebC> {
         let query = RequestTrending::new(InvidiousApiQuery::Trending {
             region: region.unwrap_or(crate::region::IsoRegion::NP),
         });
-        let fetch_result = self.fetch_endpoint(query).await;
-
-        match fetch_result {
-            Ok(trending_musics) => Ok(trending_musics.into_iter().map(Into::into).collect()),
-            Err(_e) => todo!(),
-        }
+        let fetch_result = self
+            .fetch_endpoint(query)
+            .await
+            .map_err(|e| e.as_error_string())?;
+        let result_as_music_list = fetch_result.into_iter().map(Into::into).collect();
+        Ok(result_as_music_list)
     }
 
     async fn search_query(
@@ -69,11 +69,12 @@ impl<WebC: WebClient + Send + Sync> StreamMandu for InvidiousBackend<WebC> {
             find_artist,
             find_music,
         });
-        let fetch_result = self.fetch_endpoint(query).await;
-        match fetch_result {
-            Ok(search_result) => Ok(search_result.into()),
-            Err(_e) => todo!(),
-        }
+        let fetch_result = self
+            .fetch_endpoint(query)
+            .await
+            .map_err(|e| e.as_error_string())?;
+        let fetch_result_as_search_list = fetch_result.into();
+        Ok(fetch_result_as_search_list)
     }
 }
 

@@ -11,3 +11,5 @@ crossterm = { version = "*" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+fastrand = { version = "2" }
+smallvec = { workspace = true }

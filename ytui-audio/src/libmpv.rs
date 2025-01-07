@@ -1,7 +1,4 @@
-use std::{
-    borrow::{Borrow, Cow},
-    path::Path,
-};
+use std::{borrow::Cow, path::Path};
 
 #[derive(Debug)]
 pub enum YtuiMvpAudioError {
@@ -18,12 +15,17 @@ impl YtuiMvpAudioError {
     }
 }
 
-pub enum MpvCommand<'a> {
-    /// stream given list of files
-    StreamFiles(&'a [&'a Path]),
+pub enum LoadFileArg<'a> {
+    Replace,
+    Append { force_media_title: Option<&'a str> },
+}
 
-    /// Stream given list of remote urls
-    StreamUrls(&'a [&'a str]),
+#[derive(strum::IntoStaticStr)]
+pub enum MpvCommand<'a> {
+    LoadFile {
+        stream: &'a str,
+        kind: LoadFileArg<'a>,
+    },
 }
 
 pub enum MpvPropertyGet {
@@ -33,37 +35,22 @@ pub enum MpvPropertyGet {
     PauseStatus,
     Volume,
     PercentPos,
+    PlaylistCount,
+    NthPlaylistItemTitle(usize),
 }
 impl MpvPropertyGet {
-    const fn prop_key(self) -> &'static str {
+    fn prop_key(self) -> Cow<'static, str> {
         match self {
-            Self::Duration => "duration",
-            Self::MediaTitle => "media-title",
-            Self::TimePos => "time-pos",
-            Self::PauseStatus => "pause",
-            Self::Volume => "volume",
-            Self::PercentPos => "percent-pos",
-        }
-    }
-}
-
-impl<'a> MpvCommand<'a> {
-    pub fn get_raw_command(self) -> Result<(&'static str, Cow<'a, [&'a str]>), YtuiMvpAudioError> {
-        match self {
-            MpvCommand::StreamFiles(file_paths) => {
-                let args = file_paths
-                    .iter()
-                    .map(|file_path| {
-                        file_path
-                            .to_str()
-                            .ok_or(YtuiMvpAudioError::InvalidSourcePath)
-                    })
-                    .collect::<Result<Vec<&str>, YtuiMvpAudioError>>()?;
-
-                Ok(("loadfile", Cow::Owned(args)))
+            Self::Duration => Cow::Borrowed("duration"),
+            Self::MediaTitle => Cow::Borrowed("media-title"),
+            Self::TimePos => Cow::Borrowed("time-pos"),
+            Self::PauseStatus => Cow::Borrowed("pause"),
+            Self::Volume => Cow::Borrowed("volume"),
+            Self::PercentPos => Cow::Borrowed("percent-pos"),
+            Self::PlaylistCount => Cow::Borrowed("playlist-count"),
+            Self::NthPlaylistItemTitle(n) => {
+                Cow::Owned(String::from("playlist/") + n.to_string().as_str() + "/filename")
             }
-
-            MpvCommand::StreamUrls(network_paths) => Ok(("loadfile", Cow::Borrowed(network_paths))),
         }
     }
 }
@@ -90,26 +77,31 @@ impl LibmpvPlayer {
         Ok(())
     }
 
-    pub fn load_uri(&self, uri: &str) -> Result<(), YtuiMvpAudioError> {
-        self.execute_command(MpvCommand::StreamUrls(&[uri]))
-    }
-
-    pub fn load_file(&self, file_path: &Path) -> Result<(), YtuiMvpAudioError> {
-        self.execute_command(MpvCommand::StreamFiles(&[file_path]))
-    }
-
     pub fn cycle_pause_status(&self) -> Result<(), YtuiMvpAudioError> {
         let current_status = self
             .get_property::<bool>(MpvPropertyGet::PauseStatus)?
             .unwrap();
-        self.set_property(MpvPropertyGet::PauseStatus.prop_key(), !current_status)
+        self.set_property(
+            MpvPropertyGet::PauseStatus.prop_key().as_ref(),
+            !current_status,
+        )
     }
 
     pub fn execute_command(&self, command: MpvCommand) -> Result<(), YtuiMvpAudioError> {
-        let (command, args) = command.get_raw_command()?;
-        self.mpv_handle
-            .command(command, args.borrow())
-            .map_err(|e| YtuiMvpAudioError::mpv("executing command", e))
+        let mpv_cmd = |c, args| {
+            self.mpv_handle
+                .command(c, args)
+                .map_err(|e| YtuiMvpAudioError::mpv("executing command", e))
+        };
+        match command {
+            MpvCommand::LoadFile { stream, kind } => match kind {
+                LoadFileArg::Replace => mpv_cmd("loadfile", &[stream, "replace"]),
+
+                LoadFileArg::Append { force_media_title } => {
+                    mpv_cmd("loadfile", &[stream, "append"])
+                }
+            },
+        }
     }
 
     pub fn enable_video(&self) -> Result<(), YtuiMvpAudioError> {
@@ -120,13 +112,14 @@ impl LibmpvPlayer {
         self.set_property("video", "no")
     }
 
-    pub fn get_property<PropertyValueType: libmpv2::GetData>(
+    pub fn get_property<PropertyValueType: libmpv2::GetData + std::fmt::Debug>(
         &self,
-        property_key: MpvPropertyGet,
+        property: MpvPropertyGet,
     ) -> Result<Option<PropertyValueType>, YtuiMvpAudioError> {
+        let property_key = property.prop_key();
         match self
             .mpv_handle
-            .get_property::<PropertyValueType>(property_key.prop_key())
+            .get_property::<PropertyValueType>(property_key.as_ref())
         {
             Ok(v) => Ok(Some(v)),
             Err(libmpv2::Error::Raw(libmpv2::mpv_error::PropertyUnavailable)) => Ok(None),
@@ -142,22 +135,5 @@ impl LibmpvPlayer {
         self.mpv_handle
             .set_property(property_key, property_value)
             .map_err(|e| YtuiMvpAudioError::mpv("setting property", e))
-    }
-}
-
-impl LibmpvPlayer {
-    pub async fn load_uri_async(&self, uri: &str) -> Result<(), YtuiMvpAudioError> {
-        self.load_uri(uri)
-    }
-
-    pub async fn load_file_async(&self, file_path: &Path) -> Result<(), YtuiMvpAudioError> {
-        self.load_file(file_path)
-    }
-
-    pub async fn execute_command_async<'a>(
-        &mut self,
-        command: MpvCommand<'a>,
-    ) -> Result<(), YtuiMvpAudioError> {
-        self.execute_command(command)
     }
 }

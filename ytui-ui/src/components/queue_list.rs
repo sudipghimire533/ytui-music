@@ -37,7 +37,7 @@ impl QueueList<'_> {
         Self { widget }
     }
 
-    pub fn with_list(self, items: Vec<String>) -> Self {
+    pub fn with_list(self, items: impl Iterator<Item = String>) -> Self {
         Self {
             widget: self.widget.items(items),
         }

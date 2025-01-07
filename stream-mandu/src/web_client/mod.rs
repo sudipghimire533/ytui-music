@@ -8,7 +8,7 @@ pub struct WebResponse {
 
 #[async_trait::async_trait]
 pub trait WebClient {
-    type WebError;
+    type WebError: std::error::Error;
 
     async fn request_binary(&self, url: &str) -> Result<WebResponse, Self::WebError>;
 }

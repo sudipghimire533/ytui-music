@@ -1,3 +1,4 @@
+use smallvec::SmallVec;
 use ytui_audio::libmpv::MpvPropertyGet;
 
 mod components;
@@ -42,6 +43,7 @@ pub struct PlayerStats {
     pub media_title: Option<String>,
     pub paused: Option<bool>,
     pub volume: Option<i64>,
+    pub next_in_queue: SmallVec<[String; 5]>,
 }
 
 impl PlayerStats {
@@ -59,8 +61,7 @@ impl PlayerStats {
         let volume = mpv_player.get_property(MpvPropertyGet::Volume).unwrap();
         let playback_percent = mpv_player
             .get_property(MpvPropertyGet::PercentPos)
-            .ok()
-            .flatten()
+            .unwrap()
             .map(Option::Some)
             .unwrap_or_else(|| {
                 if let (Some(total), Some(elapsed)) = (total_duration, elabsed_duration) {
@@ -70,6 +71,22 @@ impl PlayerStats {
                 }
             });
 
+        let next_in_queue = std::iter::repeat(())
+            .take({
+                let next_in_queue_count = mpv_player
+                    .get_property::<i64>(MpvPropertyGet::PlaylistCount)
+                    .unwrap()
+                    .unwrap_or_default() as usize;
+                std::cmp::min(next_in_queue_count, 5)
+            })
+            .enumerate()
+            .filter_map(|(nth, _)| {
+                mpv_player
+                    .get_property(MpvPropertyGet::NthPlaylistItemTitle(nth))
+                    .unwrap()
+            })
+            .collect();
+
         PlayerStats {
             total_duration,
             elabsed_duration,
@@ -77,6 +94,7 @@ impl PlayerStats {
             paused,
             volume,
             playback_percent,
+            next_in_queue,
         }
     }
 }

@@ -1,3 +1,4 @@
+use smallvec::SmallVec;
 use std::sync::Arc;
 use stream_mandu::common_interface::types::{ArtistInfo, MusicInfo, PlaylistInfo};
 use ytui_audio::libmpv::LibmpvPlayer;
@@ -10,6 +11,7 @@ pub struct DataSink {
     pub(super) music_list: Result<Vec<MusicInfo>, String>,
     pub(super) playlist_list: Result<Vec<PlaylistInfo>, String>,
     pub(super) artist_list: Result<Vec<ArtistInfo>, String>,
+    pub(super) queue_list: SmallVec<[(String, String); 5]>,
 
     has_new_data: bool,
 }
@@ -25,6 +27,7 @@ impl Default for DataSink {
             music_list: Ok(Vec::new()),
             playlist_list: Ok(Vec::new()),
             artist_list: Ok(Vec::new()),
+            queue_list: SmallVec::new(),
             has_new_data: false,
         }
     }

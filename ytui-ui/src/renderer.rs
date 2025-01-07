@@ -79,6 +79,10 @@ where
                         components::ComponentsCollection::create_progress_bar(&data_collection);
                     components.statusbar =
                         components::ComponentsCollection::create_status_bar(&data_collection);
+                    components.queue_list = components::ComponentsCollection::create_queue_list(
+                        &data_collection,
+                        app_state,
+                    );
                 } else {
                     let mut data_provider = self.request_available_data.blocking_lock();
                     if data_provider.has_new_data() {
