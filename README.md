@@ -50,7 +50,7 @@ sudo apt install -y youtube-dl libmpv1 libmpv-dev
 # Before running ytui-music
 Before you start with ytui-music, make sure that the following directory exists and that you have write permission to ytui-music in order to save configuration file.
 ## Windows
-`C:\Users\<username>\AppData\Roaming` or anv var `{FOLDERID_RoamingAppData}`
+`C:\Users\<username>\AppData\Roaming` or env var `{FOLDERID_RoamingAppData}`
 
 ## Mac
 `/Users/<username>/Library/Application Support` or  `$HOME/Library/Application Support`
