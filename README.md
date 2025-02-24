@@ -75,7 +75,8 @@ git clone git@github.com:sudipghimire533/ytui-music
 3) `cd` into source root and do:
 ```
 git submodule init
-MPV_BUILD=mpv-build/ cargo build --all --release --features build_libmpv
+export MPV_SOURCE=/usr/bin/mpv
+cargo build --all --release --features build_libmpv --locked
 ```
 
 4) The compiled binary is located in `target/release/` directory. Copy the `ytui_music` binary and place it somewhere where it is easy to run. Preferrably under `$PATH`.
